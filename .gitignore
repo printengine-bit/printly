@@ -7,5 +7,7 @@ venv/
 *.db-wal
 *.db-shm
 *.db-journal
+*.db.bak
+*.bak
 node_modules/
 .DS_Store
