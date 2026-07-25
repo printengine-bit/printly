@@ -81,6 +81,6 @@ up significantly before hitting the print-area edge.
 Razorpay integration (order totals are still client-trusted — MUST
 recompute server-side from a price table the moment this lands),
 verified-email/password-reset flow, actual live deployment (code and
-Render steps are ready in README, but nobody's created the hosting
+Railway steps are ready in README, but nobody's created the hosting
 account or pointed a domain at it yet), PWA manifest/service worker.
 See README "Known pending items" for details.

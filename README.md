@@ -63,44 +63,56 @@ both need the backend now, since sessions/orders require it — opening
 `frontend/index.html` directly via `file://` still works for pure
 frontend/design-tool iteration, but auth/cart/orders need the backend.)
 
-## Production deployment (Render)
+## Production deployment (Railway)
 
-Render fits well here since orders/users are stored in SQLite, which
-needs a real persistent disk. Verified pricing (render.com/pricing,
-checked directly — confirm again before committing, prices change):
-
-| Component | Price |
-|---|---|
-| Workspace plan: **Hobby** | $0/mo (fine for a solo dev — the $0/$25/$499 tiers are team/compliance features, not compute) |
-| Compute: **Starter** instance | $7/mo — 512MB RAM, 0.5 CPU. **Free instances cannot attach a persistent disk at all** (confirmed in Render's docs), so Starter is the real minimum, not Free. |
-| Persistent Disk | $0.25/GB/mo — 1GB is plenty for this app's SQLite file |
-| **Total** | **≈ $7.25/mo ≈ ₹600/mo** |
+Railway works well here too — usage-based billing (Hobby tier: $5/mo
+of included usage credits, then metered beyond that) rather than
+Render's flat fee, and persistent volumes are available even on the
+Free tier (0.5GB) unlike Render (which requires a paid instance for
+any disk at all). Realistic cost for this app's traffic: roughly
+$5–9/mo — cheaper in a quiet month, a bit more in a busy one. Less
+predictable than a flat fee, but simpler self-service volume setup.
 
 1. Push this repo to GitHub if you haven't (`git remote -v` to check).
-2. Render → New → Web Service → connect the repo → pick the **Starter**
-   instance type (not Free — see table above).
-3. **Root directory**: `backend`. **Build command**: `pip install -r requirements.txt`.
-   **Start command**:
-   ```
-   gunicorn -w 2 --threads 4 --worker-class gthread --timeout 120 --bind 0.0.0.0:$PORT printly_backend:app
-   ```
-4. **Add a persistent Disk** (e.g. mount path `/var/data`) and set the
-   env var `DB_PATH=/var/data/printly.db`. **This step is not
-   optional** — without it, the SQLite file lives on the container's
-   ephemeral filesystem and every redeploy silently wipes every user
-   and order.
-5. Set these env vars on the Render dashboard (never commit real
-   values — `.env` is gitignored on purpose):
+2. Railway → New Project → Deploy from GitHub repo → select this repo.
+3. Open the service's **Settings** tab:
+   - **Root Directory**: `/backend`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Custom Start Command**:
+     ```
+     gunicorn -w 2 --threads 4 --worker-class gthread --timeout 120 --bind 0.0.0.0:$PORT printly_backend:app
+     ```
+     (Railway auto-detects Python via Nixpacks, but don't rely on it
+     guessing the right start command — set this explicitly, or it may
+     try to run `python printly_backend.py` directly instead, which
+     is the dev server.)
+4. **Add a Volume** (⌘K → search "volume", or right-click the project
+   canvas → attach it to this service). Set a **mount path** — e.g.
+   `/data` — then set the env var `DB_PATH=/data/printly.db` to match.
+   **This step is not optional** — without it, the SQLite file lives
+   on the container's ephemeral filesystem and every redeploy silently
+   wipes every user and order. (Volumes are only mounted at *runtime*,
+   not during the build step — don't expect data written during a
+   build to persist.)
+5. Set these env vars in the service's **Variables** tab (never commit
+   real values — `.env` is gitignored on purpose):
    `FLASK_SECRET_KEY`, `ADMIN_EMAIL`, `FRONTEND_ORIGIN` (your deployed
-   URL, e.g. `https://printly.in` — locks CORS down to just that
-   origin), `FLASK_ENV=production`, plus whichever AI-provider vars
-   from `.env.example` you're using.
-6. Point your domain's DNS at Render's target and add it in the
-   dashboard — Render provisions HTTPS automatically.
+   URL — Railway gives you a free `*.up.railway.app` domain
+   automatically, or use your own custom domain once added — locks
+   CORS down to just that origin), `FLASK_ENV=production`, plus
+   whichever AI-provider vars from `.env.example` you're using.
+6. Custom domain (optional): Settings → Networking → add your domain,
+   point its DNS (CNAME) at the target Railway gives you — HTTPS is
+   automatic.
 7. **Sign up with your `ADMIN_EMAIL` address first**, before opening
    the site up to real customers — the admin role is only granted at
    signup time. If you miss this window, update the `role` column for
    your user row directly in the database, or delete and re-sign-up.
+
+*(Render remains a fine alternative if you'd rather have a flat,
+predictable ~₹600/mo instead of usage-based billing — same
+`gunicorn` start command and `DB_PATH` pattern, just Render's disk
+UI instead of Railway's volumes.)*
 
 ## Load testing
 
@@ -117,7 +129,7 @@ pip install locust
 locust -f loadtest.py --host http://127.0.0.1:5001 \
     --users 100 --spawn-rate 20 --run-time 60s --headless
 ```
-Point `--host` at your Render URL once deployed, instead of
+Point `--host` at your Railway URL once deployed, instead of
 localhost. Last run locally (dev server, not gunicorn): 100 concurrent
 users, ~2200 requests over 60s, **zero failures**, p95 ≈160ms, worst
 case ≈390ms (signup, from intentionally-slow password hashing).
@@ -156,8 +168,8 @@ case ≈390ms (signup, from intentionally-slow password hashing).
    instead of trusting the client-sent total**, or pricing becomes
    spoofable.
 2. **Live deployment** — code and steps are ready (see above); actually
-   creating the Render/GitHub accounts and running through the steps is
-   still on you, plus pointing a real domain at it.
+   creating the Railway/GitHub accounts and running through the steps
+   is still on you, plus pointing a real domain at it.
 3. **PWA** — installable home-screen app is a ~1-day addition on top
    of the existing HTML/JS; Capacitor can wrap it for Play/App Store
    later. (Deliberately not rebuilt in React Native — reuses this

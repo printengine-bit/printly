@@ -10,7 +10,7 @@ Usage:
     pip install locust        # dev-only tool, not in requirements.txt
     locust -f loadtest.py --host http://127.0.0.1:5001 \
         --users 100 --spawn-rate 10 --run-time 3m --headless
-Point --host at the deployed Render URL once live, instead of localhost.
+Point --host at the deployed Railway URL once live, instead of localhost.
 """
 import random
 import string
