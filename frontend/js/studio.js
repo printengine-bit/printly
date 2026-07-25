@@ -191,7 +191,10 @@ function drawGarment(c,type,color){
   }
   c.restore();
 }
-function draw(){
+/* `clean` renders the garment + artwork only, with no editor overlays —
+   used by captureThumb() so cart/design/order thumbnails don't have the
+   print-area guide or selection UI baked into them. */
+function draw(clean){
   ctx.clearRect(0,0,520,560);
   const L=mockLayout(state.product.id);
   if(L){
@@ -203,8 +206,10 @@ function draw(){
   }
   // print area guide
   const P=pa();
-  ctx.setLineDash([8,8]); ctx.strokeStyle='rgba(200,242,50,.55)'; ctx.lineWidth=2;
-  ctx.strokeRect(P.x,P.y,P.w,P.h); ctx.setLineDash([]);
+  if(!clean){
+    ctx.setLineDash([8,8]); ctx.strokeStyle='rgba(200,242,50,.55)'; ctx.lineWidth=2;
+    ctx.strokeRect(P.x,P.y,P.w,P.h); ctx.setLineDash([]);
+  }
   // layers
   const Ls=state.layers[state.side];
   Ls.forEach((L,i)=>{
@@ -218,7 +223,7 @@ function draw(){
       ctx.drawImage(L.img,L.x-L.w/2,L.y-L.h/2,L.w,L.h);
     }
     ctx.restore();
-    if(i===state.sel){
+    if(i===state.sel && !clean){
       const b=layerBounds(L);
       ctx.strokeStyle='#c8f232'; ctx.lineWidth=2;
       ctx.strokeRect(b.x,b.y,b.w,b.h);
@@ -433,6 +438,17 @@ function renderLayers(){
       </div>
     </div>`;
   }).reverse().join('');
+}
+/* Snapshot the canvas WITHOUT the editing chrome.
+   draw() paints the selection box, size readout, delete badge and scale
+   handle for the selected layer, and toDataURL captures whatever is on the
+   canvas — so a naive capture bakes that UI into cart and design
+   thumbnails. Deselect, redraw, capture, then put the selection back. */
+function captureThumb(type='image/jpeg', quality=0.7){
+  draw(true);                       // garment + artwork only
+  const data=cv.toDataURL(type,quality);
+  draw();                           // restore the editing view
+  return data;
 }
 function selLayer(i){ state.sel=i; renderLayers(); draw(); }
 function bump(i,f){

@@ -23,6 +23,7 @@
       <button class="nav-btn" data-v="studio" onclick="go('studio')">Design Studio</button>
       <button class="nav-btn" data-v="cart" onclick="go('cart')">Cart</button>
       <button class="nav-btn" data-v="orders" onclick="go('orders')">My Orders</button>
+      <button class="nav-btn" data-v="designs" onclick="go('designs')">My Designs</button>
       <button class="nav-btn" data-v="admin" onclick="go('admin')" style="display:none">Admin</button>
     </nav>
     <div class="hdr-right">
@@ -228,7 +229,7 @@
         </div>
       </div>
 
-      <button class="st-fab" onclick="toast('Templates are coming in the next update')">
+      <button class="st-fab" onclick="openTemplates()">
         <div class="st-fab-ico"><span class="material-symbols-outlined">auto_awesome_motion</span></div>
         <div>
           <div style="font-size:12px;font-weight:700;color:var(--primary)">Start from template</div>
@@ -256,6 +257,9 @@
         <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="addToCart()">
           Add to cart <span class="material-symbols-outlined">arrow_forward</span>
         </button>
+        <button class="btn btn-quiet btn-block btn-sm" style="margin-top:8px" onclick="saveDesign()">
+          <span class="material-symbols-outlined" style="font-size:18px">bookmark</span> Save design
+        </button>
         <p class="ships">Ships within 48 hours from Pune</p>
       </div>
     </aside>
@@ -268,6 +272,15 @@
     <h1 class="t-h1">Shopping <span class="t-lime">bag</span></h1>
     <p class="t-mut" style="margin:8px 0 32px">Review, then place the order — we email a digital proof within 2 hours.</p>
     <div id="cartBody"></div>
+  </div>
+</section>
+
+<!-- ══════════════ MY DESIGNS ══════════════ -->
+<section class="view" id="v-designs">
+  <div class="wrap section">
+    <h1 class="t-h1">My <span class="t-lime">designs</span></h1>
+    <p class="t-mut" style="margin:8px 0 32px">Pick up exactly where you left off.</p>
+    <div id="designsBody"></div>
   </div>
 </section>
 
@@ -306,6 +319,16 @@
       <span id="authToggleText">New to Printly?</span>
       <a href="#" onclick="toggleAuthMode();return false" class="t-lime" style="font-weight:600" id="authToggleLink">Create an account</a>
     </p>
+  </div>
+</div>
+
+<!-- ══════════════ TEMPLATE PICKER ══════════════ -->
+<div class="modal-bg" id="templateModal">
+  <div class="modal modal-wide">
+    <button class="modal-x" onclick="closeTemplates()" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
+    <h3 class="t-h3">Start from a <span class="t-lime">template</span></h3>
+    <p class="t-mut" style="font-size:14px;margin:6px 0 22px">Load a curated drop, then make it yours.</p>
+    <div id="templateBody"></div>
   </div>
 </div>
 
@@ -353,6 +376,7 @@
 <script src="js/studio.js?v={{V}}"></script>
 <script src="js/ai.js?v={{V}}"></script>
 <script src="js/cart.js?v={{V}}"></script>
+<script src="js/designs.js?v={{V}}"></script>
 <script src="js/init.js?v={{V}}"></script>
 </body>
 </html>

@@ -241,6 +241,7 @@ input[type=file]{font-size:12px;padding:10px}
   border-radius:var(--r-lg);
   padding:32px;
 }
+.modal-wide{max-width:900px;max-height:86vh;overflow-y:auto}
 .modal-x{
   position:absolute;top:16px;right:16px;width:36px;height:36px;
   display:flex;align-items:center;justify-content:center;
@@ -286,6 +287,15 @@ input[type=file]{font-size:12px;padding:10px}
 .pcard-price{font-size:15px;font-weight:700}
 .pcard-tiers{font-size:11px;color:var(--on-surface-variant);margin-bottom:12px}
 .pcard-body .btn{margin-top:auto}
+.pcard-img img{width:100%;height:100%;object-fit:contain}
+
+/* "Start new design" tile in the My Designs grid */
+.new-design-tile{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  min-height:220px;border-style:dashed;color:var(--on-surface-variant);
+  transition:border-color .18s,color .18s;
+}
+.new-design-tile:hover{border-color:var(--lime);color:var(--lime)}
 
 /* ── Tables (cart / orders / admin — restyled fully in a later pass) ── */
 .table{

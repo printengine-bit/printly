@@ -31,8 +31,10 @@ function addToCart(){
   if(!hasDesign){ toast('Add a design first — text, logo or AI'); return; }
   const q=+document.getElementById('qtyRange').value;
   const p=state.product, u=unitPrice(p,q);
-  const thumb=cv.toDataURL('image/png');
-  state.cart.push({product:p.name,qty:q,unit:u,total:u*q,shirt:state.shirtColor,
+  // JPEG, not PNG — this thumbnail is stored inside the order row, and a
+  // full-size PNG of the canvas is ~10x bigger for no visible benefit.
+  const thumb=captureThumb();
+  state.cart.push({pid:p.id,product:p.name,qty:q,unit:u,total:u*q,shirt:state.shirtColor,
     layers:JSON.parse(JSON.stringify({front:state.layers.front.map(stripImg),back:state.layers.back.map(stripImg)})),
     thumb});
   setCartCount();

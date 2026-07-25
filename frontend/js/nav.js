@@ -8,6 +8,7 @@ function go(v){
   if(v==='cart') renderCart();
   if(v==='orders') renderOrders();
   if(v==='admin') renderAdmin();
+  if(v==='designs') renderDesigns();
   if(v==='studio') draw();
   document.getElementById('navLinks').classList.remove('open');
   window.scrollTo({top:0});
