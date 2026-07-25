@@ -1,0 +1,182 @@
+CHAT CONTEXT — Printly (custom t-shirt printing platform)
+Saved for use in Claude Code as background on everything already
+built, tried, and decided before this folder was handed off.
+===============================================================
+
+PROJECT OVERVIEW
+--------------------------------------------------------------
+Printly is a custom-apparel e-commerce platform with a live design
+studio, built for Saurabh (Pune-based real estate entrepreneur +
+independent Python/Flask developer, also running Arthaleads.com and
+RetradeAI as separate projects — unrelated to Printly, mentioned only
+for orientation).
+
+Brand: PRINTLY. Tagline: "Your Brand. Your Story. Printed."
+Palette: navy #0D1F3C, orange #A43800, gold accent.
+Priorities driving every decision: privacy, minimum investment,
+maximum ROI, and communication in Hinglish throughout the build.
+
+--------------------------------------------------------------
+BUSINESS DECISIONS
+--------------------------------------------------------------
+- Asset-light launch: vendor-printed initially (₹2.3–3.3L investment),
+  buy an in-house DTF machine once revenue crosses ₹5L/month.
+- Products & rough pricing: round-neck tee (₹279–599), polo, hoodie,
+  sports jersey, tote.
+- Competitor research done: PrintMine.in (Shopify store, Raipur,
+  "HK Enterprises", founder Harsh Vardhan Agrawal, ~37 corporate-
+  gifting products, polo from ₹1449+, logo-print only — NO live design
+  tool) and VistaPrint. Printly's differentiator: a live design studio
+  + AI image generation + REAL photo mockups (not geometric shapes) —
+  judged to be roughly one generation ahead of PrintMine's offering.
+- Business plan PDF (`docs/Printly_Business_Plan_2026.pdf`) has 9
+  sections covering all of this in detail.
+
+--------------------------------------------------------------
+FRONTEND ARCHITECTURE (frontend/index.html)
+--------------------------------------------------------------
+Single HTML/JS/CSS file, no build step, no server required for the
+core design tool. Visual style: white frosted nav (blurred
+translucency), Space Grotesk + Inter fonts, rounded pill buttons,
+purple-gradient-border AI panels, mobile hamburger menu.
+
+Views: Home (hero cycles through product photos), Products, Design
+Studio, Cart, My Orders, Admin pipeline.
+
+Central state object: `state = {user, product, shirtColor, side,
+layers:{front,back}, sel, guides, cart, orders, aiTries}`.
+
+AI image generation is gated: guests get 3 free tries
+(`state.aiTries`) then a sign-in prompt (`openLogin()`). The manual
+design tool (text, logos, recolor) is always free and unlimited —
+this split is a deliberate business rule (AI cost control vs.
+frictionless design experimentation), not a bug.
+
+--------------------------------------------------------------
+PHOTO-MOCKUP ENGINE (the core technical system)
+--------------------------------------------------------------
+Replaced an earlier geometric/vector garment renderer with REAL
+product photos (black-background flat-lays), because real photos with
+folds/shadows look dramatically more professional than drawn shapes —
+this was tested side by side and the photo approach was the clear
+winner despite more setup work.
+
+All 4 products now have BOTH front and back real photo mockups:
+round neck, polo, hoodie, sports jersey. (Backs for round neck, polo,
+and hoodie were the last piece added — user pointed out the back
+toggle was still showing the front photo; three new back-view photos
+were supplied and wired in.)
+
+Key mechanisms:
+- `window.PRINTLY_MOCKS` (defined in the first `<script>` block) holds
+  base64 JPEGs for all 8 images (front+back × 4 products) plus a
+  `print` object with each image's print-area coordinates
+  (`cx, cy, w, h, cmW, cmH`, in 720px-wide mockup-space).
+- `mockKey(pid)` resolves which mockup image to use: returns
+  `pid + '_back'` when `state.side === 'back'` AND that key exists,
+  else `pid`. This generalized pattern (not hardcoded per-product)
+  means any new product automatically gets back-view support as long
+  as its `_back` key is added to `PRINTLY_MOCKS`.
+- `getRecoloredMock(key, color)` does a multiply-blend recolor
+  (`r/255 * targetR` etc.) that preserves fabric folds and shadows,
+  while keeping the black background pure black (pixels below a
+  threshold stay untouched). This is how one white/black-bg photo
+  becomes any color on demand — same technique VistaPrint/PrintMine
+  use.
+- `mockLayout(pid)` maps the print-area rectangle from mockup-space
+  into the actual 520×560 canvas, accounting for letterboxing.
+- Jersey Kit panel (`addJerseyKit`): player name / number / sponsor1 /
+  sponsor2 / print colour, auto-laid-out onto the jersey back print
+  area — built specifically for team/bulk orders so the customer sets
+  each player's name/number themselves instead of the seller doing it
+  manually per piece.
+
+Print areas were ENLARGED across all 4 products (front and back) after
+user feedback that a jersey number ("7") looked too small and couldn't
+be sized up enough before hitting the print-area edge. Roughly:
+round neck 30×38cm → 38×50cm, jersey back 30×44cm → 38×52cm, and
+similar increases for polo/hoodie.
+
+Element deletion — added after user feedback that there was no way to
+remove a design mid-work or before finalizing. Three ways now exist:
+  1. An on-canvas red ✕ badge that appears at the top-right corner of
+     the currently-selected element (drawn in `draw()`, hit-tested via
+     `state._delHit` at the top of the `down()` pointer handler) — the
+     most discoverable option, works mid-design.
+  2. Keyboard Delete/Backspace removes the selected element (ignored
+     while typing in an input/textarea/select).
+  3. The existing ✕ button in the side-panel layer list.
+A hint line ("Tap ✕ or press Delete to remove") was added to the
+measurement bar under the canvas so this is discoverable without
+being told.
+
+All of the above was verified with Playwright + pixel sampling before
+delivery: navy recolor gives a clean shirt color with a pure black
+(0,0,0) background; all 4 products render distinct front vs back
+photos (e.g. hoodie back shows the hood, not the front pocket); jersey
+kit text renders as ~1000+ dark pixels on the back print area; the
+delete badge removes elements (layer count goes from 1 to 0 on tap).
+
+--------------------------------------------------------------
+AI BACKEND (backend/printly_backend.py, port 5001)
+--------------------------------------------------------------
+Multi-provider, free-first fallback chain, chosen after discussing the
+cost risk of window-shoppers generating unlimited paid AI images.
+- Default provider: **Pollinations** (gen.pollinations.ai) — free, no
+  API key, no signup, no card, privacy-friendly, but no uptime SLA.
+- Fallback 1: **Gemini** free tier (needs `GEMINI_API_KEY`).
+- Fallback 2: **Replicate** (Flux Schnell, ~₹0.28/image, needs
+  `REPLICATE_API_TOKEN`) — intended for real, paying clients who need
+  higher-quality logo generation, not casual browsers.
+- Placeholder for a self-hosted ComfyUI provider (not wired up).
+Business rule this backend enforces: AI image generation only when a
+customer is serious (gated behind sign-in after 3 tries); bulk/team
+orders use the recolor engine for previews, not per-piece AI
+generation; window-shoppers use the always-free manual design tool.
+
+--------------------------------------------------------------
+KEY TECHNICAL DECISIONS AND WHY
+--------------------------------------------------------------
+- Multiply-blend recolor over flat-fill recolor — keeps garment
+  realism (folds/shadows) from a single photo per color.
+- Black-background flat-lay photos over real "on-model" photos — a
+  real model photo was tried early on and worked, but skin tone and
+  wall background bled into the recolor blend and made results messy;
+  black-bg flat-lays recolor cleanly.
+- Pollinations as the default AI provider specifically because a free,
+  no-friction default was needed to avoid burning money on window
+  shoppers, while still keeping paid providers available for real
+  client work.
+
+--------------------------------------------------------------
+PENDING / NOT YET DONE
+--------------------------------------------------------------
+1. Razorpay — checkout is currently a demo flow only, not wired to a
+   real payment gateway.
+2. Live deployment — frontend is static-hosting-ready (Netlify/Vercel
+   free tier); backend needs a small paid host (Railway/Render,
+   ~₹600/month) plus a domain (printly.in, ~₹900/year). The `BACKEND`
+   constant in `index.html` (currently `http://127.0.0.1:5001`) needs
+   updating to the live URL once deployed — recommended to do this
+   BEFORE wiring Razorpay, since payment testing needs a live callback
+   URL.
+3. PWA — an installable home-screen app was discussed as a ~1-day,
+   ~₹0 addition on top of the existing HTML/JS, with Capacitor as a
+   later step to wrap it for the Play Store/App Store. Explicitly
+   decided AGAINST rebuilding in React Native — the existing HTML/JS
+   codebase should be reused via PWA → Capacitor, not replaced.
+4. Print-area positions may need further fine-tuning per product once
+   tested on real devices/screens in production use.
+
+--------------------------------------------------------------
+WHAT'S IN THIS FOLDER
+--------------------------------------------------------------
+- frontend/index.html — the complete, current app (all of the above
+  already built in).
+- backend/printly_backend.py — the AI image backend described above.
+- assets/mockups/ — the 8 raw source photos (reference copies; the
+  app itself uses base64 versions already embedded in index.html).
+- docs/Printly_Business_Plan_2026.pdf — the 9-section business plan.
+
+See README.md for how to run everything, and CLAUDE.md for coding
+conventions to follow when extending this project further.
