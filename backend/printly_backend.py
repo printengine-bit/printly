@@ -12,10 +12,16 @@
 #
 #  Run:  python printly_backend.py
 # ═══════════════════════════════════════════════════════════════
-import os, io, sys, base64, time, sqlite3, requests
+import os, io, sys, base64, time, requests
+from datetime import timedelta
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from PIL import Image
+
+load_dotenv()  # loads backend/.env if present — no-op if it doesn't exist
+
+from db import get_db, close_db, init_db
 
 # Windows consoles default to cp1252, which can't print the arrows/emoji
 # in this file's log messages and crashes on startup — force UTF-8.
@@ -26,7 +32,35 @@ if sys.platform == "win32":
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
 app = Flask(__name__)
-CORS(app)  # allow the design-tool HTML to call this from browser
+app.teardown_appcontext(close_db)
+
+# SECRET_KEY signs the session cookie — required for login sessions (Phase 2).
+# Generate one with: python -c "import secrets;print(secrets.token_hex(32))"
+# and set it as FLASK_SECRET_KEY in .env / the host's env vars. A random
+# fallback is used if unset so local dev without a .env doesn't crash, but
+# that fallback changes every restart (logs everyone out) — never rely on
+# it outside local testing.
+app.config.update(
+    SECRET_KEY=os.environ.get("FLASK_SECRET_KEY") or os.urandom(32).hex(),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("FLASK_ENV") == "production",
+    PERMANENT_SESSION_LIFETIME=timedelta(days=14),
+)
+
+# Locked down in Phase 5 (see FRONTEND_ORIGIN) once there's a real deployed
+# domain; wide open for now so local dev / ngrok tunnels keep working.
+FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN")
+if FRONTEND_ORIGIN:
+    CORS(app, origins=[FRONTEND_ORIGIN], supports_credentials=True)
+else:
+    CORS(app, supports_credentials=True)
+
+@app.after_request
+def _security_headers(resp):
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    return resp
 
 # Serve the frontend from the same origin as the API — lets index.html call
 # the backend with a relative path (no hardcoded host), so the same build
@@ -35,6 +69,15 @@ CORS(app)  # allow the design-tool HTML to call this from browser
 def frontend():
     return send_from_directory(FRONTEND_DIR, "index.html")
 
+@app.route("/api/health")
+def health():
+    try:
+        get_db().execute("SELECT 1")
+        db_ok = True
+    except Exception:
+        db_ok = False
+    return jsonify(ok=db_ok, db="ok" if db_ok else "error", provider=PROVIDER)
+
 REPLICATE_TOKEN = os.environ.get("REPLICATE_API_TOKEN", "")
 GEMINI_KEY      = os.environ.get("GEMINI_API_KEY", "")
 # Optional, still free — a token from https://auth.pollinations.ai bumps you
@@ -42,20 +85,18 @@ GEMINI_KEY      = os.environ.get("GEMINI_API_KEY", "")
 # just queues customers more often under concurrent load.
 POLLINATIONS_TOKEN = os.environ.get("POLLINATIONS_API_TOKEN", "")
 # Which engine to use: "pollinations" (free, no key) | "gemini" (free tier) | "replicate" (paid, private) | "comfyui" (own GPU)
-PROVIDER        = os.environ.get("PRINTLY_PROVIDER", "pollinations")
+# `or`, not .get()'s default arg — a present-but-blank env var (e.g. an empty
+# field on a hosting dashboard) must still fall back, not resolve to "".
+PROVIDER        = os.environ.get("PRINTLY_PROVIDER") or "pollinations"
 # Model IDs change often — override via env if Google renames them
-GEMINI_MODEL    = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
-DB = "printly.db"
+GEMINI_MODEL    = os.environ.get("GEMINI_IMAGE_MODEL") or "gemini-2.5-flash-image"
 
-# ── DB: log every generation (cost tracking + reprint) ──────────
-def init_db():
-    c = sqlite3.connect(DB)
-    c.execute("""CREATE TABLE IF NOT EXISTS generations(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        prompt TEXT, model TEXT, cost_inr REAL,
-        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
-    c.commit(); c.close()
 init_db()
+
+from auth import auth_bp
+from orders import orders_bp
+app.register_blueprint(auth_bp)
+app.register_blueprint(orders_bp)
 
 # ── Content moderation: block misuse before spending money ─────
 BLOCKED = ["nude", "nsfw", "gore", "blood", "weapon", "gun", "drug",
@@ -86,7 +127,7 @@ def build_prompt(user_prompt: str, style: str):
 #  — we fall back to Gemini/Replicate if it's still down after retrying.
 #  NOTE: gen.pollinations.ai/image/ now requires an API key (returns 401
 #  without one) — the still-free, anonymous endpoint is image.pollinations.ai/prompt/.
-POLLINATIONS_MODEL = os.environ.get("POLLINATIONS_MODEL", "sana")
+POLLINATIONS_MODEL = os.environ.get("POLLINATIONS_MODEL") or "sana"
 def generate_pollinations(prompt: str):
     import urllib.parse
     enc = urllib.parse.quote(prompt)
@@ -203,6 +244,16 @@ def make_print_ready(png_bytes: bytes):
     return buf.getvalue()
 
 # ═══ API ════════════════════════════════════════════════════════
+# Pollinations caps at ~1 request/5s system-wide (every customer shares this
+# one backend's IP) — MAX_INFLIGHT matches that hard ceiling. Bumping it just
+# trades honest queue responses for more silent 429s from Pollinations itself.
+MAX_INFLIGHT = 1
+# If a worker crashes/OOMs mid-generation, its ai_inflight row would otherwise
+# sit forever and permanently wedge the queue at "busy" — clear rows older
+# than this before counting. Generous vs. the ~20-40s a real generation
+# takes plus retry backoff, so it never races a genuinely in-flight request.
+STALE_INFLIGHT_SECONDS = 90
+
 @app.route("/api/generate-image", methods=["POST"])
 def generate_image():
     d = request.get_json(force=True)
@@ -215,33 +266,50 @@ def generate_image():
     if not ok:
         return jsonify(ok=False, error=msg), 400
 
-    full_prompt = build_prompt(prompt, style)
-    want = d.get("provider")          # optional override from the UI
+    db = get_db()
+    db.execute("DELETE FROM ai_inflight WHERE created < datetime('now', ?)",
+               (f"-{STALE_INFLIGHT_SECONDS} seconds",))
+    n = db.execute("SELECT COUNT(*) c FROM ai_inflight").fetchone()["c"]
+    if n >= MAX_INFLIGHT:
+        return jsonify(ok=False, queued=True, position=n + 1, retry_after_s=6), 429
+    slot = db.execute("INSERT INTO ai_inflight DEFAULT VALUES")
+    db.commit()
+
     try:
-        raw, cost, used = generate(full_prompt, want)
-    except Exception as e:
-        return jsonify(ok=False, error=f"Generator busy, try again. ({e})"), 502
+        full_prompt = build_prompt(prompt, style)
+        want = d.get("provider")          # optional override from the UI
+        try:
+            raw, cost, used = generate(full_prompt, want)
+        except Exception as e:
+            return jsonify(ok=False, error=f"Generator busy, try again. ({e})"), 502
 
-    print_png = make_print_ready(raw)
-    b64 = base64.b64encode(print_png).decode()
+        print_png = make_print_ready(raw)
+        b64 = base64.b64encode(print_png).decode()
 
-    c = sqlite3.connect(DB)
-    c.execute("INSERT INTO generations(prompt,model,cost_inr) VALUES(?,?,?)",
-              (prompt, used, cost))
-    c.commit(); c.close()
+        db.execute("INSERT INTO generations(prompt,model,cost_inr) VALUES(?,?,?)",
+                   (prompt, used, cost))
+        db.commit()
+    finally:
+        db.execute("DELETE FROM ai_inflight WHERE id=?", (slot.lastrowid,))
+        db.commit()
 
     return jsonify(ok=True, image=f"data:image/png;base64,{b64}",
                    cost_inr=cost, provider=used)
 
 @app.route("/api/stats")
 def stats():
-    c = sqlite3.connect(DB)
-    n, cost = c.execute("SELECT COUNT(*), COALESCE(SUM(cost_inr),0) FROM generations").fetchone()
-    c.close()
-    return jsonify(total_images=n, total_cost_inr=round(cost, 2))
+    row = get_db().execute(
+        "SELECT COUNT(*) n, COALESCE(SUM(cost_inr),0) cost FROM generations").fetchone()
+    return jsonify(total_images=row["n"], total_cost_inr=round(row["cost"], 2))
 
 if __name__ == "__main__":
     print("Printly AI backend → http://127.0.0.1:5001")
+    if not os.environ.get("FLASK_SECRET_KEY"):
+        print("⚠️  FLASK_SECRET_KEY not set — using a random key that changes on every "
+              "restart (everyone gets logged out each time). Fine for local dev, set it "
+              "for real before deploying.")
+    if not os.environ.get("ADMIN_EMAIL"):
+        print("⚠️  ADMIN_EMAIL not set — no account will get the admin role on signup.")
     print(f"Provider: {PROVIDER}  |  Gemini key: {bool(GEMINI_KEY)}  |  Replicate token: {bool(REPLICATE_TOKEN)}")
     if PROVIDER == "pollinations":
         tier = "Seed (1 req/5s)" if POLLINATIONS_TOKEN else "Anonymous (1 req/15s) — get a free token at auth.pollinations.ai to raise this"
@@ -251,4 +319,9 @@ if __name__ == "__main__":
         print("    Switch to replicate before printing paying customers' logos.")
     # threaded=True lets multiple customers' requests be in flight at once
     # instead of the dev server queuing them one at a time behind each other.
-    app.run(port=5001, debug=True, threaded=True)
+    # debug=True (and its Werkzeug debugger — arbitrary code execution if the
+    # PIN leaks) is only ever safe for local dev; this app.run() itself is
+    # also never reached in production anyway (gunicorn imports `app`
+    # directly and never calls this block) — the guard is defense-in-depth.
+    is_prod = os.environ.get("FLASK_ENV") == "production"
+    app.run(port=int(os.environ.get("PORT", 5001)), debug=not is_prod, threaded=True)

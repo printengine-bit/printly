@@ -206,7 +206,7 @@
     <button class="nav-btn" data-v="studio" onclick="go('studio')">Design Studio</button>
     <button class="nav-btn" data-v="cart" onclick="go('cart')">Cart</button>
     <button class="nav-btn" data-v="orders" onclick="go('orders')">My Orders</button>
-    <button class="nav-btn" data-v="admin" onclick="go('admin')">Admin</button>
+    <button class="nav-btn" data-v="admin" onclick="go('admin')" style="display:none">Admin</button>
   </div>
   <div class="nav-right">
     <button class="cart-pill" onclick="go('cart')">🛒 <span id="cartCount">0</span></button>
@@ -429,12 +429,19 @@
     <button class="x" onclick="closeLogin()">✕</button>
     <h3 id="authTitle">Sign in to Printly</h3>
     <p style="font-size:13px;color:var(--mut);margin-bottom:12px" id="authSub">Save designs, track orders, get GST invoices.</p>
-    <label>Name</label>
-    <input type="text" id="authName" placeholder="Your name">
-    <label>Phone / Email</label>
-    <input type="text" id="authId" placeholder="98xxxxxx or you@company.com">
-    <button class="sbtn orange" style="margin-top:16px" onclick="doLogin()">Continue →</button>
-    <p style="font-size:11.5px;color:var(--mut);margin-top:10px">Demo build — no OTP needed. In production this is Razorpay-linked OTP login.</p>
+    <div id="authNameRow" style="display:none">
+      <label>Name</label>
+      <input type="text" id="authName" placeholder="Your name">
+    </div>
+    <label>Email</label>
+    <input type="email" id="authEmail" placeholder="you@company.com">
+    <label>Password</label>
+    <input type="password" id="authPassword" placeholder="At least 8 characters">
+    <button class="sbtn orange" style="margin-top:16px" id="authSubmitBtn" onclick="doLogin()">Sign in →</button>
+    <p style="font-size:12.5px;color:var(--mut);margin-top:12px">
+      <span id="authToggleText">New to Printly?</span>
+      <a href="#" onclick="toggleAuthMode();return false" style="color:var(--orange);font-weight:600" id="authToggleLink">Create an account</a>
+    </p>
   </div>
 </div>
 
@@ -530,8 +537,6 @@ let state = {
   sel:-1,
   guides:{v:false,h:false},
   cart:[],
-  orders:[],
-  seq:1001,
   aiTries:0,
 };
 
@@ -558,15 +563,67 @@ function toast(m){
 }
 
 /* ═══════════════ AUTH ═══════════════ */
+let authMode='login';
 function openLogin(){ document.getElementById('loginModal').classList.add('on'); }
 function closeLogin(){ document.getElementById('loginModal').classList.remove('on'); }
-function doLogin(){
-  const n=document.getElementById('authName').value.trim();
-  const id=document.getElementById('authId').value.trim();
-  if(!n||!id){ toast('Enter name and phone/email'); return; }
-  state.user={name:n,id:id};
-  document.getElementById('userPill').textContent='👤 '+n.split(' ')[0];
-  closeLogin(); toast('Welcome, '+n.split(' ')[0]+'! You are signed in.');
+function toggleAuthMode(){
+  authMode = authMode==='login' ? 'signup' : 'login';
+  const isSignup = authMode==='signup';
+  document.getElementById('authTitle').textContent = isSignup ? 'Create your Printly account' : 'Sign in to Printly';
+  document.getElementById('authNameRow').style.display = isSignup ? 'block' : 'none';
+  document.getElementById('authSubmitBtn').textContent = isSignup ? 'Create account →' : 'Sign in →';
+  document.getElementById('authToggleText').textContent = isSignup ? 'Already have an account?' : 'New to Printly?';
+  document.getElementById('authToggleLink').textContent = isSignup ? 'Sign in' : 'Create an account';
+}
+function applyAuthUI(){
+  const pill=document.getElementById('userPill');
+  if(state.user){
+    pill.textContent='👤 '+state.user.name.split(' ')[0];
+    pill.onclick=userPillClick;
+  } else {
+    pill.textContent='Sign in';
+    pill.onclick=openLogin;
+  }
+  document.querySelector('.nav-btn[data-v="admin"]').style.display =
+    (state.user && state.user.role==='admin') ? '' : 'none';
+}
+function userPillClick(){
+  if(confirm('Sign out of Printly?')) doLogout();
+}
+async function doLogin(){
+  const email=document.getElementById('authEmail').value.trim();
+  const password=document.getElementById('authPassword').value;
+  const name=document.getElementById('authName').value.trim();
+  if(!email||!password){ toast('Enter email and password'); return; }
+  if(authMode==='signup' && !name){ toast('Enter your name'); return; }
+  const btn=document.getElementById('authSubmitBtn');
+  btn.disabled=true;
+  try{
+    const path = authMode==='signup' ? '/api/auth/signup' : '/api/auth/login';
+    const body = authMode==='signup' ? {name,email,password} : {email,password};
+    const res=await fetch(BACKEND+path,{method:'POST',headers:{'Content-Type':'application/json'},
+      credentials:'include', body:JSON.stringify(body)});
+    const d=await res.json();
+    if(!d.ok){ toast(d.error||'Something went wrong'); return; }
+    state.user=d.user;
+    applyAuthUI();
+    closeLogin(); toast('Welcome, '+d.user.name.split(' ')[0]+'! You are signed in.');
+  }catch(err){
+    toast('Could not reach the server — try again.');
+  }
+  btn.disabled=false;
+}
+async function doLogout(){
+  try{ await fetch(BACKEND+'/api/auth/logout',{method:'POST',credentials:'include'}); }catch(e){}
+  state.user=null; applyAuthUI(); toast('Signed out');
+  if(state.view==='admin'||state.view==='orders') go('home');
+}
+async function checkSession(){
+  try{
+    const res=await fetch(BACKEND+'/api/auth/me',{credentials:'include'});
+    const d=await res.json();
+    if(d.ok && d.user){ state.user=d.user; applyAuthUI(); }
+  }catch(err){ /* backend offline — stay signed out locally */ }
 }
 
 /* ═══════════════ PRODUCTS ═══════════════ */
@@ -1167,6 +1224,8 @@ Rules: 1-3 lines max, punchy short text (each under 22 chars), high contrast vs 
 // this file is opened directly (file://), since a relative path has no
 // origin to resolve against there.
 const BACKEND=location.protocol==='file:' ? 'http://127.0.0.1:5001' : '';
+const AI_QUEUE_MAX_RETRIES=5;
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function aiImage(){
   const brief=document.getElementById('aiImgBrief').value.trim();
   if(!brief){ toast('Describe the image you want'); return; }
@@ -1181,14 +1240,23 @@ async function aiImage(){
   }
   const btn=document.getElementById('aiImgBtn');
   btn.innerHTML='<span class="spin"></span>Generating…'; btn.disabled=true;
+  const body=JSON.stringify({prompt:brief,
+    style:document.getElementById('aiImgStyle').value,
+    provider:document.getElementById('aiImgProvider').value});
   try{
-    const res=await fetch(BACKEND+'/api/generate-image',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt:brief,
-        style:document.getElementById('aiImgStyle').value,
-        provider:document.getElementById('aiImgProvider').value})
-    });
-    const d=await res.json();
+    let d=null;
+    for(let attempt=0; attempt<=AI_QUEUE_MAX_RETRIES; attempt++){
+      const res=await fetch(BACKEND+'/api/generate-image',{
+        method:'POST',headers:{'Content-Type':'application/json'}, body});
+      d=await res.json();
+      if(res.status===429 && d.queued){
+        if(attempt===AI_QUEUE_MAX_RETRIES) throw new Error("Still busy — please try again in a bit.");
+        btn.innerHTML=`<span class="spin"></span>#${d.position} in queue — retrying in ${d.retry_after_s}s…`;
+        await sleep(d.retry_after_s*1000);
+        continue;
+      }
+      break;
+    }
     if(!d.ok) throw new Error(d.error||'Generation failed');
     const img=new Image();
     img.onload=()=>{
@@ -1264,13 +1332,16 @@ function renderCart(){
     </div>`;
 }
 function rmCart(i){ state.cart.splice(i,1); document.getElementById('cartCount').textContent=state.cart.length; renderCart(); }
-function checkout(tot){
+async function checkout(tot){
   if(!state.user){ openLogin(); toast('Sign in to place your order'); return; }
-  const id='PL-'+(state.seq++);
-  state.orders.push({id,items:state.cart.length,total:tot,status:0,
-    date:new Date().toLocaleDateString('en-IN'),customer:state.user.name});
-  state.cart=[]; document.getElementById('cartCount').textContent=0;
-  go('orders'); toast('Order '+id+' placed! Proof coming in 2 hrs 🎉');
+  try{
+    const res=await fetch(BACKEND+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},
+      credentials:'include', body:JSON.stringify({items:state.cart,total:tot})});
+    const d=await res.json();
+    if(!d.ok){ toast(d.error||'Could not place order'); return; }
+    state.cart=[]; document.getElementById('cartCount').textContent=0;
+    go('orders'); toast('Order '+d.order.id+' placed! Proof coming in 2 hrs 🎉');
+  }catch(err){ toast('Could not reach the server — try again.'); }
 }
 const STAGES=['Proof sent','Approved','Printing','Quality check','Shipped','Delivered'];
 function badgeFor(s){
@@ -1278,25 +1349,48 @@ function badgeFor(s){
   if(s<=3)return '<span class="badge b-org">'+STAGES[s]+'</span>';
   return '<span class="badge b-ok">'+STAGES[s]+'</span>';
 }
-function renderOrders(){
+async function renderOrders(){
   const el=document.getElementById('ordersBody');
-  if(!state.orders.length){ el.innerHTML='<div class="empty"><div class="big">📦</div>No orders yet.</div>'; return; }
+  if(!state.user){ el.innerHTML='<div class="empty"><div class="big">📦</div>Sign in to see your orders.<br><br><button class="cta" onclick="openLogin()">Sign in →</button></div>'; return; }
+  el.innerHTML='<div class="empty">Loading…</div>';
+  let orders=[];
+  try{
+    const res=await fetch(BACKEND+'/api/orders/mine',{credentials:'include'});
+    const d=await res.json();
+    if(d.ok) orders=d.orders;
+  }catch(err){ el.innerHTML='<div class="empty">Could not reach the server.</div>'; return; }
+  if(!orders.length){ el.innerHTML='<div class="empty"><div class="big">📦</div>No orders yet.</div>'; return; }
   el.innerHTML='<table class="table"><tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th></tr>'+
-    state.orders.map(o=>`<tr><td><b>${o.id}</b></td><td>${o.date}</td><td>${o.items}</td>
+    orders.map(o=>`<tr><td><b>${o.id}</b></td><td>${new Date(o.created).toLocaleDateString('en-IN')}</td><td>${o.items.length}</td>
       <td>₹${o.total.toLocaleString('en-IN')}</td><td>${badgeFor(o.status)}</td></tr>`).join('')+'</table>';
 }
-function renderAdmin(){
+async function renderAdmin(){
   const el=document.getElementById('adminBody');
-  if(!state.orders.length){ el.innerHTML='<div class="empty"><div class="big">🖨️</div>No orders in the pipeline yet.<br>Orders placed from the cart appear here.</div>'; return; }
+  el.innerHTML='<div class="empty">Loading…</div>';
+  let orders=[];
+  try{
+    const res=await fetch(BACKEND+'/api/admin/orders',{credentials:'include'});
+    if(res.status===401||res.status===403){ el.innerHTML='<div class="empty"><div class="big">🔒</div>Admin access required.</div>'; return; }
+    const d=await res.json();
+    if(d.ok) orders=d.orders;
+  }catch(err){ el.innerHTML='<div class="empty">Could not reach the server.</div>'; return; }
+  if(!orders.length){ el.innerHTML='<div class="empty"><div class="big">🖨️</div>No orders in the pipeline yet.<br>Orders placed from the cart appear here.</div>'; return; }
   el.innerHTML='<table class="table"><tr><th>Order</th><th>Customer</th><th>Total</th><th>Stage</th><th>Action</th></tr>'+
-    state.orders.map((o,i)=>`<tr><td><b>${o.id}</b></td><td>${o.customer}</td>
+    orders.map(o=>`<tr><td><b>${o.id}</b></td><td>${o.customer}</td>
       <td>₹${o.total.toLocaleString('en-IN')}</td><td>${badgeFor(o.status)}</td>
-      <td>${o.status<STAGES.length-1?`<button class="sbtn small" style="width:auto;padding:6px 12px" onclick="advance(${i})">→ ${STAGES[o.status+1]}</button>`:'✅ Done'}</td></tr>`).join('')+'</table>';
+      <td>${o.status<STAGES.length-1?`<button class="sbtn small" style="width:auto;padding:6px 12px" onclick="advance('${o.id}')">→ ${STAGES[o.status+1]}</button>`:'✅ Done'}</td></tr>`).join('')+'</table>';
 }
-function advance(i){ state.orders[i].status++; renderAdmin(); toast(state.orders[i].id+' → '+STAGES[state.orders[i].status]); }
+async function advance(orderId){
+  try{
+    const res=await fetch(BACKEND+'/api/admin/orders/'+orderId+'/advance',{method:'POST',credentials:'include'});
+    const d=await res.json();
+    if(!d.ok){ toast(d.error||'Could not advance order'); return; }
+    renderAdmin(); toast(d.order.id+' → '+STAGES[d.order.status]);
+  }catch(err){ toast('Could not reach the server — try again.'); }
+}
 
 /* ═══════════════ INIT ═══════════════ */
-initStudio(); draw(); renderProducts();
+initStudio(); draw(); renderProducts(); applyAuthUI(); checkSession();
 loadMocks(()=>{ draw(); renderProducts(); heroLoop(); });
 </script>
 </body>

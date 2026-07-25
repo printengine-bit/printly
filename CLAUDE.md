@@ -25,7 +25,11 @@ after trying alternatives (see "Decisions already made" below).
 ## Conventions to follow when editing `index.html`
 
 - **State lives in one object**: `state = {user, product, shirtColor,
-  side, layers:{front,back}, sel, guides, cart, orders, aiTries}`.
+  side, layers:{front,back}, sel, guides, cart, aiTries}`. Orders are NOT
+  in client state — they're server-persisted (`backend/orders.py`),
+  fetched fresh via `/api/orders/mine` / `/api/admin/orders` each time
+  those views render. `state.user` is rehydrated from the server session
+  on load via `checkSession()`, not stored durably client-side.
   Don't create parallel state — extend this object.
 - **Mockup key naming**: `<productId>` for front, `<productId>_back`
   for back (e.g. `rn`, `rn_back`, `js`, `js_back`). `mockKey(pid)`
