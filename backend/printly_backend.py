@@ -46,7 +46,16 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.environ.get("FLASK_ENV") == "production",
     PERMANENT_SESSION_LIFETIME=timedelta(days=14),
+    # Request bodies were previously unbounded. Saved designs and logo
+    # uploads carry base64 image data, so they need real headroom — but not
+    # unlimited, or one request can exhaust a small host's memory.
+    MAX_CONTENT_LENGTH=6 * 1024 * 1024,
 )
+
+
+@app.errorhandler(413)
+def _too_large(_e):
+    return jsonify(ok=False, error="That file or design is too large (6 MB max)."), 413
 
 # Locked down in Phase 5 (see FRONTEND_ORIGIN) once there's a real deployed
 # domain; wide open for now so local dev / ngrok tunnels keep working.
@@ -133,8 +142,14 @@ init_db()
 
 from auth import auth_bp
 from orders import orders_bp
+from designs import designs_bp
+from reviews import reviews_bp
+from shipping import shipping_bp
 app.register_blueprint(auth_bp)
 app.register_blueprint(orders_bp)
+app.register_blueprint(designs_bp)
+app.register_blueprint(reviews_bp)
+app.register_blueprint(shipping_bp)
 
 # ── Content moderation: block misuse before spending money ─────
 BLOCKED = ["nude", "nsfw", "gore", "blood", "weapon", "gun", "drug",

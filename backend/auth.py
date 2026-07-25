@@ -42,7 +42,14 @@ def admin_required(fn):
 
 
 def _user_public(row):
-    return {"id": row["id"], "name": row["name"], "email": row["email"], "role": row["role"]}
+    d = {"id": row["id"], "name": row["name"], "email": row["email"], "role": row["role"]}
+    # Added by a later migration, so it may be absent on a row read from an
+    # older connection/schema — don't let that break sign-in.
+    try:
+        d["loyalty_points"] = row["loyalty_points"]
+    except (IndexError, KeyError):
+        d["loyalty_points"] = 0
+    return d
 
 
 @auth_bp.route("/signup", methods=["POST"])

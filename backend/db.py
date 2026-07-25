@@ -55,8 +55,50 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT, ip TEXT,
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    # Saved designs — "My Designs". layers_json is the canvas snapshot WITH
+    # image data kept inline (unlike the cart's stripImg()), because a design
+    # has to be fully restorable. See designs.py for the size/count caps that
+    # keep that from filling the disk.
+    c.execute("""CREATE TABLE IF NOT EXISTS saved_designs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        name TEXT NOT NULL,
+        product_id TEXT NOT NULL,
+        shirt_color TEXT NOT NULL,
+        layers_json TEXT NOT NULL,
+        thumb TEXT,
+        is_template INTEGER NOT NULL DEFAULT 0,
+        created TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_designs_user ON saved_designs(user_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_designs_template ON saved_designs(is_template)")
+    # Product reviews. One per user per product (enforced by the unique index)
+    # and only from someone who actually ordered it — see reviews.py.
+    c.execute("""CREATE TABLE IF NOT EXISTS reviews(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id TEXT NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        rating INTEGER NOT NULL,
+        body TEXT NOT NULL DEFAULT '',
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_review_user_product ON reviews(user_id, product_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_reviews_product ON reviews(product_id)")
     c.execute("""CREATE TABLE IF NOT EXISTS ai_inflight(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    _add_column(c, "users", "loyalty_points", "INTEGER NOT NULL DEFAULT 0")
     c.commit()
     c.close()
+
+
+def _add_column(conn, table, column, decl):
+    """Idempotent ALTER TABLE ADD COLUMN.
+
+    CREATE TABLE IF NOT EXISTS silently does nothing on an existing table, so
+    new columns on already-deployed tables need this. Checked against
+    PRAGMA table_info rather than catching OperationalError, so a genuine
+    error still surfaces.
+    """
+    cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")

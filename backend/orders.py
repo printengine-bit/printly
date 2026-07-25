@@ -58,10 +58,18 @@ def create_order():
         "INSERT INTO orders(user_id,total_inr,items_json) VALUES(?,?,?)",
         (session["user_id"], total, json.dumps(items)),
     )
+    # Loyalty points. ⚠️ PLACEHOLDER RULE — 1 point per ₹100 spent, with no
+    # redemption path yet. The real earn/burn policy is a business decision
+    # that hasn't been made; this exists so the dashboard has something
+    # truthful to show. Decide the policy before advertising it to customers.
+    points = int(total // 100)
+    if points:
+        db.execute("UPDATE users SET loyalty_points = loyalty_points + ? WHERE id=?",
+                   (points, session["user_id"]))
     db.commit()
 
     row = db.execute("SELECT * FROM orders WHERE id=?", (cur.lastrowid,)).fetchone()
-    return jsonify(ok=True, order=_order_public(row))
+    return jsonify(ok=True, order=_order_public(row), points_earned=points)
 
 
 @orders_bp.route("/orders/mine")
