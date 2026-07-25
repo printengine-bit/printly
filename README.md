@@ -66,13 +66,19 @@ frontend/design-tool iteration, but auth/cart/orders need the backend.)
 ## Production deployment (Render)
 
 Render fits well here since orders/users are stored in SQLite, which
-needs a real persistent disk — Render's Starter tier bundles one at a
-predictable flat price, unlike usage-billed alternatives. *(Check
-current Render pricing before committing — this doc reflects the plan
-made when this was built, not necessarily today's pricing page.)*
+needs a real persistent disk. Verified pricing (render.com/pricing,
+checked directly — confirm again before committing, prices change):
+
+| Component | Price |
+|---|---|
+| Workspace plan: **Hobby** | $0/mo (fine for a solo dev — the $0/$25/$499 tiers are team/compliance features, not compute) |
+| Compute: **Starter** instance | $7/mo — 512MB RAM, 0.5 CPU. **Free instances cannot attach a persistent disk at all** (confirmed in Render's docs), so Starter is the real minimum, not Free. |
+| Persistent Disk | $0.25/GB/mo — 1GB is plenty for this app's SQLite file |
+| **Total** | **≈ $7.25/mo ≈ ₹600/mo** |
 
 1. Push this repo to GitHub if you haven't (`git remote -v` to check).
-2. Render → New → Web Service → connect the repo.
+2. Render → New → Web Service → connect the repo → pick the **Starter**
+   instance type (not Free — see table above).
 3. **Root directory**: `backend`. **Build command**: `pip install -r requirements.txt`.
    **Start command**:
    ```
