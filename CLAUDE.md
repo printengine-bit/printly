@@ -12,10 +12,26 @@ after trying alternatives (see "Decisions already made" below).
   two `<script>` blocks (first one defines `window.PRINTLY_MOCKS` —
   the base64 mockup photo data + print-area coordinates; second one
   is all app logic), and the HTML. There is no build step and no
-  bundler — edit this file directly.
-- `backend/printly_backend.py` — Flask API, single file, port 5001.
-  Only used by the AI-image-generation button; everything else in
-  the frontend works with the backend offline.
+  bundler — edit this file directly. Also served BY the backend at
+  `/` (see below) — `const BACKEND` resolves to a relative path when
+  served that way, so API calls work unchanged on localhost, a tunnel,
+  or a real domain.
+- `backend/printly_backend.py` — Flask app entry point (port 5001):
+  serves `index.html` at `/`, does AI image generation, and registers
+  the `auth`/`orders` blueprints below. Not just an AI add-on anymore —
+  accounts, sessions, and orders all need it running now too.
+- `backend/db.py` — shared SQLite (WAL mode) connection helper +
+  schema for all tables (`generations`, `users`, `orders`,
+  `login_attempts`, `ai_inflight`). Get a connection via `get_db()`,
+  never `sqlite3.connect()` directly, so WAL/timeout settings stay
+  consistent everywhere.
+- `backend/auth.py` — signup/login/logout/me, session cookies,
+  DB-backed (not in-memory — matters once gunicorn runs multiple
+  worker processes) per-email and per-IP login rate limiting.
+- `backend/orders.py` — place/list orders, admin pipeline. Order IDs
+  (`PL-1001` etc.) are a pure display computation over the real
+  integer primary key, never stored — don't reintroduce a
+  string-primary-key scheme here, it raced under concurrent inserts.
 - `assets/mockups/` — the 8 raw source photos (reference only). The
   frontend does NOT read from this folder at runtime — it uses the
   base64 copies already embedded in `window.PRINTLY_MOCKS` inside
@@ -62,6 +78,9 @@ up significantly before hitting the print-area edge.
 
 ## Not yet done (don't assume these exist)
 
-Razorpay integration, live deployment (URLs are still localhost),
-PWA manifest/service worker. See README "Known pending items" for
-the recommended order to tackle these in.
+Razorpay integration (order totals are still client-trusted — MUST
+recompute server-side from a price table the moment this lands),
+verified-email/password-reset flow, actual live deployment (code and
+Render steps are ready in README, but nobody's created the hosting
+account or pointed a domain at it yet), PWA manifest/service worker.
+See README "Known pending items" for details.
