@@ -3,280 +3,356 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Printly — Design & Order Custom T-Shirts Online</title>
+<title>Printly — Design & Order Custom Streetwear</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/printly.css">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/printly.css?v={{V}}">
+<link rel="stylesheet" href="css/studio.css?v={{V}}">
 </head>
 <body>
-<!-- ══ NAV ══ -->
-<nav class="nav">
-  <div class="logo" onclick="go('home')">PRINT<b>LY</b></div>
-  <button class="hamburger" onclick="toggleMenu()">☰</button>
-  <div class="nav-links" id="navLinks">
-    <button class="nav-btn on" data-v="home" onclick="go('home')">Home</button>
-    <button class="nav-btn" data-v="products" onclick="go('products')">Products</button>
-    <button class="nav-btn" data-v="studio" onclick="go('studio')">Design Studio</button>
-    <button class="nav-btn" data-v="cart" onclick="go('cart')">Cart</button>
-    <button class="nav-btn" data-v="orders" onclick="go('orders')">My Orders</button>
-    <button class="nav-btn" data-v="admin" onclick="go('admin')" style="display:none">Admin</button>
-  </div>
-  <div class="nav-right">
-    <button class="cart-pill" onclick="go('cart')">🛒 <span id="cartCount">0</span></button>
-    <button class="user-pill" id="userPill" onclick="openLogin()">Sign in</button>
-  </div>
-</nav>
 
-<!-- ══ HOME ══ -->
+<!-- ══════════════ HEADER ══════════════ -->
+<header class="hdr">
+  <div class="hdr-inner">
+    <div class="logo" onclick="go('home')">PRINT<b>LY</b></div>
+    <nav class="nav" id="navLinks">
+      <button class="nav-btn on" data-v="home" onclick="go('home')">Home</button>
+      <button class="nav-btn" data-v="products" onclick="go('products')">Products</button>
+      <button class="nav-btn" data-v="studio" onclick="go('studio')">Design Studio</button>
+      <button class="nav-btn" data-v="cart" onclick="go('cart')">Cart</button>
+      <button class="nav-btn" data-v="orders" onclick="go('orders')">My Orders</button>
+      <button class="nav-btn" data-v="admin" onclick="go('admin')" style="display:none">Admin</button>
+    </nav>
+    <div class="hdr-right">
+      <button class="cart-btn" onclick="go('cart')" aria-label="Cart">
+        <span class="material-symbols-outlined">shopping_cart</span>
+        <span class="cart-count" id="cartCount" data-count="0">0</span>
+      </button>
+      <button class="btn btn-primary btn-sm" id="userPill" onclick="openLogin()">Sign in</button>
+      <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
+        <span class="material-symbols-outlined">menu</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════ HOME ══════════════ -->
 <section class="view on" id="v-home">
-  <div class="hero">
-    <div class="wrap hero-grid">
-      <div>
-        <span class="kick">CUSTOM PRINTING · PUNE → ALL INDIA</span>
-        <h1>Design it in minutes.<br>Wear it in <em>48 hours.</em></h1>
-        <p>Printly is India's fastest online custom t-shirt studio. Upload your logo, add your words, preview live on a real tee — and we print, pack and ship with tracking.</p>
-        <button class="cta" onclick="go('studio')">Open Design Studio →</button>
-        <button class="cta ghost" onclick="go('products')">Browse Products</button>
-        <div class="hero-stats">
-          <div class="hstat"><b>48 hrs</b><span>Express delivery</span></div>
-          <div class="hstat"><b>40–60%</b><span>Bulk savings</span></div>
-          <div class="hstat"><b>1 pc</b><span>Minimum order</span></div>
-        </div>
-      </div>
-      <div class="tee-stage">
-        <canvas id="heroTee" width="360" height="380"></canvas>
-        <span class="tee-cap">Live preview — this is the same engine as the Design Studio</span>
-      </div>
+  <div class="wrap section">
+    <span class="badge badge-outline">Custom printing · Pune → All India</span>
+    <h1 class="t-hero" style="margin:20px 0 18px;max-width:14ch">
+      Design it in minutes.<br><span class="t-lime">Wear it in 48 hours.</span>
+    </h1>
+    <p class="t-body-lg t-mut" style="max-width:52ch;margin-bottom:28px">
+      Your brand. Your story. Printed. The high-velocity drop culture for creators
+      and crews — premium quality at lightning speed.
+    </p>
+    <div class="row" style="flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="go('studio')">
+        Open Design Studio <span class="material-symbols-outlined">arrow_forward</span>
+      </button>
+      <button class="btn btn-ghost" onclick="go('products')">Browse products</button>
     </div>
-  </div>
-
-  <div class="sec wrap">
-    <h2>How Printly works</h2>
-    <p class="sub">From idea to doorstep in four steps.</p>
-    <div class="grid4">
-      <div class="stepc"><div class="n">STEP 1</div><h3>Pick a product</h3><p>Round neck, polo, hoodie, jersey or tote — 20+ colours, sizes S to 3XL.</p></div>
-      <div class="stepc"><div class="n">STEP 2</div><h3>Design it live</h3><p>Upload your logo, add text, or let Printly AI draft a design for you.</p></div>
-      <div class="stepc"><div class="n">STEP 3</div><h3>Approve the proof</h3><p>We send a digital proof in 2 hours. You approve with one tap.</p></div>
-      <div class="stepc"><div class="n">STEP 4</div><h3>Printed & shipped</h3><p>Quality-checked, packed in a branded box, tracked to your door.</p></div>
+    <div class="grid grid-3" style="margin-top:44px;max-width:620px">
+      <div><div class="t-h3 t-lime">48 hrs</div><div class="t-label t-mut" style="margin-top:4px">Express delivery</div></div>
+      <div><div class="t-h3 t-lime">40–60%</div><div class="t-label t-mut" style="margin-top:4px">Bulk savings</div></div>
+      <div><div class="t-h3 t-lime">1 pc</div><div class="t-label t-mut" style="margin-top:4px">No minimums</div></div>
     </div>
-  </div>
-
-  <div class="sec wrap">
-    <h2>Who orders from Printly</h2>
-    <p class="sub">Built for teams of 1 to 1,000.</p>
-    <div class="grid3">
-      <div class="stepc"><div class="n">CORPORATES</div><h3>Branded merchandise</h3><p>Onboarding kits, sports day, annual day, launch events. GST invoice + bulk rates.</p></div>
-      <div class="stepc"><div class="n">COLLEGES</div><h3>Batch & fest tees</h3><p>Farewells, cultural fests, sports teams. One WhatsApp group approval, we handle the rest.</p></div>
-      <div class="stepc"><div class="n">CREATORS</div><h3>Personal & gifting</h3><p>Single-piece printing from ₹279. Couple tees, birthday prints, fan art — no minimums.</p></div>
+    <div class="card card-pad" style="margin-top:44px;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:12px">
+      <canvas id="heroTee" width="360" height="380" style="width:100%;max-width:340px;height:auto"></canvas>
+      <span class="t-label t-dim" style="text-align:center">Live preview — same engine as the Design Studio</span>
     </div>
   </div>
 </section>
 
-<!-- ══ PRODUCTS ══ -->
+<!-- ══════════════ PRODUCTS ══════════════ -->
 <section class="view" id="v-products">
-  <div class="sec wrap">
-    <h2>Products & live pricing</h2>
-    <p class="sub">Prices drop automatically as quantity rises. Pick one to start designing.</p>
-    <div class="grid4" id="productGrid"></div>
+  <div class="wrap section">
+    <h1 class="t-h1">Products &amp; <span class="t-lime">live pricing</span></h1>
+    <p class="t-mut" style="margin:8px 0 32px">Prices drop automatically as quantity rises. Pick one to start designing.</p>
+    <div class="grid grid-4" id="productGrid"></div>
   </div>
 </section>
 
-<!-- ══ STUDIO ══ -->
+<!-- ══════════════ DESIGN STUDIO ══════════════ -->
 <section class="view" id="v-studio">
-  <div class="wrap studio">
+  <div class="studio">
 
-    <!-- LEFT: tools -->
-    <div>
-      <div class="panel frm">
-        <h4>Product</h4>
-        <select id="stProduct" onchange="studioProductChange()"></select>
-        <label>Shirt colour</label>
-        <div class="swatches" id="swatches"></div>
-        <div class="side-tabs" style="margin-top:12px">
-          <button class="stab on" id="tabF" onclick="setSide('front')">Front</button>
-          <button class="stab" id="tabB" onclick="setSide('back')">Back</button>
+    <!-- ── LEFT: tools ── -->
+    <aside class="st-side st-left scroll-thin">
+      <div class="st-pad">
+        <div class="st-tabs">
+          <button class="st-tab on" data-tab="base" onclick="studioTab('base')">Base</button>
+          <button class="st-tab" data-tab="assets" onclick="studioTab('assets')">Assets</button>
+          <button class="st-tab" data-tab="ai" onclick="studioTab('ai')">AI</button>
+        </div>
+
+        <!-- Base -->
+        <div class="st-panel on" id="tab-base">
+          <div class="st-group">
+            <label>Selected product</label>
+            <div class="st-product">
+              <div class="st-product-ico"><span class="material-symbols-outlined">apparel</span></div>
+              <div style="flex:1;min-width:0">
+                <select id="stProduct" onchange="studioProductChange()"></select>
+                <div class="st-product-sub" id="stProductSub">Premium cotton</div>
+              </div>
+            </div>
+          </div>
+          <div class="st-group">
+            <label>Garment colour</label>
+            <div class="st-colorrow">
+              <div class="swatches" id="swatches"></div>
+              <div class="seg">
+                <button id="tabF" class="on" onclick="setSide('front')">Front</button>
+                <button id="tabB" onclick="setSide('back')">Back</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assets -->
+        <div class="st-panel" id="tab-assets">
+          <div class="st-group">
+            <label>Add text</label>
+            <input type="text" id="txtInput" placeholder="Type your slogan…">
+            <div class="row" style="gap:8px;margin-top:8px">
+              <select id="txtFont" style="flex:1">
+                <option value="Archivo Narrow">Archivo</option>
+                <option value="Inter">Inter</option>
+                <option value="Georgia">Serif</option>
+                <option value="Impact">Impact</option>
+                <option value="Courier New">Mono</option>
+                <option value="Brush Script MT">Script</option>
+              </select>
+              <input type="color" id="txtColor" value="#c8f232" style="width:52px;flex-shrink:0">
+            </div>
+            <button class="btn btn-quiet btn-block" style="margin-top:10px" onclick="addText()">
+              <span class="material-symbols-outlined">add</span> Add text
+            </button>
+          </div>
+          <div class="st-group">
+            <label>Add image / logo</label>
+            <input type="file" id="imgInput" accept="image/*">
+            <button class="btn btn-quiet btn-block" style="margin-top:10px" onclick="addImage()">
+              <span class="material-symbols-outlined">upload</span> Place on garment
+            </button>
+          </div>
+          <div class="st-group" id="jerseyKit" style="display:none">
+            <label>🏆 Jersey kit (back print)</label>
+            <div class="field"><label>Player name</label><input type="text" id="jkName" value="SHARMA"></div>
+            <div class="field"><label>Number</label><input type="text" id="jkNum" value="10"></div>
+            <div class="row" style="gap:8px">
+              <div class="field" style="flex:1"><label>Sponsor 1</label><input type="text" id="jkSp1" value="PRINTLY"></div>
+              <div class="field" style="flex:1"><label>Sponsor 2</label><input type="text" id="jkSp2" value="TATA MOTORS"></div>
+            </div>
+            <div class="field"><label>Print colour</label><input type="color" id="jkColor" value="#FFFFFF"></div>
+            <button class="btn btn-primary btn-block" onclick="addJerseyKit()">Apply to back →</button>
+          </div>
+        </div>
+
+        <!-- AI -->
+        <div class="st-panel" id="tab-ai">
+          <div class="ai-frame lime">
+            <div class="ai-body">
+              <div class="ai-head">
+                <div class="ai-title">
+                  <span class="material-symbols-outlined fill t-lime" style="font-size:20px">auto_awesome</span>
+                  AI text stylist
+                </div>
+              </div>
+              <textarea id="aiBrief" placeholder="e.g. Farewell tee for CS batch 2026, funny"></textarea>
+              <button class="btn btn-primary btn-block" style="margin-top:10px" id="aiBtn" onclick="aiDesign()">Generate text design</button>
+              <p class="ai-note">AI writes the slogan, picks fonts &amp; colours, lays it out. Edit after.</p>
+            </div>
+          </div>
+
+          <div class="ai-frame pink">
+            <div class="ai-body">
+              <div class="ai-head">
+                <div class="ai-title">
+                  <span class="material-symbols-outlined fill t-pink" style="font-size:20px">draw</span>
+                  Gen-AI art
+                </div>
+                <span class="badge badge-pink">AI</span>
+              </div>
+              <textarea id="aiImgBrief" placeholder="A glitch-art tiger with neon Indian patterns…"></textarea>
+              <select id="aiImgStyle" style="margin-top:8px">
+                <option value="graphic">Style: Bold graphic</option>
+                <option value="cartoon">Style: Cartoon mascot</option>
+                <option value="vintage">Style: Vintage retro</option>
+                <option value="minimal">Style: Minimal line art</option>
+                <option value="realistic">Style: Detailed illustration</option>
+              </select>
+              <select id="aiImgProvider" style="margin-top:8px">
+                <option value="pollinations">Pollinations (Sana Sprint) — free</option>
+                <option value="gemini">Gemini — free (testing)</option>
+                <option value="replicate">Replicate Flux — ₹0.28</option>
+              </select>
+              <button class="btn btn-pink btn-block" style="margin-top:10px" id="aiImgBtn" onclick="aiImage()">
+                <span class="material-symbols-outlined" style="font-size:20px">bolt</span> Generate
+              </button>
+              <p class="ai-note">Free via Pollinations. Background auto-removed, 300 DPI print-ready.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── CENTER: canvas ── -->
+    <section class="st-stage">
+      <div class="st-toolbar">
+        <button onclick="alignSel('left')" title="Align left"><span class="material-symbols-outlined">format_align_left</span></button>
+        <button onclick="alignSel('cx')" title="Centre horizontally"><span class="material-symbols-outlined">align_horizontal_center</span></button>
+        <button onclick="alignSel('right')" title="Align right"><span class="material-symbols-outlined">format_align_right</span></button>
+        <span class="sep"></span>
+        <button onclick="alignSel('top')" title="Align top"><span class="material-symbols-outlined">vertical_align_top</span></button>
+        <button onclick="alignSel('cy')" title="Centre vertically"><span class="material-symbols-outlined">vertical_align_center</span></button>
+        <button onclick="alignSel('bottom')" title="Align bottom"><span class="material-symbols-outlined">vertical_align_bottom</span></button>
+        <span class="sep"></span>
+        <button onclick="fitWidth()" title="Fit to print width"><span class="material-symbols-outlined">fit_screen</span></button>
+        <button onclick="deleteSel()" title="Delete selected"><span class="material-symbols-outlined">delete</span></button>
+        <button onclick="downloadPNG()" title="Download preview"><span class="material-symbols-outlined">download</span></button>
+      </div>
+
+      <div class="st-canvas-wrap">
+        <div class="st-ruler"><span>0cm</span><span>10</span><span>20</span><span>30</span><span>40</span></div>
+        <span class="st-zonelabel" id="zoneLabel">Primary print zone</span>
+        <canvas id="teeCanvas" width="520" height="560"></canvas>
+        <div class="measure" id="measureBar"></div>
+        <div class="badge badge-warn st-warn" id="stWarn">
+          <span class="material-symbols-outlined" style="font-size:16px">warning</span>
+          Object outside print area
         </div>
       </div>
 
-      <div class="panel frm">
-        <h4>Add text</h4>
-        <input type="text" id="txtInput" placeholder="Type your slogan…">
-        <div class="rowb" style="margin-top:8px">
-          <select id="txtFont">
-            <option value="Space Grotesk">Grotesk</option>
-            <option value="Georgia">Serif</option>
-            <option value="Impact">Impact</option>
-            <option value="Courier New">Mono</option>
-            <option value="Brush Script MT">Script</option>
-          </select>
-          <input type="color" id="txtColor" value="#0D1F3C" style="height:38px;border:1px solid var(--line);border-radius:8px">
+      <button class="st-fab" onclick="toast('Templates are coming in the next update')">
+        <div class="st-fab-ico"><span class="material-symbols-outlined">auto_awesome_motion</span></div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--primary)">Start from template</div>
+          <div style="font-size:10px;color:var(--on-surface-variant)">Browse curated drops</div>
         </div>
-        <button class="sbtn" style="margin-top:10px" onclick="addText()">+ Add text</button>
-      </div>
+      </button>
+    </section>
 
-      <div class="panel frm" id="jerseyKit" style="display:none">
-        <h4>🏆 Jersey kit (back print)</h4>
-        <label>Player name</label>
-        <input type="text" id="jkName" placeholder="SHARMA" value="SHARMA">
-        <label>Number</label>
-        <input type="text" id="jkNum" placeholder="10" value="10">
-        <div class="rowb" style="margin-top:8px">
-          <div><label style="margin-top:0">Sponsor 1</label><input type="text" id="jkSp1" value="PRINTLY"></div>
-          <div><label style="margin-top:0">Sponsor 2</label><input type="text" id="jkSp2" value="TATA MOTORS"></div>
+    <!-- ── RIGHT: layers + summary ── -->
+    <aside class="st-side st-right">
+      <div class="st-layers scroll-thin">
+        <div class="spread" style="margin-bottom:14px">
+          <span class="st-lbl" style="margin:0">Active layers</span>
+          <span class="t-label t-dim" id="sideLabel">front</span>
         </div>
-        <label>Print colour</label>
-        <input type="color" id="jkColor" value="#FFFFFF" style="height:38px;width:100%;border:1px solid var(--line);border-radius:8px">
-        <button class="sbtn orange" style="margin-top:10px" onclick="addJerseyKit()">Apply to back →</button>
+        <div id="layerList"></div>
       </div>
-
-      <div class="panel frm">
-        <h4>Add image / logo</h4>
-        <input type="file" id="imgInput" accept="image/*" style="font-size:12px">
-        <button class="sbtn ghosty" style="margin-top:10px" onclick="addImage()">+ Place on tee</button>
-      </div>
-
-      <div class="panel">
-        <div class="ai-box frm">
-          <h4>✨ Printly AI Designer</h4>
-          <textarea id="aiBrief" placeholder="e.g. Farewell tee for CS batch 2026, funny, navy shirt"></textarea>
-          <button class="sbtn orange" style="margin-top:10px" id="aiBtn" onclick="aiDesign()">Generate text design</button>
-          <div class="ai-note">AI writes the slogan, picks fonts & colours, lays it out. Edit after.</div>
+      <div class="st-summary">
+        <div class="spread" style="margin-bottom:10px">
+          <span class="st-lbl" style="margin:0">Summary</span>
+          <span class="t-label t-mut"><b id="qtyLabel">25</b> pcs</span>
         </div>
+        <input type="range" id="qtyRange" min="1" max="500" value="25" oninput="updatePrice()" style="margin-bottom:12px">
+        <div id="priceBox"></div>
+        <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="addToCart()">
+          Add to cart <span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+        <p class="ships">Ships within 48 hours from Pune</p>
       </div>
-
-      <div class="panel">
-        <div class="ai-box frm" style="background:linear-gradient(145deg,#3A1505,#7A3010)">
-          <h4>🎨 AI Image Generator</h4>
-          <textarea id="aiImgBrief" placeholder="e.g. tiger wearing sunglasses, roaring"></textarea>
-          <select id="aiImgStyle" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:none">
-            <option value="graphic">Bold graphic</option>
-            <option value="cartoon">Cartoon mascot</option>
-            <option value="vintage">Vintage retro</option>
-            <option value="minimal">Minimal line art</option>
-            <option value="realistic">Detailed illustration</option>
-          </select>
-          <select id="aiImgProvider" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:none">
-            <option value="pollinations">Pollinations (Sana Sprint 1.6B) — free, unlimited (default)</option>
-            <option value="gemini">Gemini — free (testing)</option>
-            <option value="replicate">Replicate Flux — ₹0.28 (client logos)</option>
-          </select>
-          <button class="sbtn orange" style="margin-top:10px" id="aiImgBtn" onclick="aiImage()">Generate image</button>
-          <div class="ai-note">Free via Pollinations. Background auto-removed, 300 DPI print-ready.<br>
-          ⚠️ For real client logos use Replicate (private, no AI training).</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- CENTER: canvas -->
-    <div class="canvas-zone">
-      <canvas id="teeCanvas" width="520" height="560"></canvas>
-
-      <div class="align-bar">
-        <span class="albl">Align</span>
-        <button class="abtn" onclick="alignSel('cx')" title="Centre horizontally">⬌ Centre</button>
-        <button class="abtn" onclick="alignSel('cy')" title="Centre vertically">⬍ Middle</button>
-        <button class="abtn" onclick="alignSel('top')">↑ Top</button>
-        <button class="abtn" onclick="alignSel('bottom')">↓ Bottom</button>
-        <button class="abtn" onclick="alignSel('left')">← Left</button>
-        <button class="abtn" onclick="alignSel('right')">→ Right</button>
-        <button class="abtn hi" onclick="fitWidth()">⤢ Fit width</button>
-      </div>
-
-      <div class="measure-bar" id="measureBar"></div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
-        <button class="sbtn small ghosty" style="width:auto;padding:8px 14px" onclick="deleteSel()">🗑 Delete selected</button>
-        <button class="sbtn small ghosty" style="width:auto;padding:8px 14px" onclick="clearSide()">Clear this side</button>
-        <button class="sbtn small ghosty" style="width:auto;padding:8px 14px" onclick="downloadPNG()">⬇ Download preview</button>
-      </div>
-      <span style="font-size:12px;color:var(--mut)">Drag to move — it snaps to centre · Scroll on a selected item to resize · Dashed box = print area</span>
-    </div>
-
-    <!-- RIGHT: layers + price -->
-    <div>
-      <div class="panel">
-        <h4>Layers (<span id="sideLabel">front</span>)</h4>
-        <div id="layerList"><div style="font-size:12.5px;color:var(--mut)">Nothing yet — add text, an image, or use AI.</div></div>
-      </div>
-      <div class="panel frm">
-        <h4>Quantity & price</h4>
-        <label>Quantity: <b id="qtyLabel">25</b> pcs</label>
-        <input type="range" id="qtyRange" min="1" max="500" value="25" oninput="updatePrice()">
-        <div id="priceBox" style="margin-top:10px"></div>
-        <button class="sbtn orange" style="margin-top:12px" onclick="addToCart()">Add to cart →</button>
-      </div>
-    </div>
+    </aside>
   </div>
 </section>
 
-<!-- ══ CART ══ -->
+<!-- ══════════════ CART ══════════════ -->
 <section class="view" id="v-cart">
-  <div class="sec wrap">
-    <h2>Your cart</h2>
-    <p class="sub">Review, then place the order — we email a digital proof within 2 hours.</p>
+  <div class="wrap section">
+    <h1 class="t-h1">Shopping <span class="t-lime">bag</span></h1>
+    <p class="t-mut" style="margin:8px 0 32px">Review, then place the order — we email a digital proof within 2 hours.</p>
     <div id="cartBody"></div>
   </div>
 </section>
 
-<!-- ══ ORDERS ══ -->
+<!-- ══════════════ ORDERS ══════════════ -->
 <section class="view" id="v-orders">
-  <div class="sec wrap">
-    <h2>My orders</h2>
-    <p class="sub">Track every order from proof to doorstep.</p>
+  <div class="wrap section">
+    <h1 class="t-h1">My <span class="t-lime">orders</span></h1>
+    <p class="t-mut" style="margin:8px 0 32px">Track every order from proof to doorstep.</p>
     <div id="ordersBody"></div>
   </div>
 </section>
 
-<!-- ══ ADMIN ══ -->
+<!-- ══════════════ ADMIN ══════════════ -->
 <section class="view" id="v-admin">
-  <div class="sec wrap">
-    <h2>Admin — order pipeline</h2>
-    <p class="sub">This is your back-office view: move orders through each production stage.</p>
+  <div class="wrap section">
+    <h1 class="t-h1">Order <span class="t-lime">pipeline</span></h1>
+    <p class="t-mut" style="margin:8px 0 32px">Back-office view: move orders through each production stage.</p>
     <div id="adminBody"></div>
   </div>
 </section>
 
-<!-- ══ LOGIN MODAL ══ -->
+<!-- ══════════════ AUTH MODAL ══════════════ -->
 <div class="modal-bg" id="loginModal">
-  <div class="modal frm">
-    <button class="x" onclick="closeLogin()">✕</button>
-    <h3 id="authTitle">Sign in to Printly</h3>
-    <p style="font-size:13px;color:var(--mut);margin-bottom:12px" id="authSub">Save designs, track orders, get GST invoices.</p>
-    <div id="authNameRow" style="display:none">
+  <div class="modal">
+    <button class="modal-x" onclick="closeLogin()" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
+    <h3 class="t-h3" id="authTitle">Sign in to Printly</h3>
+    <p class="t-mut" style="font-size:14px;margin:6px 0 22px" id="authSub">Save designs, track orders, get GST invoices.</p>
+    <div class="field" id="authNameRow" style="display:none">
       <label>Name</label>
       <input type="text" id="authName" placeholder="Your name">
     </div>
-    <label>Email</label>
-    <input type="email" id="authEmail" placeholder="you@company.com">
-    <label>Password</label>
-    <input type="password" id="authPassword" placeholder="At least 8 characters">
-    <button class="sbtn orange" style="margin-top:16px" id="authSubmitBtn" onclick="doLogin()">Sign in →</button>
-    <p style="font-size:12.5px;color:var(--mut);margin-top:12px">
+    <div class="field"><label>Email</label><input type="email" id="authEmail" placeholder="you@company.com"></div>
+    <div class="field"><label>Password</label><input type="password" id="authPassword" placeholder="At least 8 characters"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:8px" id="authSubmitBtn" onclick="doLogin()">Sign in →</button>
+    <p class="t-mut" style="font-size:13px;margin-top:16px;text-align:center">
       <span id="authToggleText">New to Printly?</span>
-      <a href="#" onclick="toggleAuthMode();return false" style="color:var(--orange);font-weight:600" id="authToggleLink">Create an account</a>
+      <a href="#" onclick="toggleAuthMode();return false" class="t-lime" style="font-weight:600" id="authToggleLink">Create an account</a>
     </p>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<footer>
+<!-- ══════════════ FOOTER ══════════════ -->
+<footer class="ftr">
   <div class="wrap">
-    <div><b style="color:#fff">PRINTLY</b> — Your Brand. Your Story. Printed.</div>
-    <div>Pune · Ships all-India · hello@printly.in</div>
+    <div class="ftr-grid">
+      <div>
+        <div class="logo" style="margin-bottom:12px">PRINT<b>LY</b></div>
+        <p class="t-mut" style="font-size:14px;max-width:34ch">
+          Custom streetwear designed by you, printed by us. Pune-based, ships all-India.
+        </p>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <a href="#" onclick="go('products');return false">Products</a>
+        <a href="#" onclick="go('studio');return false">Design Studio</a>
+        <a href="#" onclick="go('cart');return false">Cart</a>
+      </div>
+      <div>
+        <h4>Support</h4>
+        <a href="#" onclick="go('orders');return false">My orders</a>
+        <a href="mailto:hello@printly.in">Contact</a>
+      </div>
+      <div>
+        <h4>The workshop</h4>
+        <p class="t-mut" style="font-size:14px">Pune, Maharashtra<br>Ships all-India</p>
+      </div>
+    </div>
+    <div class="ftr-bottom">
+      <span>© 2026 Printly. Your brand. Your story. Printed.</span>
+      <span>hello@printly.in</span>
+    </div>
   </div>
 </footer>
 
-<script src="js/mockup-data.js"></script>
-<script src="js/data.js"></script>
-<script src="js/mockups.js"></script>
-<script src="js/nav.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/products.js"></script>
-<script src="js/studio.js"></script>
-<script src="js/ai.js"></script>
-<script src="js/cart.js"></script>
-<script src="js/init.js"></script>
+<script src="js/mockup-data.js?v={{V}}"></script>
+<script src="js/data.js?v={{V}}"></script>
+<script src="js/mockups.js?v={{V}}"></script>
+<script src="js/nav.js?v={{V}}"></script>
+<script src="js/auth.js?v={{V}}"></script>
+<script src="js/products.js?v={{V}}"></script>
+<script src="js/studio.js?v={{V}}"></script>
+<script src="js/ai.js?v={{V}}"></script>
+<script src="js/cart.js?v={{V}}"></script>
+<script src="js/init.js?v={{V}}"></script>
 </body>
 </html>

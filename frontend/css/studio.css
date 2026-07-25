@@ -1,0 +1,208 @@
+/* ═══════════════════════════════════════════════════════════════
+   Design Studio — three-column app layout
+   Canvas keeps its 520x560 internal resolution (pa()/mockLayout() are
+   built around it); CSS only scales it, and pos() already divides by the
+   rendered size, so pointer maths stays correct.
+   ═══════════════════════════════════════════════════════════════ */
+
+#v-studio.on{display:flex;flex-direction:column;height:calc(100vh - 65px);overflow:hidden}
+
+.studio{display:flex;flex:1;min-height:0}
+
+/* ── Panels ───────────────────────────────────────────────────── */
+.st-side{
+  width:340px;flex-shrink:0;
+  background:var(--surface-container-low);
+  overflow-y:auto;
+}
+.st-left{border-right:1px solid var(--outline-variant)}
+.st-right{border-left:1px solid var(--outline-variant);display:flex;flex-direction:column}
+.st-pad{padding:20px}
+
+.st-tabs{display:flex;background:var(--surface-container-highest);border-radius:var(--r-full);padding:4px;margin-bottom:20px}
+.st-tab{
+  flex:1;padding:9px 4px;border-radius:var(--r-full);
+  font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--on-surface-variant);transition:background .18s,color .18s;
+}
+.st-tab.on{background:var(--lime);color:var(--on-lime)}
+.st-panel{display:none}
+.st-panel.on{display:block}
+
+.st-group{margin-bottom:22px}
+.st-group > label,.st-lbl{
+  display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--outline);margin-bottom:10px;
+}
+
+/* Product selector */
+.st-product{
+  display:flex;align-items:center;gap:12px;padding:12px;
+  background:var(--surface-container-high);border:1px solid var(--outline-variant);
+  border-radius:var(--r);
+}
+.st-product-ico{
+  width:46px;height:46px;flex-shrink:0;border-radius:var(--r-sm);
+  background:var(--surface-container-highest);
+  display:flex;align-items:center;justify-content:center;color:var(--lime);
+}
+.st-product select{
+  background:transparent;border:none;padding:0;min-height:auto;
+  font-size:15px;font-weight:700;color:var(--primary);cursor:pointer;
+}
+.st-product select:focus{box-shadow:none}
+.st-product select option{background:var(--surface-container-high);color:var(--on-surface)}
+.st-product-sub{font-size:11px;color:var(--on-surface-variant);margin-top:2px}
+
+/* Colour swatches + side toggle */
+.st-colorrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.sw{
+  width:26px;height:26px;border-radius:var(--r-full);cursor:pointer;
+  border:2px solid transparent;box-shadow:0 0 0 1px var(--outline-variant);
+  transition:box-shadow .18s;
+}
+.sw.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--lime)}
+
+.seg{display:flex;background:var(--surface-container-high);border-radius:var(--r-sm);padding:3px;flex-shrink:0}
+.seg button{
+  padding:7px 14px;border-radius:6px;font-size:12px;font-weight:700;
+  color:var(--on-surface-variant);transition:background .18s,color .18s;
+}
+.seg button.on{background:var(--surface-container-highest);color:var(--primary)}
+
+/* AI panels — gradient/solid 1px frame via padding trick */
+.ai-frame{border-radius:var(--r-md);padding:1px;margin-bottom:18px}
+.ai-frame.lime{background:linear-gradient(135deg,var(--lime),var(--pink))}
+.ai-frame.pink{background:var(--pink);transition:box-shadow .18s}
+.ai-frame.pink:hover{box-shadow:var(--glow-pink)}
+.ai-body{background:var(--surface-container-low);border-radius:calc(var(--r-md) - 1px);padding:18px}
+.ai-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.ai-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary)}
+.ai-note{font-size:11px;color:var(--on-surface-variant);margin-top:10px;line-height:1.5}
+
+/* ── Canvas column ────────────────────────────────────────────── */
+.st-stage{
+  flex:1;min-width:0;position:relative;
+  background:var(--surface-container-lowest);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  /* top padding clears the floating toolbar + template card */
+  padding:88px 24px 32px;overflow:auto;
+}
+.st-toolbar{
+  position:absolute;top:20px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:4px;
+  background:rgba(32,31,31,.7);backdrop-filter:blur(8px);
+  border:1px solid var(--outline-variant);border-radius:var(--r);
+  padding:6px;z-index:5;
+}
+.st-toolbar button{
+  width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--r-sm);color:var(--on-surface);transition:background .18s,color .18s;
+}
+.st-toolbar button:hover{background:var(--surface-container-highest);color:var(--lime)}
+.st-toolbar .sep{width:1px;height:22px;background:var(--outline-variant);margin:0 4px}
+
+.st-canvas-wrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;max-height:100%}
+.st-ruler{
+  display:flex;justify-content:space-between;
+  width:min(520px,60vh);font-size:10px;color:var(--outline);
+  font-variant-numeric:tabular-nums;
+  border-bottom:1px solid var(--outline-variant);padding-bottom:3px;
+}
+#teeCanvas{
+  width:min(520px,60vh);height:auto;
+  border-radius:var(--r);touch-action:none;
+  background:#000;
+}
+.st-zonelabel{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--lime);text-transform:uppercase}
+
+/* In normal flow under the measure chips — absolutely positioning this
+   collided with the measure bar and the template FAB. */
+.st-warn{display:none;align-items:center;gap:8px;white-space:nowrap}
+.st-warn.on{display:inline-flex}
+
+/* Top-right, not bottom-right: the bottom of the stage belongs to the
+   measure chips + the outside-print-area warning, which the FAB overlapped. */
+.st-fab{
+  position:absolute;top:20px;right:20px;z-index:5;
+  display:flex;align-items:center;gap:12px;padding:10px 14px;
+  background:var(--surface-container);border:1px solid var(--outline-variant);
+  border-radius:var(--r);transition:border-color .18s;text-align:left;
+}
+.st-fab:hover{border-color:var(--lime)}
+.st-fab-ico{
+  width:38px;height:38px;border-radius:var(--r-full);flex-shrink:0;
+  background:var(--surface-container-highest);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .18s,color .18s;
+}
+.st-fab:hover .st-fab-ico{background:var(--lime);color:var(--on-lime)}
+
+/* Measurement chips under the canvas */
+.measure{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:min(520px,60vh)}
+.mz{
+  font-size:11px;padding:5px 10px;border-radius:var(--r-full);
+  background:var(--surface-container-high);color:var(--on-surface-variant);
+  white-space:nowrap;
+}
+.mz b{color:var(--primary);font-weight:700}
+.mz.ok{background:rgba(200,242,50,.15);color:var(--lime)}
+.mz.bad{background:rgba(206,3,88,.2);color:var(--pink-bright)}
+.mz.quiet{background:transparent;color:var(--outline)}
+
+/* ── Layers + summary ─────────────────────────────────────────── */
+.st-layers{flex:1;overflow-y:auto;padding:20px;min-height:0}
+.layer{
+  display:flex;align-items:center;gap:12px;padding:10px;
+  background:var(--surface-container-low);
+  border:1px solid var(--outline-variant);
+  border-radius:var(--r);margin-bottom:10px;
+  transition:border-color .18s,background .18s;
+}
+.layer.on{background:var(--surface-container-high);border-color:transparent;border-left:4px solid var(--lime)}
+.layer-thumb{
+  width:38px;height:38px;flex-shrink:0;border-radius:var(--r-sm);
+  background:var(--surface-container-highest);border:1px solid var(--outline-variant);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--outline);
+}
+.layer-thumb img{width:100%;height:100%;object-fit:contain}
+.layer-meta{flex:1;min-width:0;cursor:pointer}
+.layer-name{font-size:12px;font-weight:700;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layer-sub{font-size:10px;color:var(--on-surface-variant);margin-top:2px}
+.layer-acts{display:flex;gap:2px;flex-shrink:0}
+.layer-acts button{
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;color:var(--on-surface-variant);font-size:12px;font-weight:700;
+  transition:background .18s,color .18s;
+}
+.layer-acts button:hover{background:var(--surface-container-highest);color:var(--primary)}
+.layer-acts button.del:hover{background:var(--error-container);color:var(--error)}
+
+.st-summary{padding:20px;background:var(--surface-container-high);border-top:1px solid var(--outline-variant)}
+.price-line{display:flex;justify-content:space-between;font-size:13px;padding:5px 0}
+.price-line span:first-child{color:var(--on-surface-variant)}
+.price-line span:last-child{color:var(--primary);font-weight:700}
+.price-line.total{
+  border-top:1px solid var(--outline-variant);margin-top:8px;padding-top:12px;
+  font-size:15px;
+}
+.price-line.total span:first-child{color:var(--primary);font-weight:800}
+.price-line.total span:last-child{color:var(--lime);font-weight:800;font-size:20px}
+.ships{text-align:center;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--on-surface-variant);margin-top:14px}
+
+/* ── Mobile: canvas first, tools below, sticky CTA ───────────── */
+@media(max-width:900px){
+  #v-studio.on{height:auto;overflow:visible}
+  .studio{flex-direction:column}
+  .st-side{width:100%;border:none;overflow:visible}
+  .st-left{order:2;border-top:1px solid var(--outline-variant)}
+  .st-right{order:3;border-top:1px solid var(--outline-variant)}
+  .st-stage{order:1;padding:16px;min-height:60vh}
+  .st-toolbar{position:static;transform:none;margin-bottom:12px}
+  .st-fab{position:static;width:100%;margin-top:16px;justify-content:center}
+  .st-warn{position:static;transform:none;margin-top:12px}
+  #teeCanvas,.st-ruler,.measure{width:min(520px,88vw);max-width:100%}
+  .st-layers{overflow:visible}
+  .st-summary{position:sticky;bottom:0;z-index:20}
+}

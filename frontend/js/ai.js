@@ -3,6 +3,7 @@ async function aiDesign(){
   const brief=document.getElementById('aiBrief').value.trim();
   if(!brief){ toast('Describe your design idea first'); return; }
   const btn=document.getElementById('aiBtn');
+  const btnHTML=btn.innerHTML;
   btn.innerHTML='<span class="spin"></span>Designing…'; btn.disabled=true;
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
@@ -14,7 +15,7 @@ async function aiDesign(){
 Current shirt colour: ${state.shirtColor}.
 Respond ONLY with JSON, no markdown fences, exactly this shape:
 {"shirt":"#hex (best shirt colour for this design)",
- "lines":[{"text":"LINE 1","size":40,"color":"#hex","font":"Space Grotesk|Georgia|Impact|Courier New|Brush Script MT","bold":true},
+ "lines":[{"text":"LINE 1","size":40,"color":"#hex","font":"Archivo Narrow|Georgia|Impact|Courier New|Brush Script MT","bold":true},
           {"text":"line 2","size":24,"color":"#hex","font":"...","bold":false}],
  "reason":"one short sentence"}
 Rules: 1-3 lines max, punchy short text (each under 22 chars), high contrast vs shirt colour, fonts only from the list.`}]
@@ -33,7 +34,7 @@ Rules: 1-3 lines max, punchy short text (each under 22 chars), high contrast vs 
     d.lines.forEach((ln,i)=>{
       state.layers[state.side].push({type:'text',text:ln.text.slice(0,26),
         x:cx,y:startY+i*60,size:Math.min(60,ln.size||34),
-        font:ln.font||'Space Grotesk',color:ln.color||'#0D1F3C',bold:!!ln.bold});
+        font:ln.font||'Archivo Narrow',color:ln.color||'#0D1F3C',bold:!!ln.bold});
     });
     state.sel=-1; renderLayers(); draw();
     toast('✨ '+(d.reason||'AI design applied — edit freely'));
@@ -41,7 +42,7 @@ Rules: 1-3 lines max, punchy short text (each under 22 chars), high contrast vs 
     console.error(err);
     toast('AI is busy — try once more');
   }
-  btn.innerHTML='Generate design with AI'; btn.disabled=false;
+  btn.innerHTML=btnHTML; btn.disabled=false;
 }
 
 /* ═══════════════ AI IMAGE (production backend) ═══════════════ */
@@ -66,6 +67,7 @@ async function aiImage(){
     state.aiTries++;
   }
   const btn=document.getElementById('aiImgBtn');
+  const btnHTML=btn.innerHTML;
   btn.innerHTML='<span class="spin"></span>Generating…'; btn.disabled=true;
   const body=JSON.stringify({prompt:brief,
     style:document.getElementById('aiImgStyle').value,
@@ -100,5 +102,5 @@ async function aiImage(){
     console.error(err);
     toast(err.message.includes('fetch')?'Backend not running — start printly_backend.py':err.message);
   }
-  btn.innerHTML='Generate image'; btn.disabled=false;
+  btn.innerHTML=btnHTML; btn.disabled=false;
 }

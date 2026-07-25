@@ -62,18 +62,47 @@ def _security_headers(resp):
     resp.headers["X-Frame-Options"] = "DENY"
     return resp
 
+def _asset_version():
+    """Cache-busting token derived from the newest css/js mtime.
+
+    The assets below are served with a 30-day max-age, so without this a
+    deployed CSS/JS change would stay invisible to returning visitors for a
+    month. index.html carries `?v=<token>` on every asset URL and is itself
+    sent no-cache, so a changed file always produces a new URL.
+    """
+    newest = 0.0
+    for sub in ("css", "js"):
+        d = os.path.join(FRONTEND_DIR, sub)
+        if not os.path.isdir(d):
+            continue
+        for name in os.listdir(d):
+            try:
+                newest = max(newest, os.path.getmtime(os.path.join(d, name)))
+            except OSError:
+                pass
+    return str(int(newest))
+
+
+_ASSET_V = _asset_version()
+
 # Serve the frontend from the same origin as the API — lets index.html call
 # the backend with a relative path (no hardcoded host), so the same build
 # works unchanged on localhost, an ngrok tunnel, or a real deployed domain.
 @app.route("/")
 def frontend():
-    return send_from_directory(FRONTEND_DIR, "index.html")
+    # Recompute per request in dev so edits show up on reload; in production
+    # the files never change between deploys, so compute it once at import.
+    v = _ASSET_V if os.environ.get("FLASK_ENV") == "production" else _asset_version()
+    with open(os.path.join(FRONTEND_DIR, "index.html"), encoding="utf-8") as f:
+        html = f.read().replace("{{V}}", v)
+    resp = app.make_response(html)
+    resp.headers["Content-Type"] = "text/html; charset=utf-8"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
-# Everything else in frontend/ — css/, js/, mockups/. These are content-stable
-# (a changed design gets a changed filename or a cache-busting query), so a
-# long max-age is safe and keeps repeat visits from re-downloading ~190KB of
-# garment photos. Only paths under frontend/ resolve here; send_from_directory
-# rejects traversal outside it.
+# Everything else in frontend/ — css/, js/, mockups/. Long max-age is safe
+# because css/js URLs are versioned by the token above. Only paths under
+# frontend/ resolve here; send_from_directory rejects traversal outside it.
 @app.route("/<path:filename>")
 def frontend_asset(filename):
     return send_from_directory(FRONTEND_DIR, filename, max_age=60 * 60 * 24 * 30)

@@ -6,4 +6,13 @@ const PRODUCTS = [
   {id:'js', name:'Sports Jersey',      emoji:'🏏', base:799, tiers:[[1,799],[10,599],[50,499],[100,399]], cost:'₹399 at 100+'},
   {id:'tb', name:'Tote Bag',           emoji:'👜', base:399, tiers:[[1,399],[10,299],[50,249],[100,199]], cost:'₹199 at 100+'},
 ];
-const SHIRT_COLORS = ['#FFFFFF','#0D1F3C','#1A1A1A','#B02E2E','#1A8A4A','#E0B23C','#7A5EA8','#D4D8DE'];
+const SHIRT_COLORS = ['#FFFFFF','#111111','#0D1F3C','#B02E2E','#1A8A4A','#C8F232','#CE0358','#D4D8DE'];
+
+/* Shared helper — every render function interpolates user-supplied strings
+   (layer text, product names, order ids) into innerHTML, so escape them.
+   Lives here because data.js loads first. */
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+  ));
+}

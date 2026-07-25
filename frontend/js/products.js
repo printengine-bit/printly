@@ -11,21 +11,21 @@ function jerseyBackPrint(c){
   c.beginPath(); c.moveTo(160,100); c.lineTo(260,153); c.lineTo(360,100); c.stroke();
   // back print
   c.textAlign='center';
-  c.fillStyle='#FFE9A8'; c.font='700 24px "Space Grotesk"';
+  c.fillStyle='#FFE9A8'; c.font='700 24px "Archivo Narrow"';
   c.fillText('PRINTLY',260,205);                        // sponsor 1
-  c.fillStyle='#FFFFFF'; c.font='700 34px "Space Grotesk"';
+  c.fillStyle='#FFFFFF'; c.font='700 34px "Archivo Narrow"';
   c.fillText('SHARMA',260,256);                         // player name
-  c.font='700 132px "Space Grotesk"';
+  c.font='700 132px "Archivo Narrow"';
   c.fillText('10',260,382);                             // number
   c.strokeStyle='rgba(255,255,255,.65)'; c.lineWidth=2;
   c.strokeText('10',260,382);
-  c.fillStyle='#FFE9A8'; c.font='700 20px "Space Grotesk"';
+  c.fillStyle='#FFE9A8'; c.font='700 20px "Archivo Narrow"';
   c.fillText('TATA MOTORS',260,458);                    // sponsor 2
   c.restore();
 }
 function toteArt(c){
   c.save(); c.textAlign='center';
-  c.fillStyle='#0D1F3C'; c.font='700 30px "Space Grotesk"';
+  c.fillStyle='#0D1F3C'; c.font='700 30px "Archivo Narrow"';
   c.fillText('PRINTLY',260,330);
   c.strokeStyle='#E05A1E'; c.lineWidth=3;
   c.beginPath(); c.moveTo(205,348); c.lineTo(315,348); c.stroke();
@@ -33,7 +33,7 @@ function toteArt(c){
 }
 function teeArt(c,txt,col){
   c.save(); c.textAlign='center'; c.fillStyle=col;
-  c.font='700 38px "Space Grotesk"'; c.fillText(txt,260,290);
+  c.font='700 38px "Archivo Narrow"'; c.fillText(txt,260,290);
   c.restore();
 }
 function drawProductThumb(cnv,id){
@@ -61,26 +61,28 @@ function drawProductThumb(cnv,id){
   c.restore();
 }
 function renderProducts(){
-  const g=document.getElementById('productGrid'); g.innerHTML='';
-  PRODUCTS.forEach(p=>{
-    g.innerHTML+=`
-    <div class="pcard">
-      <div class="pimg"><canvas class="pthumb" data-p="${p.id}" width="260" height="280"
-           style="width:auto;height:140px"></canvas></div>
-      <div class="pbody">
-        <h3>${p.name}</h3>
-        ${p.id==='js'?'<div style="font-size:11px;color:var(--mut);margin-top:2px">Back view — name, number & sponsors</div>':''}
-        <div class="pr">₹${p.tiers[3][1]} <span style="font-size:11px;color:var(--mut);font-weight:400">at 100+ pcs</span></div>
-        <div class="tier">1pc ₹${p.tiers[0][1]} · 10+ ₹${p.tiers[1][1]} · 50+ ₹${p.tiers[2][1]}</div>
-        <button class="pbtn" onclick="pickProduct('${p.id}')">Design this →</button>
+  const g=document.getElementById('productGrid');
+  g.innerHTML=PRODUCTS.map(p=>`
+    <div class="card card-hover card-lift pcard">
+      <div class="pcard-img">
+        <canvas class="pthumb" data-p="${p.id}" width="300" height="320"></canvas>
       </div>
-    </div>`;
-  });
+      <div class="pcard-body">
+        <h3 class="pcard-name">${esc(p.name)}</h3>
+        <div class="pcard-price">From <span class="t-lime">₹${p.tiers[3][1].toLocaleString('en-IN')}</span>
+          <span class="t-label t-dim" style="font-weight:400"> at 100+</span></div>
+        <div class="pcard-tiers">1pc ₹${p.tiers[0][1]} · 10+ ₹${p.tiers[1][1]} · 50+ ₹${p.tiers[2][1]}</div>
+        <button class="btn btn-primary btn-sm btn-block" onclick="pickProduct('${p.id}')">
+          Design this <span class="material-symbols-outlined" style="font-size:18px">arrow_forward</span>
+        </button>
+      </div>
+    </div>`).join('');
   document.querySelectorAll('.pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
 }
 function pickProduct(id){
   state.product=PRODUCTS.find(p=>p.id===id);
   document.getElementById('stProduct').value=id;
   toggleJerseyKit();
+  updateProductSub();
   go('studio'); updatePrice(); draw(); toast(state.product.name+' selected');
 }

@@ -7,12 +7,28 @@ function initStudio(){
   SHIRT_COLORS.forEach((c,i)=>{
     const d=document.createElement('div');
     d.className='sw'+(i===0?' on':''); d.style.background=c;
-    if(c==='#FFFFFF')d.style.border='2px solid #D0D4DC';
+    d.title=c;
     d.onclick=()=>{ state.shirtColor=c;
       document.querySelectorAll('.sw').forEach(x=>x.classList.remove('on')); d.classList.add('on'); draw(); };
     sw.appendChild(d);
   });
+  updateProductSub();
   updatePrice();
+}
+/* Left-panel tab switcher (Base / Assets / AI) */
+function studioTab(name){
+  document.querySelectorAll('.st-tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===name));
+  document.querySelectorAll('.st-panel').forEach(p=>p.classList.toggle('on',p.id==='tab-'+name));
+}
+/* Fabric/spec line under the product name */
+const PRODUCT_SPEC={
+  rn:'180 GSM combed cotton', po:'220 GSM pique cotton',
+  hd:'320 GSM fleece blend',  js:'130 GSM dry-fit polyester',
+  tb:'12 oz canvas',
+};
+function updateProductSub(){
+  const el=document.getElementById('stProductSub');
+  if(el) el.textContent=PRODUCT_SPEC[state.product.id]||'Premium fabric';
 }
 function addJerseyKit(){
   const nm=(document.getElementById('jkName').value||'').trim().toUpperCase();
@@ -23,10 +39,10 @@ function addJerseyKit(){
   setSide('back');
   const P=pa(), cx=P.x+P.w/2;
   const L=[];
-  if(s1) L.push({type:'text',text:s1,x:cx,y:P.y+26,size:20,font:'Space Grotesk',color:col,bold:true});
-  if(nm) L.push({type:'text',text:nm,x:cx,y:P.y+68,size:30,font:'Space Grotesk',color:col,bold:true});
-  if(nu) L.push({type:'text',text:nu,x:cx,y:P.y+150,size:96,font:'Space Grotesk',color:col,bold:true});
-  if(s2) L.push({type:'text',text:s2,x:cx,y:P.y+P.h-22,size:18,font:'Space Grotesk',color:col,bold:true});
+  if(s1) L.push({type:'text',text:s1,x:cx,y:P.y+26,size:20,font:'Archivo Narrow',color:col,bold:true});
+  if(nm) L.push({type:'text',text:nm,x:cx,y:P.y+68,size:30,font:'Archivo Narrow',color:col,bold:true});
+  if(nu) L.push({type:'text',text:nu,x:cx,y:P.y+150,size:96,font:'Archivo Narrow',color:col,bold:true});
+  if(s2) L.push({type:'text',text:s2,x:cx,y:P.y+P.h-22,size:18,font:'Archivo Narrow',color:col,bold:true});
   state.layers.back=L; state.sel=-1;
   renderLayers(); draw();
   toast('Jersey back applied — drag anything to fine-tune');
@@ -52,6 +68,7 @@ function studioProductChange(){
     });
   });
   toggleJerseyKit();
+  updateProductSub();
   updatePrice(); draw();
   toast(state.product.name+' — mockup updated');
 }
@@ -186,7 +203,7 @@ function draw(){
   }
   // print area guide
   const P=pa();
-  ctx.setLineDash([6,5]); ctx.strokeStyle='rgba(164,56,0,.6)'; ctx.lineWidth=1.4;
+  ctx.setLineDash([8,8]); ctx.strokeStyle='rgba(200,242,50,.55)'; ctx.lineWidth=2;
   ctx.strokeRect(P.x,P.y,P.w,P.h); ctx.setLineDash([]);
   // layers
   const Ls=state.layers[state.side];
@@ -203,19 +220,22 @@ function draw(){
     ctx.restore();
     if(i===state.sel){
       const b=layerBounds(L);
-      ctx.strokeStyle='#A43800'; ctx.lineWidth=1.6; ctx.setLineDash([4,4]);
-      ctx.strokeRect(b.x,b.y,b.w,b.h); ctx.setLineDash([]);
+      ctx.strokeStyle='#c8f232'; ctx.lineWidth=2;
+      ctx.strokeRect(b.x,b.y,b.w,b.h);
       // live size readout in cm
       const k=pxcm();
-      ctx.fillStyle='#A43800'; ctx.font='600 11px Inter,sans-serif'; ctx.textAlign='center';
-      ctx.fillText(`${(b.w/k).toFixed(1)} × ${(b.h/k).toFixed(1)} cm`, b.x+b.w/2, b.y-7);
+      ctx.fillStyle='#c8f232'; ctx.font='700 11px Inter,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(`${(b.w/k).toFixed(1)} × ${(b.h/k).toFixed(1)} cm`, b.x+b.w/2, b.y-8);
+      // scale handle (bottom-right) — visual affordance for the wheel resize
+      ctx.fillStyle='#c8f232';
+      ctx.fillRect(b.x+b.w-5,b.y+b.h-5,10,10);
       // on-canvas delete badge (top-right corner)
       const bx=b.x+b.w, by=b.y, r=11;
       state._delHit={x:bx,y:by,r:r+3};
       ctx.beginPath(); ctx.arc(bx,by,r,0,Math.PI*2);
-      ctx.fillStyle='#D33A2C'; ctx.fill();
+      ctx.fillStyle='#ce0358'; ctx.fill();
       ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
-      ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.beginPath();
+      ctx.beginPath();
       ctx.moveTo(bx-4,by-4); ctx.lineTo(bx+4,by+4);
       ctx.moveTo(bx+4,by-4); ctx.lineTo(bx-4,by+4); ctx.stroke();
     }
@@ -223,11 +243,11 @@ function draw(){
   // centre snap guides
   const cx=P.x+P.w/2, cy=P.y+P.h/2;
   if(state.guides.v){
-    ctx.strokeStyle='rgba(14,110,140,.85)'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+    ctx.strokeStyle='rgba(255,177,192,.9)'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
     ctx.beginPath(); ctx.moveTo(cx,P.y-24); ctx.lineTo(cx,P.y+P.h+24); ctx.stroke(); ctx.setLineDash([]);
   }
   if(state.guides.h){
-    ctx.strokeStyle='rgba(14,110,140,.85)'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+    ctx.strokeStyle='rgba(255,177,192,.9)'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
     ctx.beginPath(); ctx.moveTo(P.x-24,cy); ctx.lineTo(P.x+P.w+24,cy); ctx.stroke(); ctx.setLineDash([]);
   }
   updateMeasure();
@@ -237,24 +257,30 @@ function draw(){
 function updateMeasure(){
   const box=document.getElementById('measureBar'); if(!box) return;
   const P=pa(), k=pxcm();
-  let html=`<span class="mz"><b>Print area</b> ${P.cmW} × ${P.cmH} cm</span>`;
+  const zone=document.getElementById('zoneLabel');
+  if(zone) zone.textContent=`Primary print zone · ${P.cmW} × ${P.cmH} cm`;
+
+  let html='', outside=false;
   const L=state.layers[state.side][state.sel];
   if(!L){
-    html+=`<span class="mz mut">Select an item to see its size &amp; alignment</span>`;
+    html=`<span class="mz quiet">Select an item to see its size &amp; alignment</span>`;
   }else{
     const b=layerBounds(L);
-    const w=(b.w/k), h=(b.h/k);
-    const cx=P.x+P.w/2, cy=P.y+P.h/2;
-    const dxc=Math.abs(L.x-cx)<1.5, dyc=Math.abs(L.y-cy)<1.5;
-    const outside = b.x<P.x-1||b.y<P.y-1||b.x+b.w>P.x+P.w+1||b.y+b.h>P.y+P.h+1;
-    html+=`<span class="mz"><b>Selected</b> ${w.toFixed(1)} × ${h.toFixed(1)} cm</span>`;
-    html+=`<span class="mz"><b>From top</b> ${((b.y-P.y)/k).toFixed(1)} cm</span>`;
-    html+=dxc?`<span class="mz ok">✓ Centred horizontally</span>`
-             :`<span class="mz warn">↔ Off-centre by ${(Math.abs(L.x-cx)/k).toFixed(1)} cm</span>`;
-    html+=outside?`<span class="mz bad">⚠ Outside print area — will be cropped</span>`:'';
-    html+=`<span class="mz mut">Tap ✕ or press Delete to remove</span>`;
+    const cx=P.x+P.w/2;
+    const centred=Math.abs(L.x-cx)<1.5;
+    outside = b.x<P.x-1||b.y<P.y-1||b.x+b.w>P.x+P.w+1||b.y+b.h>P.y+P.h+1;
+    html+=`<span class="mz"><b>${(b.w/k).toFixed(1)} × ${(b.h/k).toFixed(1)}</b> cm</span>`;
+    html+=`<span class="mz">From top <b>${((b.y-P.y)/k).toFixed(1)}</b> cm</span>`;
+    html+=centred?`<span class="mz ok">Centred</span>`
+                 :`<span class="mz">Off-centre <b>${(Math.abs(L.x-cx)/k).toFixed(1)}</b> cm</span>`;
+    if(outside) html+=`<span class="mz bad">Will be cropped</span>`;
+    html+=`<span class="mz quiet">Scroll to resize · Delete to remove</span>`;
   }
   box.innerHTML=html;
+
+  // The mockup surfaces this as a floating pill rather than an inline chip.
+  const warn=document.getElementById('stWarn');
+  if(warn) warn.classList.toggle('on',outside);
 }
 function alignSel(mode){
   const L=state.layers[state.side][state.sel];
@@ -304,8 +330,8 @@ function drawHeroText(l1,l2,txt,pid){
   const img=mockImgs[pid];
   if(!img||!P){ // fallback centre
     hctx.fillStyle=txt; hctx.textAlign='center';
-    hctx.font='700 40px "Space Grotesk"'; hctx.fillText(l1,180,190);
-    hctx.font='700 26px "Space Grotesk"'; hctx.fillText(l2,180,225);
+    hctx.font='700 40px "Archivo Narrow"'; hctx.fillText(l1,180,190);
+    hctx.font='700 26px "Archivo Narrow"'; hctx.fillText(l2,180,225);
     return;
   }
   const iw=img.naturalWidth, ih=img.naturalHeight;
@@ -313,8 +339,8 @@ function drawHeroText(l1,l2,txt,pid){
   const ox=(360-dw)/2, oy=(380-dh)/2;
   const cx=ox+P.cx*sc, cy=oy+P.cy*sc;
   hctx.fillStyle=txt; hctx.textAlign='center'; hctx.textBaseline='middle';
-  hctx.font='700 34px "Space Grotesk"'; hctx.fillText(l1,cx,cy-14);
-  hctx.font='700 22px "Space Grotesk"'; hctx.fillText(l2,cx,cy+18);
+  hctx.font='700 34px "Archivo Narrow"'; hctx.fillText(l1,cx,cy-14);
+  hctx.font='700 22px "Archivo Narrow"'; hctx.fillText(l2,cx,cy+18);
 }
 function heroLoop(){
   const [l1,l2,shirt,txt,type]=heroSlogans[hi%heroSlogans.length];
@@ -338,8 +364,8 @@ function heroLoop(){
   } else {
     hctx.save(); hctx.scale(360/520,380/560);
     drawGarment(hctx,type,shirt);
-    hctx.font='700 44px "Space Grotesk"'; hctx.fillStyle=txt; hctx.textAlign='center';
-    hctx.fillText(l1,260,280); hctx.font='700 30px "Space Grotesk"'; hctx.fillText(l2,260,325);
+    hctx.font='700 44px "Archivo Narrow"'; hctx.fillStyle=txt; hctx.textAlign='center';
+    hctx.fillText(l1,260,280); hctx.font='700 30px "Archivo Narrow"'; hctx.fillText(l2,260,325);
     hctx.restore();
   }
   hi++;
@@ -377,14 +403,36 @@ function addImage(){
 }
 function renderLayers(){
   const el=document.getElementById('layerList'); const Ls=state.layers[state.side];
-  if(!Ls.length){ el.innerHTML='<div style="font-size:12.5px;color:var(--mut)">Nothing yet — add text, an image, or use AI.</div>'; return; }
-  el.innerHTML='';
-  Ls.forEach((L,i)=>{
-    el.innerHTML+=`<div class="layer" style="${i===state.sel?'border-color:var(--orange)':''}">
-      <b onclick="selLayer(${i})" style="cursor:pointer">${L.type==='text'?'🅣 '+L.text:'🖼 image'}</b>
-      <button onclick="bump(${i},1.15)">A+</button><button onclick="bump(${i},0.87)">A−</button>
-      <button onclick="delLayer(${i})">✕</button></div>`;
-  });
+  if(!Ls.length){
+    el.innerHTML=`<div class="empty" style="padding:32px 8px">
+      <span class="material-symbols-outlined">layers_clear</span>
+      <p style="font-size:13px">Nothing on this side yet.<br>Add text, a logo, or use AI.</p>
+    </div>`;
+    return;
+  }
+  // Newest on top, matching how the canvas stacks them.
+  el.innerHTML=Ls.map((L,i)=>{
+    const isText=L.type==='text';
+    const thumb=isText
+      ? `<span class="material-symbols-outlined" style="font-size:18px">title</span>`
+      : (L.img ? `<img src="${L.img.src}" alt="">` : `<span class="material-symbols-outlined" style="font-size:18px">image</span>`);
+    const name=isText ? esc(L.text) : 'Image layer';
+    const sub=isText ? `Text · ${Math.round(L.size)}px` : `Image · ${Math.round(L.w)}×${Math.round(L.h)}`;
+    return `<div class="layer${i===state.sel?' on':''}">
+      <div class="layer-thumb">${thumb}</div>
+      <div class="layer-meta" onclick="selLayer(${i})">
+        <div class="layer-name">${name}</div>
+        <div class="layer-sub">${sub}</div>
+      </div>
+      <div class="layer-acts">
+        <button onclick="bump(${i},1.15)" title="Bigger">+</button>
+        <button onclick="bump(${i},0.87)" title="Smaller">−</button>
+        <button class="del" onclick="delLayer(${i})" title="Remove">
+          <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+        </button>
+      </div>
+    </div>`;
+  }).reverse().join('');
 }
 function selLayer(i){ state.sel=i; renderLayers(); draw(); }
 function bump(i,f){
