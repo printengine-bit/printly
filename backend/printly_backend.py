@@ -69,6 +69,15 @@ def _security_headers(resp):
 def frontend():
     return send_from_directory(FRONTEND_DIR, "index.html")
 
+# Everything else in frontend/ — css/, js/, mockups/. These are content-stable
+# (a changed design gets a changed filename or a cache-busting query), so a
+# long max-age is safe and keeps repeat visits from re-downloading ~190KB of
+# garment photos. Only paths under frontend/ resolve here; send_from_directory
+# rejects traversal outside it.
+@app.route("/<path:filename>")
+def frontend_asset(filename):
+    return send_from_directory(FRONTEND_DIR, filename, max_age=60 * 60 * 24 * 30)
+
 @app.route("/api/health")
 def health():
     try:
