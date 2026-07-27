@@ -41,6 +41,38 @@ def _row_id_from_display(order_id):
         return None
 
 
+def _validate_sizes(items):
+    """Check each cart line's size breakdown is sane and matches its qty.
+
+    Returns an error string, or None if everything is fine. Lines without a
+    `sizes` key are allowed through — orders placed before sizing existed
+    don't have one, and rejecting them would break re-ordering.
+    """
+    if not isinstance(items, list):
+        return "Cart is empty or invalid."
+    for it in items:
+        if not isinstance(it, dict):
+            return "Cart is empty or invalid."
+        sizes = it.get("sizes")
+        if sizes is None:
+            continue
+        if not isinstance(sizes, dict) or not sizes:
+            return "That order's size breakdown is invalid."
+        subtotal = 0
+        for label, n in sizes.items():
+            if not isinstance(label, str) or not label.strip() or len(label) > 12:
+                return "That order's size breakdown is invalid."
+            if isinstance(n, bool) or not isinstance(n, int) or n < 0 or n > 9999:
+                return "That order's size breakdown is invalid."
+            subtotal += n
+        if subtotal < 1:
+            return "Pick at least one size before ordering."
+        qty = it.get("qty")
+        if isinstance(qty, int) and qty != subtotal:
+            return "Sizes don't add up to the quantity ordered."
+    return None
+
+
 @orders_bp.route("/orders", methods=["POST"])
 @login_required
 def create_order():
@@ -49,6 +81,14 @@ def create_order():
     total = d.get("total")
     if not items or not isinstance(total, (int, float)) or total <= 0:
         return jsonify(ok=False, error="Cart is empty or invalid."), 400
+
+    # The size breakdown is what the print floor actually works from, so
+    # reject anything malformed here rather than letting a bad order reach
+    # production. (Money totals stay client-trusted until Razorpay lands —
+    # tracked separately.)
+    err = _validate_sizes(items)
+    if err:
+        return jsonify(ok=False, error=err), 400
 
     # NOTE: total is client-computed for now — there's no real payment yet.
     # The moment Razorpay is wired in, this MUST be recomputed server-side

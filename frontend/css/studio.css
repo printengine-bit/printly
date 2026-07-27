@@ -179,6 +179,31 @@
 .layer-acts button:hover{background:var(--surface-container-highest);color:var(--primary)}
 .layer-acts button.del:hover{background:var(--error-container);color:var(--error)}
 
+/* ── Size breakdown ───────────────────────────────────────────── */
+.size-grid{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.size-row{display:flex;align-items:center;gap:6px}
+.size-key{
+  width:42px;flex-shrink:0;font-size:12px;font-weight:700;
+  letter-spacing:.04em;color:var(--on-surface-variant);
+}
+.size-step{
+  width:32px;height:32px;flex-shrink:0;border-radius:var(--r-sm);
+  background:var(--surface-container-highest);color:var(--on-surface);
+  font-size:16px;font-weight:700;line-height:1;
+  display:flex;align-items:center;justify-content:center;transition:.15s;
+}
+.size-step:hover{background:var(--lime);color:var(--on-lime)}
+.size-num{
+  flex:1;min-width:0;min-height:32px;padding:6px 8px;text-align:center;
+  font-size:13px;font-weight:700;
+  background:var(--surface-container-low);border:1px solid var(--outline-variant);
+  border-radius:var(--r-sm);color:var(--on-surface);
+  -moz-appearance:textfield;
+}
+.size-num::-webkit-outer-spin-button,
+.size-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.size-num:focus{border-color:var(--lime);box-shadow:0 0 0 2px rgba(200,242,50,.25);outline:none}
+
 .st-summary{padding:20px;background:var(--surface-container-high);border-top:1px solid var(--outline-variant)}
 .price-line{display:flex;justify-content:space-between;font-size:13px;padding:5px 0}
 .price-line span:first-child{color:var(--on-surface-variant)}
@@ -207,6 +232,10 @@
   .seg button{min-height:44px}
   .layer-acts button{width:40px;height:40px}
   .sw{width:34px;height:34px}
+  /* Size steppers get thumb-sized on touch. */
+  .size-step{width:44px;height:44px;font-size:18px}
+  .size-num{min-height:44px;font-size:15px}
+  .size-grid{gap:8px}
   .st-fab{position:static;width:100%;margin-top:16px;justify-content:center}
   .st-warn{position:static;transform:none;margin-top:12px}
   #teeCanvas,.st-ruler,.measure{width:min(520px,88vw);max-width:100%}

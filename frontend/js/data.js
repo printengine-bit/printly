@@ -16,3 +16,34 @@ function esc(s){
     {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
   ));
 }
+
+/* ── Sizing ───────────────────────────────────────────────────────
+   Tote bags are one-size; everything else is sized apparel. Keeping the
+   list here (rather than on each product) means a new product only opts
+   out if it genuinely has no sizes. */
+const SIZES=['S','M','L','XL','2XL','3XL'];
+const ONE_SIZE=['tb'];
+const ONE_SIZE_KEY='One size';
+
+function sizeKeys(pid){ return ONE_SIZE.includes(pid) ? [ONE_SIZE_KEY] : SIZES; }
+function isSized(pid){ return !ONE_SIZE.includes(pid); }
+
+/* A fresh breakdown for a product. Defaults the whole opening quantity to
+   M (or the single size) so the studio still has a sensible starting
+   price rather than showing ₹0. */
+function newSizeBreakdown(pid='rn', total=25){
+  const keys=sizeKeys(pid);
+  const b={};
+  keys.forEach(k=>b[k]=0);
+  b[keys.includes('M') ? 'M' : keys[0]] = total;
+  return b;
+}
+function sizeTotal(sizes){
+  return Object.values(sizes||{}).reduce((s,n)=>s+(+n||0),0);
+}
+/* "5×S · 10×M" — skips empty sizes. Used in cart, orders and admin. */
+function sizeSummary(sizes){
+  if(!sizes) return '';
+  return Object.entries(sizes).filter(([,n])=>+n>0)
+    .map(([k,n])=>`${n}×${k}`).join(' · ');
+}

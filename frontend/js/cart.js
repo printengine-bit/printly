@@ -4,10 +4,43 @@ function unitPrice(p,q){
   p.tiers.forEach(([min,pr])=>{ if(q>=min)u=pr; });
   return u;
 }
+/* Render the per-size steppers. These ARE the quantity input — the total
+   is derived from them, so there's no second control that can disagree. */
+function renderSizeGrid(){
+  const el=document.getElementById('sizeGrid'); if(!el) return;
+  const keys=sizeKeys(state.product.id);
+  el.innerHTML=keys.map(k=>`
+    <div class="size-row">
+      <span class="size-key">${esc(k)}</span>
+      <button class="size-step" onclick="bumpSize('${esc(k)}',-1)" aria-label="Fewer ${esc(k)}">−</button>
+      <input class="size-num" type="number" min="0" max="9999" inputmode="numeric"
+             value="${state.sizes[k]||0}" oninput="setSize('${esc(k)}',this.value)" aria-label="${esc(k)} quantity">
+      <button class="size-step" onclick="bumpSize('${esc(k)}',1)" aria-label="More ${esc(k)}">+</button>
+    </div>`).join('');
+}
+function bumpSize(k,d){
+  state.sizes[k]=Math.max(0,(+state.sizes[k]||0)+d);
+  renderSizeGrid(); updatePrice();
+}
+function setSize(k,v){
+  const n=Math.max(0,Math.min(9999,parseInt(v,10)||0));
+  state.sizes[k]=n;
+  updatePrice();          // don't re-render: it would fight the caret
+}
+/* Reset the breakdown when the product changes, since size keys differ
+   (a tote has no S/M/L). Carries the existing total over. */
+function resetSizesForProduct(){
+  const keys=sizeKeys(state.product.id);
+  const existing=Object.keys(state.sizes);
+  const sameShape = existing.length===keys.length && keys.every(k=>k in state.sizes);
+  if(!sameShape) state.sizes=newSizeBreakdown(state.product.id, sizeTotal(state.sizes)||25);
+  renderSizeGrid();
+}
+
 function updatePrice(){
-  const q=+document.getElementById('qtyRange').value;
+  const q=sizeTotal(state.sizes);
   document.getElementById('qtyLabel').textContent=q;
-  const p=state.product, u=unitPrice(p,q), sub=u*q;
+  const p=state.product, u=unitPrice(p,Math.max(1,q)), sub=u*q;
   const gst=Math.round(sub*0.05), ship=q>=50?0:99, tot=sub+gst+ship;
   document.getElementById('priceBox').innerHTML=`
     <div class="price-line"><span>Unit price</span><span>₹${u.toLocaleString('en-IN')}</span></div>
@@ -29,12 +62,15 @@ function setCartCount(){
 function addToCart(){
   const hasDesign=state.layers.front.length||state.layers.back.length;
   if(!hasDesign){ toast('Add a design first — text, logo or AI'); return; }
-  const q=+document.getElementById('qtyRange').value;
+  const q=sizeTotal(state.sizes);
+  if(q<1){ toast('Pick at least one size'); return; }
   const p=state.product, u=unitPrice(p,q);
   // JPEG, not PNG — this thumbnail is stored inside the order row, and a
   // full-size PNG of the canvas is ~10x bigger for no visible benefit.
   const thumb=captureThumb();
-  state.cart.push({pid:p.id,product:p.name,qty:q,unit:u,total:u*q,shirt:state.shirtColor,
+  // Drop empty sizes — production only needs the ones actually ordered.
+  const sizes=Object.fromEntries(Object.entries(state.sizes).filter(([,n])=>+n>0));
+  state.cart.push({pid:p.id,product:p.name,qty:q,sizes,unit:u,total:u*q,shirt:state.shirtColor,
     layers:JSON.parse(JSON.stringify({front:state.layers.front.map(stripImg),back:state.layers.back.map(stripImg)})),
     thumb});
   setCartCount();
@@ -58,6 +94,8 @@ function renderCart(){
       <div class="cart-meta">
         <div class="cart-name">${esc(c.product)}</div>
         <div class="cart-sub">${c.qty} pcs × ₹${c.unit.toLocaleString('en-IN')}</div>
+        ${c.sizes?`<div class="size-chips">${Object.entries(c.sizes)
+          .map(([k,n])=>`<span class="size-chip"><b>${n}</b>×${esc(k)}</span>`).join('')}</div>`:''}
         <button class="btn btn-quiet btn-sm" style="margin-top:12px" onclick="rmCart(${i})">
           <span class="material-symbols-outlined" style="font-size:16px">delete</span> Remove
         </button>
@@ -189,6 +227,9 @@ async function renderOrders(){
       <div class="t-dim" style="font-size:12px">
         Placed ${fmtDate(o.created)} · ${o.items.length} item${o.items.length===1?'':'s'}
       </div>
+      ${o.items.filter(it=>it&&it.sizes).map(it=>
+        `<div class="t-mut" style="font-size:12px;margin-top:6px">
+           ${esc(it.product||'')} — ${esc(sizeSummary(it.sizes))}</div>`).join('')}
       ${tracker(o.status)}
     </div>`).join('');
 }
@@ -215,11 +256,15 @@ async function renderAdmin(){
       <div class="stat-pill"><span>Total value</span><b>₹${revenue.toLocaleString('en-IN')}</b></div>
     </div>
     <table class="table">
-      <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Stage</th><th>Action</th></tr></thead>
+      <thead><tr><th>Order</th><th>Customer</th><th>To print</th><th>Total</th><th>Stage</th><th>Action</th></tr></thead>
       <tbody>`+
     orders.map(o=>`<tr>
       <td data-label="Order"><span><b>${esc(o.id)}</b><br><span class="t-dim" style="font-size:11px">${fmtDate(o.created)}</span></span></td>
       <td data-label="Customer"><span>${esc(o.customer)}<br><span class="t-dim" style="font-size:11px">${esc(o.customer_email||'')}</span></span></td>
+      <td data-label="To print"><span>${o.items.map(it=>
+          `${esc(it.product||'item')}<br><span class="t-lime" style="font-size:11px">${
+            it.sizes ? esc(sizeSummary(it.sizes)) : (it.qty||'?')+' pcs (no size recorded)'}</span>`
+        ).join('<br>')}</span></td>
       <td data-label="Total"><b>₹${o.total.toLocaleString('en-IN')}</b></td>
       <td data-label="Stage">${badgeFor(o.status)}</td>
       <td data-label="Action">${o.status<STAGES.length-1

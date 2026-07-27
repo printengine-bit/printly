@@ -142,6 +142,12 @@ details.acc ul{padding-left:18px}
 .cart-meta{flex:1;min-width:0}
 .cart-name{font-family:var(--ff-display);font-size:18px;font-weight:800;text-transform:uppercase}
 .cart-sub{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--on-surface-variant);margin-top:4px}
+.size-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.size-chip{
+  font-size:11px;padding:4px 9px;border-radius:var(--r-full);
+  background:var(--surface-container-highest);color:var(--on-surface-variant);
+}
+.size-chip b{color:var(--lime)}
 .cart-line-total{text-align:right;flex-shrink:0}
 .cart-line-total b{font-family:var(--ff-display);font-size:20px;color:var(--lime)}
 .summary-card{position:sticky;top:88px}

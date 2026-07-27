@@ -70,4 +70,9 @@ let state = {
   guides:{v:false,h:false},
   cart:[],
   aiTries:0,
+  /* Per-size quantities are the single source of truth for how many pieces
+     are being ordered — total quantity is derived from them, never stored
+     separately. Bulk apparel orders are always a breakdown (5×S, 10×M …),
+     so a lone "quantity" field can't express a real order. */
+  sizes:newSizeBreakdown(),
 };

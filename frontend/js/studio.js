@@ -13,6 +13,7 @@ function initStudio(){
     sw.appendChild(d);
   });
   updateProductSub();
+  resetSizesForProduct();
   updatePrice();
 }
 /* Left-panel tab switcher (Base / Assets / AI) */
@@ -69,6 +70,7 @@ function studioProductChange(){
   });
   toggleJerseyKit();
   updateProductSub();
+  resetSizesForProduct();   // size keys differ (a tote is one-size)
   updatePrice(); draw();
   toast(state.product.name+' — mockup updated');
 }
