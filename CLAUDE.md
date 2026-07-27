@@ -8,45 +8,71 @@ after trying alternatives (see "Decisions already made" below).
 
 ## File map
 
-- `frontend/index.html` — the ENTIRE frontend. One file: `<style>`,
-  two `<script>` blocks (first one defines `window.PRINTLY_MOCKS` —
-  the base64 mockup photo data + print-area coordinates; second one
-  is all app logic), and the HTML. There is no build step and no
-  bundler — edit this file directly. Also served BY the backend at
-  `/` (see below) — `const BACKEND` resolves to a relative path when
-  served that way, so API calls work unchanged on localhost, a tunnel,
-  or a real domain.
-- `backend/printly_backend.py` — Flask app entry point (port 5001):
-  serves `index.html` at `/`, does AI image generation, and registers
-  the `auth`/`orders` blueprints below. Not just an AI add-on anymore —
-  accounts, sessions, and orders all need it running now too.
-- `backend/db.py` — shared SQLite (WAL mode) connection helper +
-  schema for all tables (`generations`, `users`, `orders`,
-  `login_attempts`, `ai_inflight`). Get a connection via `get_db()`,
-  never `sqlite3.connect()` directly, so WAL/timeout settings stay
-  consistent everywhere.
-- `backend/auth.py` — signup/login/logout/me, session cookies,
-  DB-backed (not in-memory — matters once gunicorn runs multiple
-  worker processes) per-email and per-IP login rate limiting.
-- `backend/orders.py` — place/list orders, admin pipeline. Order IDs
-  (`PL-1001` etc.) are a pure display computation over the real
-  integer primary key, never stored — don't reintroduce a
-  string-primary-key scheme here, it raced under concurrent inserts.
-- `assets/mockups/` — the 8 raw source photos (reference only). The
-  frontend does NOT read from this folder at runtime — it uses the
-  base64 copies already embedded in `window.PRINTLY_MOCKS` inside
-  `index.html`. If you replace a mockup photo, you must re-encode it
-  to base64 and swap it into that JS object yourself.
+Still no build step and no bundler — plain files, edited directly. What
+changed is that they're now *separate* files instead of one 311KB
+`index.html`, because Flask serves the whole `frontend/` directory.
 
-## Conventions to follow when editing `index.html`
+**Frontend** (`frontend/`)
+- `index.html` — markup only: shared header/footer plus one `<section
+  class="view">` per page. `const BACKEND` resolves to a relative path,
+  so API calls work unchanged on localhost, a tunnel or a real domain.
+  Asset URLs carry `?v={{V}}`, substituted server-side — see the
+  caching note below.
+- `css/printly.css` — "Streetwear Black" tokens (surfaces, acid lime
+  `#c8f232`, hot pink `#ce0358`) + shared components. `css/studio.css`
+  is the three-column studio, `css/pages.css` the rest.
+- `js/` loads in order and shares global scope (classic scripts, not
+  modules): `mockup-data.js` → `data.js` → `mockups.js` → `nav.js` →
+  `auth.js` → `products.js` → `studio.js` → `ai.js` → `cart.js` →
+  `designs.js` → `pdp.js` → `init.js`. Order matters for top-level
+  side effects; `esc()` lives in `data.js` because it loads first.
+- `mockups/*.jpg` — the 8 garment photos, loaded at runtime.
+  `window.PRINTLY_MOCKS` (in `js/mockup-data.js`) holds paths to these,
+  keeping the `rn` / `rn_back` key naming. Replacing a photo is now just
+  dropping in a new file — no base64 re-encoding.
+
+**Backend** (`backend/`)
+- `printly_backend.py` — Flask entry point (port 5001): serves the
+  frontend, AI image generation, and registers every blueprint below.
+  Accounts, orders, designs and reviews all need it running.
+- `db.py` — shared SQLite (WAL) connection + schema for `generations`,
+  `users`, `orders`, `login_attempts`, `ai_inflight`, `saved_designs`,
+  `reviews`. Always `get_db()`, never `sqlite3.connect()` directly.
+  New columns on existing tables need `_add_column()` — `CREATE TABLE
+  IF NOT EXISTS` silently skips them.
+- `auth.py` — signup/login/logout/me, session cookies, DB-backed
+  per-email and per-IP rate limiting (in-memory wouldn't work once
+  gunicorn forks workers).
+- `orders.py` — place/list orders, admin pipeline, loyalty award. Order
+  IDs (`PL-1001`) are computed from the integer PK, never stored — don't
+  reintroduce a string primary key, it raced under concurrent inserts.
+- `designs.py` — saved designs + templates. `reviews.py` — verified-
+  purchase-gated reviews. `shipping.py` — pincode delivery estimate.
+- `assets/mockups/` — the raw source photos (reference only; the
+  runtime copies live in `frontend/mockups/`).
+
+## Asset caching — read before changing CSS/JS
+
+Assets are served with a 30-day `max-age`. `index.html` is served
+`no-cache` and its `{{V}}` placeholders are replaced with a token derived
+from the newest css/js mtime, so a changed file gets a new URL. **If you
+add a new CSS or JS file, give its `<link>`/`<script>` a `?v={{V}}`** or
+returning visitors will keep the stale copy for a month.
+
+## Conventions to follow when editing the frontend
 
 - **State lives in one object**: `state = {user, product, shirtColor,
-  side, layers:{front,back}, sel, guides, cart, aiTries}`. Orders are NOT
-  in client state — they're server-persisted (`backend/orders.py`),
-  fetched fresh via `/api/orders/mine` / `/api/admin/orders` each time
-  those views render. `state.user` is rehydrated from the server session
-  on load via `checkSession()`, not stored durably client-side.
+  side, layers:{front,back}, sel, guides, cart, aiTries, designId,
+  pdp}`. Orders and saved designs are NOT in client state — they're
+  server-persisted and fetched fresh each time those views render.
+  `state.user` is rehydrated from the server session on load via
+  `checkSession()`, not stored durably client-side.
   Don't create parallel state — extend this object.
+- **Escape interpolated strings.** Every render function builds
+  `innerHTML` from server/user data; run it through `esc()` (`data.js`).
+- **Thumbnails use `captureThumb()`, never `cv.toDataURL()` directly.**
+  `draw()` paints the print-area guide and selection chrome, and a raw
+  capture bakes that editor UI into cart/design/order thumbnails.
 - **Mockup key naming**: `<productId>` for front, `<productId>_back`
   for back (e.g. `rn`, `rn_back`, `js`, `js_back`). `mockKey(pid)`
   resolves which one to use based on `state.side` — any new product
@@ -69,18 +95,27 @@ after trying alternatives (see "Decisions already made" below).
 
 ## Known-good state
 
-Last verified working (via Playwright, pixel-sampled): all 4 products
-render distinct front AND back real photo mockups, recolor keeps
-folds intact with a pure black background, jersey kit text renders on
-the back print area, the on-canvas delete badge removes the selected
-element, and enlarged print areas allow a jersey number to be sized
-up significantly before hitting the print-area edge.
+Verified in-browser against the running backend: all 5 products render
+distinct front AND back photo mockups with multiply-blend recolor over a
+pure-black background; jersey kit lays out on the back print area; the
+on-canvas delete badge and `fitWidth()` behave; AI image generation
+places on canvas; a design with text + image layers survives save →
+hard reload → restore; checkout awards loyalty points and shows the
+6-stage tracker; a non-admin gets 403 from the admin API. At 375px:
+zero horizontal overflow and zero sub-44px tap targets across all 8
+views. Load test: 100 concurrent users, ~1,640 requests, 0 failures,
+p95 ≈220ms.
 
 ## Not yet done (don't assume these exist)
 
-Razorpay integration (order totals are still client-trusted — MUST
-recompute server-side from a price table the moment this lands),
-verified-email/password-reset flow, actual live deployment (code and
-Railway steps are ready in README, but nobody's created the hosting
-account or pointed a domain at it yet), PWA manifest/service worker.
-See README "Known pending items" for details.
+- **Razorpay** — order totals are still client-trusted. The server MUST
+  recompute from a price table the moment payment lands.
+- **Size selection** — the app never captures a garment size. For bulk
+  orders this really wants a per-size breakdown (5×S, 10×M …), which
+  touches the cart and order shapes. The PDP shows a size *chart* and a
+  selector, but it is presentational and does not reach the cart.
+- **GST** — flat 5%. Real Indian apparel GST is 5% under ₹1,000 and 12%
+  at or above, so higher-priced items are likely under-collecting.
+- **Loyalty redemption** — points accrue on a placeholder rule
+  (1 per ₹100) with no way to spend them and no agreed policy.
+- Verified-email / password reset, live deployment, PWA. See README.
