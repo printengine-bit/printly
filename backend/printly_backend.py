@@ -88,7 +88,10 @@ def _asset_version():
     sent no-cache, so a changed file always produces a new URL.
     """
     newest = 0.0
-    for sub in ("css", "js"):
+    # Both apps. Leaving admin/ out meant an edited admin stylesheet kept
+    # its old token, so the 30-day cached copy was served and the change
+    # simply never appeared — the same trap this function exists to avoid.
+    for sub in ("css", "js", "admin/css", "admin/js"):
         d = os.path.join(FRONTEND_DIR, sub)
         if not os.path.isdir(d):
             continue
@@ -116,6 +119,38 @@ def frontend():
     resp.headers["Content-Type"] = "text/html; charset=utf-8"
     resp.headers["Cache-Control"] = "no-cache"
     return resp
+
+# ── Admin panel ──────────────────────────────────────────────────
+# A separate app, not a section of the storefront: its own markup, CSS and
+# JS under frontend/admin/, so admin code never ships to a customer and
+# storefront code never ships to staff. Same process and same session
+# cookie — being same-origin is what makes one login work for both.
+#
+# These rules are declared before the storefront catch-all for readability;
+# Werkzeug actually orders by specificity, not source order, so `/admin`
+# beats `/<path:filename>` regardless. That's load-bearing and tested.
+ADMIN_DIR = os.path.join(FRONTEND_DIR, "admin")
+
+
+@app.route("/admin")
+@app.route("/admin/")
+def admin_shell():
+    v = _ASSET_V if os.environ.get("FLASK_ENV") == "production" else _asset_version()
+    with open(os.path.join(ADMIN_DIR, "index.html"), encoding="utf-8") as f:
+        html = f.read().replace("{{V}}", v)
+    resp = app.make_response(html)
+    resp.headers["Content-Type"] = "text/html; charset=utf-8"
+    resp.headers["Cache-Control"] = "no-cache"
+    # The panel is never a search result and never framed.
+    resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+    resp.headers["X-Frame-Options"] = "DENY"
+    return resp
+
+
+@app.route("/admin/<path:filename>")
+def admin_asset(filename):
+    return send_from_directory(ADMIN_DIR, filename, max_age=60 * 60 * 24 * 30)
+
 
 # Everything else in frontend/ — css/, js/, mockups/. Long max-age is safe
 # because css/js URLs are versioned by the token above. Only paths under
@@ -154,8 +189,10 @@ from designs import designs_bp
 from reviews import reviews_bp
 from shipping import shipping_bp
 from artwork import artwork_bp
+from admin_api import admin_bp
 app.register_blueprint(auth_bp)
 app.register_blueprint(artwork_bp)
+app.register_blueprint(admin_bp)
 app.register_blueprint(orders_bp)
 app.register_blueprint(designs_bp)
 app.register_blueprint(reviews_bp)

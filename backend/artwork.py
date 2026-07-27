@@ -14,7 +14,8 @@ import secrets
 
 from flask import Blueprint, request, jsonify, send_from_directory
 
-from auth import login_required, admin_required
+from auth import login_required
+from permissions import require
 from db import DB_PATH
 
 artwork_bp = Blueprint("artwork", __name__, url_prefix="/api/artwork")
@@ -76,7 +77,7 @@ def upload_artwork():
 
 
 @artwork_bp.route("/<name>")
-@admin_required
+@require("production")
 def get_artwork(name):
     """Admin-only: this is the production file, and the customer already has
     their design under My Designs. The filename is unguessable regardless."""

@@ -7,7 +7,8 @@ import json
 from flask import Blueprint, request, jsonify, session
 
 from db import get_db
-from auth import login_required, admin_required
+from auth import login_required
+from permissions import require
 
 designs_bp = Blueprint("designs", __name__, url_prefix="/api/designs")
 
@@ -143,7 +144,7 @@ def delete_design(design_id):
 
 
 @designs_bp.route("/<int:design_id>/promote", methods=["POST"])
-@admin_required
+@require("content")
 def promote_to_template(design_id):
     """Turn one of your own saved designs into a public starter template.
 

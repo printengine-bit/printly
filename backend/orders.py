@@ -4,7 +4,8 @@ import re
 from flask import Blueprint, request, jsonify, session
 
 from db import get_db
-from auth import login_required, admin_required
+from auth import login_required
+from permissions import require
 
 orders_bp = Blueprint("orders", __name__, url_prefix="/api")
 
@@ -90,11 +91,11 @@ def _clean_shipping(d):
 
 
 def _log_event(db, order_id, kind, from_status=None, to_status=None, note=""):
-    db.execute(
-        """INSERT INTO order_events(order_id,actor_id,kind,from_status,to_status,note)
-           VALUES(?,?,?,?,?,?)""",
-        (order_id, session.get("user_id"), kind, from_status, to_status, note[:500]),
-    )
+    """Order history lives in the shared audit_log — see admin_api.log().
+    order_events is legacy: still written by nothing, kept only until the
+    backfill is confirmed good in production."""
+    from admin_api import log
+    log(db, "order", order_id, kind, from_status, to_status, note)
 
 
 def _row_id_from_display(order_id):
@@ -196,7 +197,7 @@ def my_orders():
 
 
 @orders_bp.route("/admin/orders")
-@admin_required
+@require("orders")
 def admin_orders():
     """List view. Returns a per-line *summary* rather than the cart payload:
     each line carries a base64 mockup thumbnail (~58KB), so sending the full
@@ -231,7 +232,7 @@ def _load_order(order_id):
 
 
 @orders_bp.route("/admin/orders/<order_id>")
-@admin_required
+@require("orders")
 def admin_order_detail(order_id):
     row, db = _load_order(order_id)
     if not row:
@@ -240,19 +241,19 @@ def admin_order_detail(order_id):
     o["customer"] = row["customer_name"]
     o["customer_email"] = row["customer_email"]
     events = db.execute(
-        """SELECT e.*, u.name AS actor_name FROM order_events e
-           LEFT JOIN users u ON u.id = e.actor_id
-           WHERE e.order_id=? ORDER BY e.id""", (row["id"],)
+        """SELECT a.*, u.name AS actor_name FROM audit_log a
+           LEFT JOIN users u ON u.id = a.actor_id
+           WHERE a.entity_type='order' AND a.entity_id=? ORDER BY a.id""", (row["id"],)
     ).fetchall()
     o["events"] = [{
-        "kind": e["kind"], "from": e["from_status"], "to": e["to_status"],
+        "kind": e["action"], "from": e["from_val"], "to": e["to_val"],
         "note": e["note"], "actor": e["actor_name"], "created": e["created"],
     } for e in events]
     return jsonify(ok=True, order=o)
 
 
 @orders_bp.route("/admin/orders/<order_id>/status", methods=["POST"])
-@admin_required
+@require("orders")
 def set_order_status(order_id):
     """Set the stage directly, in either direction. Forward-only meant a
     mis-click couldn't be undone; the audit trail is what keeps that honest."""
@@ -274,7 +275,7 @@ def set_order_status(order_id):
 
 
 @orders_bp.route("/admin/orders/<order_id>/cancel", methods=["POST"])
-@admin_required
+@require("orders")
 def cancel_order(order_id):
     """Cancel or restore. The stage is left untouched so a restored order
     picks up exactly where it was rather than resetting to Proof sent."""
@@ -294,7 +295,7 @@ def cancel_order(order_id):
 
 
 @orders_bp.route("/admin/orders/<order_id>/note", methods=["POST"])
-@admin_required
+@require("orders")
 def add_order_note(order_id):
     row, db = _load_order(order_id)
     if not row:

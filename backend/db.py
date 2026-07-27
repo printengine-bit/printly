@@ -51,6 +51,43 @@ def init_db():
         items_json TEXT NOT NULL,
         created TEXT DEFAULT CURRENT_TIMESTAMP,
         updated TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    # Single-row business identity. Delivery notes and shipping labels are
+    # unprintable without it, and the GSTIN stays blank until Printly is
+    # actually registered — see the note on doc_prefix below.
+    c.execute("""CREATE TABLE IF NOT EXISTS company(
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        legal_name TEXT NOT NULL DEFAULT '',
+        trade_name TEXT NOT NULL DEFAULT 'Printly',
+        address TEXT NOT NULL DEFAULT '',
+        city TEXT NOT NULL DEFAULT '',
+        state TEXT NOT NULL DEFAULT '',
+        pincode TEXT NOT NULL DEFAULT '',
+        phone TEXT NOT NULL DEFAULT '',
+        email TEXT NOT NULL DEFAULT '',
+        gstin TEXT NOT NULL DEFAULT '',
+        -- Document numbering. Without a GSTIN these are delivery *notes*,
+        -- not tax challans, so the series is ours to define.
+        doc_prefix TEXT NOT NULL DEFAULT 'PL',
+        challan_next INTEGER NOT NULL DEFAULT 1,
+        updated TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("INSERT OR IGNORE INTO company(id) VALUES(1)")
+
+    # Everything a staff member does, to anything — append-only. Supersedes
+    # order_events (backfilled below) so there's one place to answer "who
+    # changed this, and when".
+    c.execute("""CREATE TABLE IF NOT EXISTS audit_log(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER,
+        actor_id INTEGER REFERENCES users(id),
+        action TEXT NOT NULL,
+        from_val TEXT,
+        to_val TEXT,
+        note TEXT NOT NULL DEFAULT '',
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_audit_entity ON audit_log(entity_type, entity_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_audit_created ON audit_log(created)")
+
     # Every admin action on an order, append-only. Stage changes are no longer
     # forward-only, so without this a mistaken edit would be indistinguishable
     # from the real history — and "who marked this delivered?" is exactly the
@@ -109,8 +146,40 @@ def init_db():
     # Cancellation is orthogonal to the 6 pipeline stages, not a 7th one:
     # keeping `status` intact means a restored order resumes where it was.
     _add_column(c, "orders", "cancelled", "INTEGER NOT NULL DEFAULT 0")
+    # Staff accounts are created by the owner, who sets the first password
+    # and hands it over — there's no email transport to send an invite with.
+    _add_column(c, "users", "must_change_password", "INTEGER NOT NULL DEFAULT 0")
+    _add_column(c, "users", "active", "INTEGER NOT NULL DEFAULT 1")
+
+    # 'admin' predates the role matrix in permissions.py, where the
+    # full-access role is 'owner'. Rename in place so the existing account
+    # keeps working instead of silently losing access.
+    c.execute("UPDATE users SET role='owner' WHERE role='admin'")
+
+    _backfill_audit(c)
     c.commit()
     c.close()
+
+
+def _backfill_audit(conn):
+    """Copy order_events into audit_log once, so the switch to one log
+    doesn't lose the history already recorded against orders.
+
+    Guarded on there being no order rows in audit_log rather than on a
+    version flag — re-running init_db() must not duplicate the history.
+    order_events is left in place until the new log has been verified in
+    production; dropping it is a separate, deliberate step.
+    """
+    already = conn.execute(
+        "SELECT 1 FROM audit_log WHERE entity_type='order' LIMIT 1"
+    ).fetchone()
+    if already:
+        return
+    conn.execute("""
+        INSERT INTO audit_log(entity_type,entity_id,actor_id,action,from_val,to_val,note,created)
+        SELECT 'order', order_id, actor_id, kind,
+               CAST(from_status AS TEXT), CAST(to_status AS TEXT), note, created
+        FROM order_events ORDER BY id""")
 
 
 def _add_column(conn, table, column, decl):

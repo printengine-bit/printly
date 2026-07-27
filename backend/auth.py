@@ -9,6 +9,7 @@ from flask import Blueprint, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from db import get_db
+from permissions import is_staff
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
@@ -31,11 +32,14 @@ def login_required(fn):
 
 
 def admin_required(fn):
+    """Any staff member. Kept for routes that predate the module matrix;
+    new endpoints should use `require("<module>")` from permissions.py so
+    access is scoped to what the role actually does."""
     @wraps(fn)
     def wrapped(*a, **kw):
         if not session.get("user_id"):
             return jsonify(ok=False, error="Sign in required"), 401
-        if session.get("role") != "admin":
+        if not is_staff(session.get("role")):
             return jsonify(ok=False, error="Admin access required"), 403
         return fn(*a, **kw)
     return wrapped
@@ -43,6 +47,13 @@ def admin_required(fn):
 
 def _user_public(row):
     d = {"id": row["id"], "name": row["name"], "email": row["email"], "role": row["role"]}
+    # Columns from later migrations — a row read against an older schema
+    # shouldn't be able to break sign-in.
+    for col, default in (("must_change_password", 0), ("active", 1)):
+        try:
+            d[col] = bool(row[col])
+        except (IndexError, KeyError):
+            d[col] = bool(default)
     # Added by a later migration, so it may be absent on a row read from an
     # older connection/schema — don't let that break sign-in.
     try:
@@ -68,7 +79,15 @@ def signup():
     if db.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
         return jsonify(ok=False, error="An account with this email already exists."), 400
 
-    role = "admin" if ADMIN_EMAIL and email == ADMIN_EMAIL.strip().lower() else "customer"
+    # ADMIN_EMAIL is a bootstrap, not an ongoing rule: it exists so the very
+    # first owner can exist at all. Once one owner is in the table, every
+    # further staff account is created inside the panel — otherwise anyone
+    # who learns the address could claim the role by signing up.
+    role = "customer"
+    if ADMIN_EMAIL and email == ADMIN_EMAIL.strip().lower():
+        has_owner = db.execute("SELECT 1 FROM users WHERE role='owner' LIMIT 1").fetchone()
+        if not has_owner:
+            role = "owner"
     cur = db.execute(
         "INSERT INTO users(email,password_hash,name,role) VALUES(?,?,?,?)",
         (email, generate_password_hash(password), name, role),
@@ -107,6 +126,13 @@ def login():
         db.execute("INSERT INTO login_attempts(email, ip) VALUES(?,?)", (email, request.remote_addr))
         db.commit()
         return jsonify(ok=False, error="Invalid email or password."), 401
+    # Deactivated staff: same generic message as a bad password, so the form
+    # doesn't confirm which accounts exist.
+    try:
+        if not row["active"]:
+            return jsonify(ok=False, error="Invalid email or password."), 401
+    except (IndexError, KeyError):
+        pass
 
     session.clear()
     session["user_id"] = row["id"]
@@ -118,6 +144,30 @@ def login():
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     session.clear()
+    return jsonify(ok=True)
+
+
+@auth_bp.route("/change-password", methods=["POST"])
+@login_required
+def change_password():
+    """Also the exit route from a handed-over staff password: the panel
+    blocks on this until must_change_password clears."""
+    d = request.get_json(force=True, silent=True) or {}
+    current = d.get("current") or ""
+    fresh = d.get("password") or ""
+    if len(fresh) < 8:
+        return jsonify(ok=False, error="New password must be at least 8 characters."), 400
+    db = get_db()
+    row = db.execute("SELECT * FROM users WHERE id=?", (session["user_id"],)).fetchone()
+    if not row or not check_password_hash(row["password_hash"], current):
+        return jsonify(ok=False, error="Current password is wrong."), 401
+    if check_password_hash(row["password_hash"], fresh):
+        return jsonify(ok=False, error="Pick a password you haven't used here."), 400
+    db.execute(
+        "UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?",
+        (generate_password_hash(fresh), row["id"]),
+    )
+    db.commit()
     return jsonify(ok=True)
 
 

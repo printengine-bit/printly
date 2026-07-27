@@ -35,6 +35,14 @@ changed is that they're now *separate* files instead of one 311KB
   keeping the `rn` / `rn_back` key naming. Replacing a photo is now just
   dropping in a new file — no base64 re-encoding.
 
+**Admin panel** (`frontend/admin/`) — a *separate app* served at `/admin`,
+sharing no file with the storefront: `index.html`, `css/admin.css`,
+`js/{api,theme,dashboard,settings,app}.js`. Staff never download studio
+code and customers never download admin code. It reuses the storefront's
+session cookie (same origin), so there is only one login. The palette
+tokens are deliberately duplicated rather than imported — same design
+language, independent files, so neither app can break the other.
+
 **Backend** (`backend/`)
 - `printly_backend.py` — Flask entry point (port 5001): serves the
   frontend, AI image generation, and registers every blueprint below.
@@ -44,9 +52,18 @@ changed is that they're now *separate* files instead of one 311KB
   `reviews`. Always `get_db()`, never `sqlite3.connect()` directly.
   New columns on existing tables need `_add_column()` — `CREATE TABLE
   IF NOT EXISTS` silently skips them.
-- `auth.py` — signup/login/logout/me, session cookies, DB-backed
-  per-email and per-IP rate limiting (in-memory wouldn't work once
-  gunicorn forks workers).
+- `auth.py` — signup/login/logout/me/change-password, session cookies,
+  DB-backed per-email and per-IP rate limiting (in-memory wouldn't work
+  once gunicorn forks workers). `ADMIN_EMAIL` is a **bootstrap only**: it
+  grants `owner` to the first signup with that address and is ignored once
+  an owner exists, so learning the address later gets you nothing.
+- `permissions.py` — the role→module matrix, and the `require("<module>")`
+  decorator every admin route should use. The panel's sidebar is built
+  from the same matrix the API enforces, so a menu can't offer something
+  the server would refuse. `owner_required` guards staff and settings.
+- `admin_api.py` — panel session, dashboard, `pulse` (polled live data),
+  company profile, staff CRUD, audit log. `log()` here is how any staff
+  action gets recorded.
 - `orders.py` — place/list orders, admin pipeline, loyalty award. Order
   IDs (`PL-1001`) are computed from the integer PK, never stored — don't
   reintroduce a string primary key, it raced under concurrent inserts.
@@ -78,11 +95,13 @@ changed is that they're now *separate* files instead of one 311KB
 
 ## Asset caching — read before changing CSS/JS
 
-Assets are served with a 30-day `max-age`. `index.html` is served
-`no-cache` and its `{{V}}` placeholders are replaced with a token derived
-from the newest css/js mtime, so a changed file gets a new URL. **If you
-add a new CSS or JS file, give its `<link>`/`<script>` a `?v={{V}}`** or
-returning visitors will keep the stale copy for a month.
+Assets are served with a 30-day `max-age`. Both `index.html` files are
+served `no-cache` and their `{{V}}` placeholders are replaced with a token
+derived from the newest mtime across `css/`, `js/`, `admin/css/` and
+`admin/js/`, so a changed file gets a new URL. **If you add a new CSS or JS
+file, give its `<link>`/`<script>` a `?v={{V}}`; if you add a new asset
+*directory*, add it to `_asset_version()`** — the admin folder was missed
+once and an edited stylesheet silently kept serving the cached copy.
 
 ## Conventions to follow when editing the frontend
 
