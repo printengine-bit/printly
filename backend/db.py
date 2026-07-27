@@ -30,6 +30,13 @@ def close_db(exc=None):
 
 
 def init_db():
+    # Create the parent directory if it isn't there. On a host with a mounted
+    # volume it always is — but if DB_PATH is misconfigured, sqlite's error is
+    # just "unable to open database file", which reads like corruption rather
+    # than a wrong path.
+    parent = os.path.dirname(os.path.abspath(DB_PATH))
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     c = sqlite3.connect(DB_PATH)
     c.execute("PRAGMA journal_mode=WAL")
     c.execute("""CREATE TABLE IF NOT EXISTS generations(

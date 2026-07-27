@@ -1,0 +1,4 @@
+# Railway's builder (Nixpacks) looks for a requirements.txt at the repo
+# root, not in backend/. This defers to the real list so there's still only
+# one place to add a dependency.
+-r backend/requirements.txt

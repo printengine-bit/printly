@@ -166,7 +166,11 @@ def health():
         db_ok = True
     except Exception:
         db_ok = False
-    return jsonify(ok=db_ok, db="ok" if db_ok else "error", provider=PROVIDER)
+    # 503, not 200-with-ok:false. This is the platform's healthcheck target,
+    # and a healthcheck that only ever returns 200 can't fail a deploy — an
+    # unwritable volume would roll out looking perfectly healthy.
+    return jsonify(ok=db_ok, db="ok" if db_ok else "error",
+                   provider=PROVIDER), (200 if db_ok else 503)
 
 REPLICATE_TOKEN = os.environ.get("REPLICATE_API_TOKEN", "")
 GEMINI_KEY      = os.environ.get("GEMINI_API_KEY", "")
