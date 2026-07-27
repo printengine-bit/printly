@@ -72,10 +72,19 @@ function addToCart(){
   const sizes=Object.fromEntries(Object.entries(state.sizes).filter(([,n])=>+n>0));
   state.cart.push({pid:p.id,product:p.name,qty:q,sizes,unit:u,total:u*q,shirt:state.shirtColor,
     layers:JSON.parse(JSON.stringify({front:state.layers.front.map(stripImg),back:state.layers.back.map(stripImg)})),
+    // The measured print spec, and the print-ready artwork itself. Both have
+    // to be captured HERE: the canvas still holds the live Image objects,
+    // which stripImg() is about to drop. `_art` is held in memory only and
+    // uploaded at checkout — see uploadArt() — so abandoned carts don't
+    // leave orphaned files on the volume.
+    spec:{front:printSpec('front'), back:printSpec('back')},
+    _art:{front:capturePrintArt('front'), back:capturePrintArt('back')},
     thumb});
   setCartCount();
   toast('Added to cart 🛒');
 }
+/* The cart line only needs enough to redraw a preview; the printable copy of
+   an uploaded image goes to the artwork endpoint instead of into the order. */
 function stripImg(L){ if(L.type==='img'){const c={...L}; delete c.img; c.note='uploaded image'; return c;} return L; }
 const FREE_SHIP_OVER=10000;
 function renderCart(){
@@ -110,6 +119,7 @@ function renderCart(){
     <div>${lines}
       ${away>0?`<p class="t-dim" style="font-size:12px;margin-top:8px">
         Add ₹${away.toLocaleString('en-IN')} more for free shipping.</p>`:''}
+      ${shipForm()}
     </div>
     <div class="card card-pad summary-card">
       <h3 class="t-label" style="margin-bottom:16px">Order summary</h3>
@@ -132,20 +142,102 @@ function renderCart(){
   </div>`;
 }
 function rmCart(i){ state.cart.splice(i,1); setCartCount(); renderCart(); }
+
+/* ── Delivery address ────────────────────────────────────────────
+   Kept in state (not localStorage) and re-filled from the last order, so a
+   repeat customer doesn't retype it. Nothing here is optional except line 2
+   — an order with no address can't be shipped, which is exactly the hole
+   this closes. */
+const SHIP_FIELDS=[
+  ['name','Full name','text','given-name'],
+  ['phone','Mobile number','tel','tel'],
+  ['line1','Flat / house / street','text','address-line1'],
+  ['line2','Area, landmark (optional)','text','address-line2'],
+  ['city','City','text','address-level2'],
+  ['state','State','text','address-level1'],
+  ['pincode','PIN code','text','postal-code'],
+];
+state.ship = state.ship || {name:'',phone:'',line1:'',line2:'',city:'',state:'',pincode:''};
+
+function shipForm(){
+  return `<div class="card card-pad ship-form">
+    <h3 class="t-label" style="margin-bottom:4px">Delivery address</h3>
+    <p class="t-dim" style="font-size:12px;margin-bottom:16px">Where should we send the parcel?</p>
+    <div class="ship-grid">${SHIP_FIELDS.map(([k,label,type,auto])=>`
+      <label class="field ${k==='line1'||k==='line2'?'span2':''}">
+        <span>${label}</span>
+        <input id="ship_${k}" type="${type}" autocomplete="${auto}"
+               value="${esc(state.ship[k]||'')}" oninput="state.ship['${k}']=this.value"
+               ${k==='pincode'?'inputmode="numeric" maxlength="6"':''}
+               ${k==='phone'?'inputmode="numeric" maxlength="10"':''}>
+      </label>`).join('')}</div>
+  </div>`;
+}
+
+/* Mirrors _clean_shipping() in orders.py. The server is the authority — this
+   exists so the customer sees the problem next to the field, not as a toast
+   after a round trip. */
+function validateShip(){
+  const s=state.ship;
+  if(!(s.name||'').trim()) return 'Add the name the parcel should go to.';
+  if(!/^[6-9]\d{9}$/.test((s.phone||'').trim())) return 'Enter a 10-digit Indian mobile number.';
+  if(!(s.line1||'').trim()) return 'Add the street address.';
+  if(!(s.city||'').trim()||!(s.state||'').trim()) return 'Add the city and state.';
+  if(!/^[1-9]\d{5}$/.test((s.pincode||'').trim())) return 'Enter a valid 6-digit PIN code.';
+  return null;
+}
+
+/* Push each line's print-ready PNGs to the artwork endpoint and swap the
+   in-memory data URIs for URLs. Returns the order-safe cart. */
+async function uploadArt(){
+  const out=[];
+  for(const line of state.cart){
+    const {_art, ...rest}=line;
+    const art={};
+    for(const side of ['front','back']){
+      if(!_art||!_art[side]) continue;
+      const res=await fetch(BACKEND+'/api/artwork',{method:'POST',
+        headers:{'Content-Type':'application/json'},credentials:'include',
+        body:JSON.stringify({data:_art[side]})});
+      const d=await res.json();
+      if(!d.ok) throw new Error(d.error||'Artwork upload failed');
+      art[side]=d.url;
+    }
+    out.push({...rest, art});
+  }
+  return out;
+}
+
 async function checkout(tot){
   if(!state.user){ openLogin(); toast('Sign in to place your order'); return; }
+  const bad=validateShip();
+  if(bad){ toast(bad); document.getElementById('ship_'+shipFieldFor(bad))?.focus(); return; }
+  const btn=document.querySelector('.summary-card .btn-primary');
+  if(btn){ btn.disabled=true; btn.textContent='Placing order…'; }
   try{
+    const items=await uploadArt();
     const res=await fetch(BACKEND+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},
-      credentials:'include', body:JSON.stringify({items:state.cart,total:tot})});
+      credentials:'include', body:JSON.stringify({items,total:tot,shipping:state.ship})});
     const d=await res.json();
-    if(!d.ok){ toast(d.error||'Could not place order'); return; }
+    if(!d.ok){ toast(d.error||'Could not place order'); renderCart(); return; }
     state.cart=[]; setCartCount();
     // Loyalty points are awarded server-side, so the cached user is now
     // stale — refresh it before the orders page reads the balance.
     if(d.points_earned) await checkSession();
     go('orders');
     toast('Order '+d.order.id+' placed'+(d.points_earned?` · +${d.points_earned} points`:'')+' 🎉');
-  }catch(err){ toast('Could not reach the server — try again.'); }
+  }catch(err){
+    toast(err&&err.message ? err.message : 'Could not reach the server — try again.');
+    renderCart();
+  }
+}
+/* Which field to focus for a given validation message. */
+function shipFieldFor(msg){
+  if(msg.includes('name')) return 'name';
+  if(msg.includes('mobile')) return 'phone';
+  if(msg.includes('street')) return 'line1';
+  if(msg.includes('city')) return 'city';
+  return 'pincode';
 }
 const STAGES=['Proof sent','Approved','Printing','Quality check','Shipped','Delivered'];
 function badgeFor(s){
@@ -232,51 +324,4 @@ async function renderOrders(){
            ${esc(it.product||'')} — ${esc(sizeSummary(it.sizes))}</div>`).join('')}
       ${tracker(o.status)}
     </div>`).join('');
-}
-async function renderAdmin(){
-  const el=document.getElementById('adminBody');
-  el.innerHTML='<div class="empty">Loading…</div>';
-  let orders=[];
-  try{
-    const res=await fetch(BACKEND+'/api/admin/orders',{credentials:'include'});
-    if(res.status===401||res.status===403){ el.innerHTML='<div class="empty"><span class="material-symbols-outlined">lock</span><br>Admin access required.</div>'; return; }
-    const d=await res.json();
-    if(d.ok) orders=d.orders;
-  }catch(err){ el.innerHTML='<div class="empty">Could not reach the server.</div>'; return; }
-  if(!orders.length){ el.innerHTML='<div class="empty"><span class="material-symbols-outlined">print</span><br>No orders in the pipeline yet.<br>Orders placed from the cart appear here.</div>'; return; }
-
-  const inProd=orders.filter(o=>o.status>0&&o.status<STAGES.length-1).length;
-  const today=orders.filter(o=>isToday(o.created)).length;
-  const revenue=orders.reduce((s,o)=>s+o.total,0);
-
-  el.innerHTML=`
-    <div class="grid grid-3" style="margin-bottom:28px;max-width:640px">
-      <div class="stat-pill"><span>Orders today</span><b>${today}</b></div>
-      <div class="stat-pill"><span>In production</span><b>${inProd}</b></div>
-      <div class="stat-pill"><span>Total value</span><b>₹${revenue.toLocaleString('en-IN')}</b></div>
-    </div>
-    <table class="table">
-      <thead><tr><th>Order</th><th>Customer</th><th>To print</th><th>Total</th><th>Stage</th><th>Action</th></tr></thead>
-      <tbody>`+
-    orders.map(o=>`<tr>
-      <td data-label="Order"><span><b>${esc(o.id)}</b><br><span class="t-dim" style="font-size:11px">${fmtDate(o.created)}</span></span></td>
-      <td data-label="Customer"><span>${esc(o.customer)}<br><span class="t-dim" style="font-size:11px">${esc(o.customer_email||'')}</span></span></td>
-      <td data-label="To print"><span>${o.items.map(it=>
-          `${esc(it.product||'item')}<br><span class="t-lime" style="font-size:11px">${
-            it.sizes ? esc(sizeSummary(it.sizes)) : (it.qty||'?')+' pcs (no size recorded)'}</span>`
-        ).join('<br>')}</span></td>
-      <td data-label="Total"><b>₹${o.total.toLocaleString('en-IN')}</b></td>
-      <td data-label="Stage">${badgeFor(o.status)}</td>
-      <td data-label="Action">${o.status<STAGES.length-1
-        ? `<button class="btn btn-primary btn-sm" onclick="advance('${o.id}')">→ ${STAGES[o.status+1]}</button>`
-        : '<span class="badge b-done">Done</span>'}</td>
-    </tr>`).join('')+'</tbody></table>';
-}
-async function advance(orderId){
-  try{
-    const res=await fetch(BACKEND+'/api/admin/orders/'+orderId+'/advance',{method:'POST',credentials:'include'});
-    const d=await res.json();
-    if(!d.ok){ toast(d.error||'Could not advance order'); return; }
-    renderAdmin(); toast(d.order.id+' → '+STAGES[d.order.status]);
-  }catch(err){ toast('Could not reach the server — try again.'); }
 }

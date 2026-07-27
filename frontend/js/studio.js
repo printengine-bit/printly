@@ -201,7 +201,12 @@ function draw(clean){
   const L=mockLayout(state.product.id);
   if(L){
     const mock=getRecoloredMock(L.key,state.shirtColor);
-    if(mock) ctx.drawImage(mock,L.ox,L.oy,L.dw,L.dh);
+    if(mock){
+      // Stage first: the mockup's own background is transparent now, so
+      // without this a dark garment sits on a dark page and disappears.
+      drawStage(ctx,state.shirtColor,L.ox,L.oy,L.dw,L.dh);
+      ctx.drawImage(mock,L.ox,L.oy,L.dw,L.dh);
+    }
     else drawGarment(ctx,state.product.id,state.shirtColor);
   } else {
     drawGarment(ctx,state.product.id,state.shirtColor);
@@ -357,16 +362,12 @@ function heroLoop(){
     const mock=getRecoloredMock(type,shirt);
     const iw=img.naturalWidth, ih=img.naturalHeight;
     const sc=Math.min(360/iw,380/ih), dw=iw*sc, dh=ih*sc;
-    // draw to temp canvas, knock out black bg, then blit to hero
-    const tmp=document.createElement('canvas'); tmp.width=360; tmp.height=380;
-    const t=tmp.getContext('2d');
-    t.drawImage(mock||img,(360-dw)/2,(380-dh)/2,dw,dh);
-    const d=t.getImageData(0,0,360,380), p=d.data;
-    for(let i=0;i<p.length;i+=4){
-      if(p[i]<40&&p[i+1]<40&&p[i+2]<40) p[i+3]=0;   // black → transparent
-    }
-    t.putImageData(d,0,0);
-    hctx.drawImage(tmp,0,0);
+    const ox=(360-dw)/2, oy=(380-dh)/2;
+    // The knockout used to happen here, on the *recolored* pixels, which
+    // also ate any garment dark enough to look like the backdrop. It now
+    // lives in getRecoloredMock() where it can key off the original photo.
+    drawStage(hctx,shirt,ox,oy,dw,dh,14);
+    hctx.drawImage(mock||img,ox,oy,dw,dh);
     drawHeroText(l1,l2,txt,type);
   } else {
     hctx.save(); hctx.scale(360/520,380/560);
@@ -389,7 +390,9 @@ function drawAiPreview(){
   if(mock){
     const iw=mock.width||mock.naturalWidth, ih=mock.height||mock.naturalHeight;
     const s=Math.min(c.width/iw,c.height/ih);
-    x.drawImage(mock,(c.width-iw*s)/2,(c.height-ih*s)/2,iw*s,ih*s);
+    const ox=(c.width-iw*s)/2, oy=(c.height-ih*s)/2;
+    drawStage(x,'#111111',ox,oy,iw*s,ih*s,14);
+    x.drawImage(mock,ox,oy,iw*s,ih*s);
   }
   x.textAlign='center';
   x.fillStyle='#c8f232'; x.font='800 30px "Archivo Narrow"';
@@ -470,6 +473,125 @@ function captureThumb(type='image/jpeg', quality=0.7){
   const data=cv.toDataURL(type,quality);
   draw();                           // restore the editing view
   return data;
+}
+
+/* ── print-ready export ──────────────────────────────────────────
+   captureThumb() gives a picture of a t-shirt; production needs the
+   artwork alone, on transparency, at a resolution worth printing. This
+   renders just the print area, scaled up from the 520×560 editor space,
+   with no garment, guides or selection chrome.
+
+   Resolution is derived from the print zone's real width in cm, not from a
+   fixed pixel count — a tote's small zone and a hoodie's full front then
+   come out at the same physical quality instead of the small one being
+   needlessly huge. PRINT_MAX_PX is only a memory backstop: at 200 DPI a
+   38cm zone is already an 11-megapixel canvas.
+
+   ⚠️ 200 DPI, not the 300 the home page advertises. 300 would put a
+   photographic print over both the browser's comfortable canvas size and
+   the 5MB upload cap. Either raise the ceiling deliberately or fix the
+   copy — don't let the two drift. */
+const PRINT_DPI = 200;
+const PRINT_MAX_PX = 3600;
+/* Raw bytes an encoded artwork file may reach. Sits under artwork.py's 5MB
+   cap with room for base64's 4/3 inflation on the way up. */
+const PRINT_BUDGET = 3.5 * 1024 * 1024;
+
+function dataUrlBytes(u){
+  const i = u.indexOf(',') + 1;
+  const pad = u.endsWith('==') ? 2 : u.endsWith('=') ? 1 : 0;
+  return Math.floor((u.length - i) * 3 / 4) - pad;
+}
+
+/* Encode a print canvas as small as it can go without giving up quality
+   unnecessarily.
+
+   PNG first, always: a text-and-logo design is a few hundred KB lossless,
+   and that's the common case. Only when PNG blows the budget — which is
+   what a photographic AI generation does, ~8.7MB at full print size — do we
+   fall back to WebP, which carries alpha (so the removed background
+   survives) at roughly a sixth of the bytes. Last resort is scaling down,
+   because a slightly smaller print file beats a checkout that fails. */
+function encodePrintArt(canvas){
+  const png = canvas.toDataURL('image/png');
+  if(dataUrlBytes(png) <= PRINT_BUDGET) return png;
+
+  const webp = canvas.toDataURL('image/webp', 0.92);
+  // Browsers that can't encode WebP silently hand back a PNG data URL.
+  if(webp.startsWith('data:image/webp')){
+    if(dataUrlBytes(webp) <= PRINT_BUDGET) return webp;
+    const leaner = canvas.toDataURL('image/webp', 0.8);
+    if(dataUrlBytes(leaner) <= PRINT_BUDGET) return leaner;
+  }
+
+  let best = webp.startsWith('data:image/webp') ? webp : png;
+  const type = webp.startsWith('data:image/webp') ? 'image/webp' : 'image/png';
+  for(const scale of [0.75, 0.55, 0.4]){
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(canvas.width*scale));
+    c.height = Math.max(1, Math.round(canvas.height*scale));
+    const x = c.getContext('2d');
+    x.imageSmoothingQuality = 'high';
+    x.drawImage(canvas, 0, 0, c.width, c.height);
+    best = c.toDataURL(type, 0.88);
+    if(dataUrlBytes(best) <= PRINT_BUDGET) return best;
+  }
+  return best;   // still over: let the server reject it with a real message
+}
+
+function capturePrintArt(side){
+  const prev = state.side;
+  state.side = side;                      // pa()/mockLayout() read state.side
+  const layers = state.layers[side] || [];
+  if(!layers.length){ state.side = prev; return null; }
+
+  const P = pa();
+  const targetW = (P.cmW / 2.54) * PRINT_DPI;
+  const scale = Math.min(targetW, PRINT_MAX_PX) / P.w;
+  const c = document.createElement('canvas');
+  c.width = Math.round(P.w * scale);
+  c.height = Math.round(P.h * scale);
+  const x = c.getContext('2d');
+  // Translate print-area origin to 0,0 so editor coordinates map straight in.
+  x.setTransform(scale, 0, 0, scale, -P.x*scale, -P.y*scale);
+
+  layers.forEach(L=>{
+    if(L.type==='text'){
+      x.font=`${L.bold?'700':'400'} ${L.size}px "${L.font}"`;
+      x.fillStyle=L.color; x.textAlign='center'; x.textBaseline='middle';
+      x.fillText(L.text,L.x,L.y);
+    } else if(L.type==='img' && L.img){
+      x.drawImage(L.img,L.x-L.w/2,L.y-L.h/2,L.w,L.h);
+    }
+  });
+  state.side = prev;
+  return encodePrintArt(c);
+}
+
+/* What the print floor needs in writing: every layer's real-world size and
+   placement, in cm, measured from the top-left of the print area. */
+function printSpec(side){
+  const prev = state.side;
+  state.side = side;
+  const P = pa(), k = pxcm();
+  const spec = (state.layers[side]||[]).map(L=>{
+    const b = layerBounds(L);
+    return {
+      kind: L.type,
+      text: L.type==='text' ? L.text : null,
+      font: L.type==='text' ? L.font : null,
+      color: L.type==='text' ? L.color : null,
+      w: +(b.w/k).toFixed(1), h: +(b.h/k).toFixed(1),
+      fromTop: +((b.y-P.y)/k).toFixed(1),
+      fromLeft: +((b.x-P.x)/k).toFixed(1),
+      // Anything hanging outside the print area gets trimmed on the press —
+      // production needs to know before it runs, not after.
+      cropped: b.x<P.x-1 || b.y<P.y-1 || b.x+b.w>P.x+P.w+1 || b.y+b.h>P.y+P.h+1,
+    };
+  });
+  const zone = {w:P.cmW, h:P.cmH};
+  state.side = prev;
+  return spec.length ? {zone, layers:spec} : null;
 }
 function selLayer(i){ state.sel=i; renderLayers(); draw(); }
 function bump(i,f){

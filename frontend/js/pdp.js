@@ -8,7 +8,10 @@
 
 state.pdp = {id:null, side:'front', color:'#FFFFFF', size:'M'};
 
-const SIZES=['S','M','L','XL','2XL','3XL'];
+/* SIZES comes from data.js. It must NOT be re-declared here: these are
+   classic scripts sharing one global scope, so a duplicate `const` is a
+   parse error that silently discards this entire file — the whole product
+   detail page stops existing, with nothing in the console to say why. */
 
 /* Chest is half-circumference laid flat, which is how Indian apparel size
    charts are normally quoted. Values differ per fit. */
@@ -169,7 +172,10 @@ function drawPdp(){
     if(!mock){ drawGarment(c,p.id,state.pdp.color); return; }
     const iw=mock.width||mock.naturalWidth, ih=mock.height||mock.naturalHeight;
     const s=Math.min(cnv.width/iw,cnv.height/ih);
-    c.drawImage(mock,(cnv.width-iw*s)/2,(cnv.height-ih*s)/2,iw*s,ih*s);
+    const ox=(cnv.width-iw*s)/2, oy=(cnv.height-ih*s)/2;
+    // Thumbnails are small, so scale the corner radius with the canvas.
+    drawStage(c,state.pdp.color,ox,oy,iw*s,ih*s,cnv.width<120?6:16);
+    c.drawImage(mock,ox,oy,iw*s,ih*s);
   };
   paint(document.getElementById('pdpCanvas'),key);
   document.querySelectorAll('.pdp-tc').forEach(cnv=>{

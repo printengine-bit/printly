@@ -16,7 +16,18 @@ function loadMocks(cb){
 function hexToRgb(h){
   h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
 }
-/* build a recolored mockup canvas (multiply blend on black-bg photo) */
+/* Build a recolored mockup canvas.
+
+   Two things happen per pixel, both keyed off the ORIGINAL photo:
+   1. Recolor — white fabric multiplied by the target colour, so folds and
+      shadows survive (don't replace this with a flat fill).
+   2. Background keyed to transparent. The source photos are shot on black,
+      and leaving that black opaque is what made a black tee vanish into a
+      dark page. With it keyed out the garment floats, and whatever draws it
+      can put a contrasting stage behind — see stageFill().
+
+   Alpha ramps across 24–56 rather than switching at a threshold, otherwise
+   the garment gets a hard jagged edge where the photo's antialiasing was. */
 function getRecoloredMock(pid,color){
   const key=pid+'|'+color;
   if(mockCache[key]) return mockCache[key];
@@ -24,21 +35,49 @@ function getRecoloredMock(pid,color){
   const w=img.naturalWidth,h=img.naturalHeight;
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const x=c.getContext('2d'); x.drawImage(img,0,0);
-  if(color!=='#FFFFFF'){
-    const [tr,tg,tb]=hexToRgb(color);
-    const d=x.getImageData(0,0,w,h), p=d.data;
-    for(let i=0;i<p.length;i+=4){
-      const r=p[i],g=p[i+1],b=p[i+2];
-      // black bg stays black; white fabric takes colour, folds preserved
-      if(r>55||g>55||b>55){
-        p[i]  = r/255*tr;
-        p[i+1]= g/255*tg;
-        p[i+2]= b/255*tb;
-      }
+  const tint = color!=='#FFFFFF';
+  const [tr,tg,tb] = tint ? hexToRgb(color) : [0,0,0];
+  const d=x.getImageData(0,0,w,h), p=d.data;
+  for(let i=0;i<p.length;i+=4){
+    const r=p[i],g=p[i+1],b=p[i+2];
+    const m = r>g ? (r>b?r:b) : (g>b?g:b);      // brightest channel
+    if(m<=24){ p[i+3]=0; continue; }            // pure background
+    if(m<56) p[i+3] = Math.round((m-24)/32*255);
+    if(tint){
+      p[i]  = r/255*tr;
+      p[i+1]= g/255*tg;
+      p[i+2]= b/255*tb;
     }
-    x.putImageData(d,0,0);
   }
+  x.putImageData(d,0,0);
   mockCache[key]=c; return c;
+}
+function clearMockCache(){ for(const k in mockCache) delete mockCache[k]; }
+
+/* Relative luminance, 0–255. */
+function colorLum(hex){
+  const [r,g,b]=hexToRgb(hex);
+  return 0.2126*r + 0.7152*g + 0.0722*b;
+}
+
+/* The panel drawn behind a garment. It contrasts the *garment*, not the
+   page: a black tee needs a light backdrop whichever theme you're in, and a
+   white tee needs a dark one — otherwise the product disappears. */
+function stageFill(garmentColor){
+  return colorLum(garmentColor) < 128 ? '#f2f2ec' : '#141414';
+}
+
+/* Fill a rounded stage panel over the area a mockup is about to be drawn
+   into. Callers pass the same box they hand drawImage(). */
+function drawStage(ctx2d, garmentColor, x, y, w, h, radius){
+  ctx2d.save();
+  ctx2d.fillStyle = stageFill(garmentColor);
+  ctx2d.beginPath();
+  const r = radius===undefined ? 18 : radius;
+  if(r>0 && typeof ctx2d.roundRect === 'function') ctx2d.roundRect(x,y,w,h,r);
+  else ctx2d.rect(x,y,w,h);
+  ctx2d.fill();
+  ctx2d.restore();
 }
 /* resolve which mockup key to use for a product + side */
 function mockKey(pid){

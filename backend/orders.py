@@ -1,5 +1,6 @@
 # ── Orders blueprint: place orders, list mine, admin pipeline ──
 import json
+import re
 from flask import Blueprint, request, jsonify, session
 
 from db import get_db
@@ -20,15 +21,80 @@ def _display_id(row_id):
     return "PL-" + str(1000 + row_id)
 
 
-def _order_public(row):
-    return {
+def _shipping(row):
+    keys = ("name", "phone", "line1", "line2", "city", "state", "pincode")
+    d = {k: (row["ship_" + k] or "") for k in keys}
+    # Orders placed before addresses were collected have every field blank —
+    # say so explicitly rather than rendering an empty card.
+    d["recorded"] = bool(d["line1"])
+    return d
+
+
+def _order_public(row, items=True):
+    """`items=False` omits the cart payload — see admin_orders for why."""
+    o = {
         "id": _display_id(row["id"]),
         "total": row["total_inr"],
         "status": row["status"],
-        "items": json.loads(row["items_json"]),
+        "cancelled": bool(row["cancelled"]),
         "created": row["created"],
         "updated": row["updated"],
+        "shipping": _shipping(row),
     }
+    if items:
+        o["items"] = json.loads(row["items_json"])
+    return o
+
+
+def _summarise(items):
+    """The few per-line fields the admin table needs, without the thumbnails
+    or layer data — those are what made the list response megabytes wide."""
+    out = []
+    for it in items if isinstance(items, list) else []:
+        if not isinstance(it, dict):
+            continue
+        out.append({
+            "product": it.get("product"),
+            "qty": it.get("qty"),
+            "sizes": it.get("sizes"),
+        })
+    return out
+
+
+# Deliberately loose: Indian addresses don't fit a strict grammar, and the
+# only fields worth machine-checking are the two that have a fixed shape.
+PHONE_RE = re.compile(r"^[6-9]\d{9}$")
+PINCODE_RE = re.compile(r"^[1-9]\d{5}$")
+MAX_FIELD = 120
+
+
+def _clean_shipping(d):
+    """Returns (values_dict, error). Every field except line2 is required."""
+    if not isinstance(d, dict):
+        return None, "Add a delivery address before placing the order."
+    v = {}
+    for k in ("name", "phone", "line1", "line2", "city", "state", "pincode"):
+        raw = d.get(k)
+        v[k] = raw.strip()[:MAX_FIELD] if isinstance(raw, str) else ""
+    if not v["name"]:
+        return None, "Add the name the parcel should go to."
+    if not PHONE_RE.match(v["phone"]):
+        return None, "Enter a 10-digit Indian mobile number."
+    if not v["line1"]:
+        return None, "Add the street address."
+    if not v["city"] or not v["state"]:
+        return None, "Add the city and state."
+    if not PINCODE_RE.match(v["pincode"]):
+        return None, "Enter a valid 6-digit PIN code."
+    return v, None
+
+
+def _log_event(db, order_id, kind, from_status=None, to_status=None, note=""):
+    db.execute(
+        """INSERT INTO order_events(order_id,actor_id,kind,from_status,to_status,note)
+           VALUES(?,?,?,?,?,?)""",
+        (order_id, session.get("user_id"), kind, from_status, to_status, note[:500]),
+    )
 
 
 def _row_id_from_display(order_id):
@@ -90,14 +156,22 @@ def create_order():
     if err:
         return jsonify(ok=False, error=err), 400
 
+    ship, err = _clean_shipping(d.get("shipping"))
+    if err:
+        return jsonify(ok=False, error=err), 400
+
     # NOTE: total is client-computed for now — there's no real payment yet.
     # The moment Razorpay is wired in, this MUST be recomputed server-side
     # from a price table instead of trusted from the request body.
     db = get_db()
     cur = db.execute(
-        "INSERT INTO orders(user_id,total_inr,items_json) VALUES(?,?,?)",
-        (session["user_id"], total, json.dumps(items)),
+        """INSERT INTO orders(user_id,total_inr,items_json,ship_name,ship_phone,
+                              ship_line1,ship_line2,ship_city,ship_state,ship_pincode)
+           VALUES(?,?,?,?,?,?,?,?,?,?)""",
+        (session["user_id"], total, json.dumps(items), ship["name"], ship["phone"],
+         ship["line1"], ship["line2"], ship["city"], ship["state"], ship["pincode"]),
     )
+    _log_event(db, cur.lastrowid, "placed", None, 0)
     # Loyalty points. ⚠️ PLACEHOLDER RULE — 1 point per ₹100 spent, with no
     # redemption path yet. The real earn/burn policy is a business decision
     # that hasn't been made; this exists so the dashboard has something
@@ -124,6 +198,10 @@ def my_orders():
 @orders_bp.route("/admin/orders")
 @admin_required
 def admin_orders():
+    """List view. Returns a per-line *summary* rather than the cart payload:
+    each line carries a base64 mockup thumbnail (~58KB), so sending the full
+    items_json made this response grow without bound as orders accumulate.
+    The detail endpoint below serves the heavy data, one order at a time."""
     rows = get_db().execute(
         """SELECT orders.*, users.name AS customer_name, users.email AS customer_email
            FROM orders JOIN users ON users.id = orders.user_id
@@ -131,28 +209,99 @@ def admin_orders():
     ).fetchall()
     out = []
     for r in rows:
-        o = _order_public(r)
+        o = _order_public(r, items=False)
         o["customer"] = r["customer_name"]
         o["customer_email"] = r["customer_email"]
+        o["lines"] = _summarise(json.loads(r["items_json"]))
         out.append(o)
     return jsonify(ok=True, orders=out)
 
 
-@orders_bp.route("/admin/orders/<order_id>/advance", methods=["POST"])
-@admin_required
-def advance_order(order_id):
+def _load_order(order_id):
+    """(row, db) for a display id, or (None, db) if it doesn't resolve."""
+    db = get_db()
     row_id = _row_id_from_display(order_id)
     if row_id is None:
-        return jsonify(ok=False, error="Order not found."), 404
-    db = get_db()
-    row = db.execute("SELECT * FROM orders WHERE id=?", (row_id,)).fetchone()
+        return None, db
+    return db.execute(
+        """SELECT orders.*, users.name AS customer_name, users.email AS customer_email
+           FROM orders JOIN users ON users.id = orders.user_id
+           WHERE orders.id=?""", (row_id,)
+    ).fetchone(), db
+
+
+@orders_bp.route("/admin/orders/<order_id>")
+@admin_required
+def admin_order_detail(order_id):
+    row, db = _load_order(order_id)
     if not row:
         return jsonify(ok=False, error="Order not found."), 404
-    if row["status"] >= MAX_STATUS:
-        return jsonify(ok=False, error="Order is already at the final stage."), 400
-    db.execute(
-        "UPDATE orders SET status=status+1, updated=CURRENT_TIMESTAMP WHERE id=?", (row_id,)
-    )
+    o = _order_public(row)
+    o["customer"] = row["customer_name"]
+    o["customer_email"] = row["customer_email"]
+    events = db.execute(
+        """SELECT e.*, u.name AS actor_name FROM order_events e
+           LEFT JOIN users u ON u.id = e.actor_id
+           WHERE e.order_id=? ORDER BY e.id""", (row["id"],)
+    ).fetchall()
+    o["events"] = [{
+        "kind": e["kind"], "from": e["from_status"], "to": e["to_status"],
+        "note": e["note"], "actor": e["actor_name"], "created": e["created"],
+    } for e in events]
+    return jsonify(ok=True, order=o)
+
+
+@orders_bp.route("/admin/orders/<order_id>/status", methods=["POST"])
+@admin_required
+def set_order_status(order_id):
+    """Set the stage directly, in either direction. Forward-only meant a
+    mis-click couldn't be undone; the audit trail is what keeps that honest."""
+    row, db = _load_order(order_id)
+    if not row:
+        return jsonify(ok=False, error="Order not found."), 404
+    to = (request.get_json(force=True, silent=True) or {}).get("to")
+    if isinstance(to, bool) or not isinstance(to, int) or not 0 <= to <= MAX_STATUS:
+        return jsonify(ok=False, error="That isn't a valid stage."), 400
+    if row["cancelled"]:
+        return jsonify(ok=False, error="Restore the order before changing its stage."), 400
+    if to != row["status"]:
+        db.execute("UPDATE orders SET status=?, updated=CURRENT_TIMESTAMP WHERE id=?",
+                   (to, row["id"]))
+        _log_event(db, row["id"], "stage", row["status"], to)
+        db.commit()
+    return jsonify(ok=True, order=_order_public(
+        db.execute("SELECT * FROM orders WHERE id=?", (row["id"],)).fetchone()))
+
+
+@orders_bp.route("/admin/orders/<order_id>/cancel", methods=["POST"])
+@admin_required
+def cancel_order(order_id):
+    """Cancel or restore. The stage is left untouched so a restored order
+    picks up exactly where it was rather than resetting to Proof sent."""
+    row, db = _load_order(order_id)
+    if not row:
+        return jsonify(ok=False, error="Order not found."), 404
+    d = request.get_json(force=True, silent=True) or {}
+    cancelled = 0 if d.get("restore") else 1
+    note = d.get("reason") if isinstance(d.get("reason"), str) else ""
+    if cancelled != row["cancelled"]:
+        db.execute("UPDATE orders SET cancelled=?, updated=CURRENT_TIMESTAMP WHERE id=?",
+                   (cancelled, row["id"]))
+        _log_event(db, row["id"], "cancelled" if cancelled else "restored", note=note)
+        db.commit()
+    return jsonify(ok=True, order=_order_public(
+        db.execute("SELECT * FROM orders WHERE id=?", (row["id"],)).fetchone()))
+
+
+@orders_bp.route("/admin/orders/<order_id>/note", methods=["POST"])
+@admin_required
+def add_order_note(order_id):
+    row, db = _load_order(order_id)
+    if not row:
+        return jsonify(ok=False, error="Order not found."), 404
+    note = (request.get_json(force=True, silent=True) or {}).get("note")
+    if not isinstance(note, str) or not note.strip():
+        return jsonify(ok=False, error="Write something first."), 400
+    _log_event(db, row["id"], "note", note=note.strip())
     db.commit()
-    row = db.execute("SELECT * FROM orders WHERE id=?", (row_id,)).fetchone()
-    return jsonify(ok=True, order=_order_public(row))
+    return jsonify(ok=True)

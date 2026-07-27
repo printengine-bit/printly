@@ -5,9 +5,21 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Home ─────────────────────────────────────────────────────── */
+/* Full-bleed band behind the hero. js/cursorgrid.js injects a <canvas>
+   as the first child; it's a backdrop only, so pointer events pass
+   straight through to the buttons above it (the listeners live on the
+   band itself). Nothing here depends on the canvas existing. */
+.hero-band{position:relative;overflow:hidden}
+.hero-band > .wrap{position:relative;z-index:1}
+.hero-band > .cursor-grid{
+  position:absolute;inset:0;display:block;width:100%;height:100%;
+  z-index:0;pointer-events:none;
+  -webkit-mask-image:radial-gradient(ellipse 90% 75% at 50% 45%,#000 45%,transparent 100%);
+  mask-image:radial-gradient(ellipse 90% 75% at 50% 45%,#000 45%,transparent 100%);
+}
 .hero{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center;padding:72px 0}
 .hero-stats{display:flex;gap:40px;margin-top:40px;flex-wrap:wrap}
-.hero-stats b{display:block;font-family:var(--ff-display);font-size:26px;font-weight:800;color:var(--lime);line-height:1}
+.hero-stats b{display:block;font-family:var(--ff-display);font-size:26px;font-weight:800;color:var(--lime-ink);line-height:1}
 .hero-stats span{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--on-surface-variant)}
 .hero-stage{
   position:relative;background:var(--surface-container-low);
@@ -26,7 +38,7 @@
   padding:20px 28px;background:var(--surface-container-low);
   border-top:1px solid var(--outline-variant);border-bottom:1px solid var(--outline-variant);
 }
-.stars{color:var(--lime);letter-spacing:2px;font-size:14px}
+.stars{color:var(--lime-ink);letter-spacing:2px;font-size:14px}
 
 .step{position:relative;padding:26px;overflow:hidden}
 .step-n{
@@ -36,7 +48,40 @@
 }
 .step h3{font-family:var(--ff-display);font-size:18px;font-weight:800;text-transform:uppercase;margin:14px 0 8px}
 .step p{font-size:14px;color:var(--on-surface-variant)}
-.step .material-symbols-outlined{color:var(--lime)}
+.step .material-symbols-outlined{color:var(--lime-ink)}
+
+/* Scroll stack — the 4-up grid becomes a pile of full-width cards that
+   pin as you scroll. `is-stacked` is added by js/scrollstack.js, so
+   no-JS and prefers-reduced-motion visitors keep the grid above. */
+.scroll-stack.is-stacked{display:block}
+.scroll-stack.is-stacked .stack-card{
+  min-height:clamp(170px,22vh,220px);
+  /* Full-bleed cards read as banners, not cards — and a line of body copy
+     that wide is unreadable anyway. */
+  max-width:880px;margin-left:auto;margin-right:auto;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:clamp(24px,3vw,40px);
+  background:var(--surface-container);
+  border-radius:var(--r-lg);
+  box-shadow:var(--shadow-card);
+  transform-origin:top center;
+  backface-visibility:hidden;
+  will-change:transform;
+}
+.scroll-stack.is-stacked .stack-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--lime);
+}
+.scroll-stack.is-stacked .stack-card:nth-child(even)::before{background:var(--pink)}
+.scroll-stack.is-stacked .step-n{
+  font-size:clamp(58px,9vw,108px);top:clamp(16px,3vw,28px);right:clamp(18px,3vw,34px);
+}
+.scroll-stack.is-stacked .step h3{font-size:clamp(20px,2.4vw,26px);margin:14px 0 8px}
+.scroll-stack.is-stacked .step p{font-size:clamp(14px,1.3vw,16px);max-width:46ch}
+.scroll-stack.is-stacked .step .material-symbols-outlined{font-size:30px}
+/* Height is set by scrollstack.js from the real card geometry — a fixed
+   value here either leaves dead space or lets the pile overlap what
+   follows, depending on the viewport. */
+.stack-end{height:0}
 
 .aud{position:relative;overflow:hidden;min-height:260px;display:flex;flex-direction:column;justify-content:flex-end;padding:26px}
 .aud h3{font-family:var(--ff-display);font-size:20px;font-weight:800;text-transform:uppercase;margin-bottom:6px}
@@ -49,7 +94,7 @@
 }
 .ai-cta ul{list-style:none;margin:20px 0}
 .ai-cta li{display:flex;align-items:center;gap:10px;font-size:14px;margin-bottom:10px}
-.ai-cta li .material-symbols-outlined{color:var(--lime);font-size:18px}
+.ai-cta li .material-symbols-outlined{color:var(--lime-ink);font-size:18px}
 
 /* ── Products: search, filters, ratings ───────────────────────── */
 .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:28px}
@@ -64,12 +109,12 @@
 .search-row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
 .search-row .inp{flex:1;min-width:220px}
 .rating{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--on-surface-variant)}
-.rating .material-symbols-outlined{font-size:15px;color:var(--lime)}
+.rating .material-symbols-outlined{font-size:15px;color:var(--lime-ink)}
 
 /* ── Product detail ───────────────────────────────────────────── */
 .crumb{font-size:12px;color:var(--outline);margin-bottom:24px}
 .crumb a{color:var(--on-surface-variant)}
-.crumb a:hover{color:var(--lime)}
+.crumb a:hover{color:var(--lime-ink)}
 .pdp{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
 .pdp-gallery{position:sticky;top:88px}
 .pdp-main{
@@ -95,7 +140,7 @@
 .tier.best{border-color:var(--lime)}
 .tier-q{font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--on-surface-variant)}
 .tier-p{font-family:var(--ff-display);font-size:19px;font-weight:800;margin-top:3px}
-.tier.best .tier-p{color:var(--lime)}
+.tier.best .tier-p{color:var(--lime-ink)}
 
 .sizes{display:flex;gap:8px;flex-wrap:wrap}
 .size-btn{
@@ -112,7 +157,7 @@ details.acc summary{
   font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
 }
 details.acc summary::-webkit-details-marker{display:none}
-details.acc summary::after{content:"expand_more";font-family:'Material Symbols Outlined';font-size:20px;color:var(--lime);transition:transform .2s}
+details.acc summary::after{content:"expand_more";font-family:'Material Symbols Outlined';font-size:20px;color:var(--lime-ink);transition:transform .2s}
 details.acc[open] summary::after{transform:rotate(180deg)}
 details.acc p,details.acc ul{margin-top:12px;font-size:14px;color:var(--on-surface-variant);line-height:1.7}
 details.acc ul{padding-left:18px}
@@ -122,7 +167,7 @@ details.acc ul{padding-left:18px}
 .review-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
 .avatar{
   width:38px;height:38px;border-radius:var(--r-full);flex-shrink:0;
-  background:var(--surface-container-highest);color:var(--lime);
+  background:var(--surface-container-highest);color:var(--lime-ink);
   display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;
 }
 
@@ -147,9 +192,9 @@ details.acc ul{padding-left:18px}
   font-size:11px;padding:4px 9px;border-radius:var(--r-full);
   background:var(--surface-container-highest);color:var(--on-surface-variant);
 }
-.size-chip b{color:var(--lime)}
+.size-chip b{color:var(--lime-ink)}
 .cart-line-total{text-align:right;flex-shrink:0}
-.cart-line-total b{font-family:var(--ff-display);font-size:20px;color:var(--lime)}
+.cart-line-total b{font-family:var(--ff-display);font-size:20px;color:var(--lime-ink)}
 .summary-card{position:sticky;top:88px}
 .trust{display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--on-surface-variant);justify-content:center;margin-top:16px}
 
@@ -160,7 +205,7 @@ details.acc ul{padding-left:18px}
   border-radius:var(--r-lg);padding:16px 28px;text-align:center;
 }
 .stat-pill span{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--on-surface-variant)}
-.stat-pill b{font-family:var(--ff-display);font-size:26px;font-weight:800;color:var(--lime)}
+.stat-pill b{font-family:var(--ff-display);font-size:26px;font-weight:800;color:var(--lime-ink)}
 
 .order-card{padding:22px;margin-bottom:14px}
 .order-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
@@ -184,7 +229,7 @@ details.acc ul{padding-left:18px}
 .track-step.now .track-dot{background:var(--lime);box-shadow:0 0 0 4px rgba(200,242,50,.25)}
 .track-label{font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--outline);line-height:1.3}
 .track-step.done .track-label,.track-step.now .track-label{color:var(--on-surface)}
-.track-step.now .track-label{color:var(--lime);font-weight:700}
+.track-step.now .track-label{color:var(--lime-ink);font-weight:700}
 
 /* ── Responsive ───────────────────────────────────────────────── */
 @media(max-width:1024px){
@@ -234,4 +279,124 @@ details.acc ul{padding-left:18px}
   .track-step{min-width:76px}
   .hero-stats{gap:24px}
   .dash-head{flex-direction:column;align-items:flex-start}
+}
+
+/* ── Checkout: delivery address ───────────────────────────────── */
+/* `.field` styles a nested <label>; these forms put the caption in a <span>
+   inside the label itself, so mirror the type treatment. */
+.field > span{
+  display:block;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--on-surface-variant);margin-bottom:6px;
+}
+.ship-form{margin-top:20px}
+.ship-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.ship-grid .span2{grid-column:1/-1}
+
+/* ── Admin: pipeline ──────────────────────────────────────────── */
+.admin-stats{margin-bottom:24px;max-width:840px}
+.admin-bar{display:flex;flex-direction:column;gap:14px;margin-bottom:22px}
+.admin-search{position:relative;margin:0;max-width:420px}
+.admin-search .material-symbols-outlined{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  color:var(--on-surface-variant);font-size:20px;pointer-events:none;
+}
+.admin-search input{padding-left:40px}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap}
+.chip{
+  padding:9px 15px;min-height:40px;border-radius:var(--r-full);
+  background:var(--surface-container-low);border:1px solid var(--outline-variant);
+  color:var(--on-surface-variant);font-size:12.5px;font-weight:600;cursor:pointer;
+  transition:border-color .16s,color .16s,background .16s;
+}
+.chip:hover{border-color:var(--lime);color:var(--on-surface)}
+.chip.on{background:var(--lime);border-color:var(--lime);color:var(--on-lime)}
+.b-off{background:var(--surface-container-highest);color:var(--on-surface-variant)}
+.row-off td{opacity:.5}
+.btn-danger{background:var(--pink);color:#fff}
+.btn-danger:hover{background:#a90247}
+.icon-btn{
+  background:none;border:none;color:var(--on-surface-variant);cursor:pointer;
+  min-width:44px;min-height:44px;display:grid;place-items:center;border-radius:var(--r-full);
+}
+.icon-btn:hover{color:var(--on-surface);background:var(--surface-container-high)}
+.swatch{
+  display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;
+  margin-right:5px;border:1px solid var(--outline-variant);
+}
+
+/* ── Admin: order drawer ──────────────────────────────────────── */
+.drawer-scrim{
+  position:fixed;inset:0;background:var(--scrim);z-index:60;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.drawer-scrim.on{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);z-index:61;
+  background:var(--surface-container-low);border-left:1px solid var(--outline-variant);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .24s ease;
+}
+.drawer.on{transform:none}
+.drawer-head{
+  display:flex;align-items:center;gap:14px;padding:20px 22px;
+  border-bottom:1px solid var(--outline-variant);flex-shrink:0;
+}
+.drawer-head .badge{margin-left:auto}
+.drawer-body{overflow-y:auto;padding:4px 22px 32px}
+.drawer-body section{padding:20px 0;border-bottom:1px solid var(--outline-variant)}
+.drawer-body section:last-child{border-bottom:none}
+.drawer-body h3.t-label{margin-bottom:12px}
+
+.addr{display:flex;flex-direction:column;gap:3px;font-size:14px;line-height:1.5}
+.addr a{color:var(--lime-ink)}
+.addr .btn{align-self:flex-start;margin-top:10px}
+
+.ord-line{
+  background:var(--surface-container);border:1px solid var(--outline-variant);
+  border-radius:var(--r-md);padding:16px;margin-bottom:14px;
+}
+.ord-line-top{display:flex;gap:14px;align-items:flex-start}
+.ord-thumb{
+  width:64px;height:64px;object-fit:cover;border-radius:var(--r-sm);
+  background:var(--surface-container-highest);flex-shrink:0;
+}
+.ord-total{display:flex;justify-content:space-between;align-items:center;
+  padding-top:12px;font-size:15px}
+
+.spec{margin-top:14px;border-top:1px dashed var(--outline-variant);padding-top:12px}
+.spec-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:13px}
+.spec-head .btn{margin-left:auto}
+.spec-row{
+  display:flex;flex-direction:column;gap:3px;font-size:12.5px;
+  padding:8px 10px;border-radius:var(--r-sm);background:var(--surface-container-low);
+  margin-bottom:6px;
+}
+.spec-row.bad{border:1px solid var(--pink)}
+.spec-kind{
+  font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--lime-ink);
+}
+.b-pink{background:var(--tint-pink);color:var(--pink-ink);align-self:flex-start}
+
+.timeline{list-style:none;display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+.timeline li{
+  display:flex;flex-direction:column;gap:2px;font-size:13px;
+  padding-left:14px;border-left:2px solid var(--outline-variant);
+}
+.timeline li .t-dim{font-size:11px}
+.note-row{display:flex;gap:8px}
+.note-row input{flex:1}
+
+@media(max-width:900px){
+  .drawer{width:100%}
+}
+@media(max-width:768px){
+  /* 40px clears a mouse but not the 44px touch floor the rest of the app holds to. */
+  .chip{min-height:44px;display:inline-flex;align-items:center}
+  /* The drawer's mailto/tel links are the ones you actually tap on a phone. */
+  .drawer-body a{min-height:44px;display:inline-flex;align-items:center}
+}
+@media(max-width:640px){
+  .ship-grid{grid-template-columns:1fr}
+  .admin-stats{grid-template-columns:repeat(2,1fr)}
 }

@@ -51,6 +51,20 @@ def init_db():
         items_json TEXT NOT NULL,
         created TEXT DEFAULT CURRENT_TIMESTAMP,
         updated TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    # Every admin action on an order, append-only. Stage changes are no longer
+    # forward-only, so without this a mistaken edit would be indistinguishable
+    # from the real history — and "who marked this delivered?" is exactly the
+    # question you need answered when a customer complains.
+    c.execute("""CREATE TABLE IF NOT EXISTS order_events(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id INTEGER NOT NULL REFERENCES orders(id),
+        actor_id INTEGER REFERENCES users(id),
+        kind TEXT NOT NULL,
+        from_status INTEGER,
+        to_status INTEGER,
+        note TEXT NOT NULL DEFAULT '',
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_events_order ON order_events(order_id)")
     c.execute("""CREATE TABLE IF NOT EXISTS login_attempts(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT, ip TEXT,
@@ -87,6 +101,14 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")
     _add_column(c, "users", "loyalty_points", "INTEGER NOT NULL DEFAULT 0")
+    # Delivery address. Added after the fact, so existing rows get "" — the
+    # admin UI labels those "no address recorded" rather than showing blanks.
+    for col in ("ship_name", "ship_phone", "ship_line1", "ship_line2",
+                "ship_city", "ship_state", "ship_pincode"):
+        _add_column(c, "orders", col, "TEXT NOT NULL DEFAULT ''")
+    # Cancellation is orthogonal to the 6 pipeline stages, not a 7th one:
+    # keeping `status` intact means a restored order resumes where it was.
+    _add_column(c, "orders", "cancelled", "INTEGER NOT NULL DEFAULT 0")
     c.commit()
     c.close()
 

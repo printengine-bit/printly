@@ -8,6 +8,18 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap" rel="stylesheet">
+<!-- Theme must be on <html> before the first paint, or the page flashes the
+     wrong palette. Inline and blocking on purpose; js/theme.js owns
+     everything after this. -->
+<script>
+  (function(){
+    var t; try{ t = localStorage.getItem('printly-theme'); }catch(e){}
+    if(t !== 'light' && t !== 'dark'){
+      t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
 <link rel="stylesheet" href="css/printly.css?v={{V}}">
 <link rel="stylesheet" href="css/studio.css?v={{V}}">
 <link rel="stylesheet" href="css/pages.css?v={{V}}">
@@ -28,6 +40,9 @@
       <button class="nav-btn" data-v="admin" onclick="go('admin')" style="display:none">Admin</button>
     </nav>
     <div class="hdr-right">
+      <button class="cart-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Switch theme">
+        <span class="material-symbols-outlined">light_mode</span>
+      </button>
       <button class="cart-btn" onclick="go('cart')" aria-label="Cart">
         <span class="material-symbols-outlined">shopping_cart</span>
         <span class="cart-count" id="cartCount" data-count="0">0</span>
@@ -42,6 +57,7 @@
 
 <!-- ══════════════ HOME ══════════════ -->
 <section class="view on" id="v-home">
+  <div class="hero-band" id="heroBand">
   <div class="wrap">
     <div class="hero">
       <div>
@@ -72,23 +88,24 @@
       </div>
     </div>
   </div>
+  </div>
 
   <div class="proof wrap" id="homeProof"></div>
 
   <div class="wrap section">
     <h2 class="t-h2">How Printly <span class="t-lime">works</span></h2>
     <p class="t-mut" style="margin:8px 0 32px">From concept to closet in four steps.</p>
-    <div class="grid grid-4">
-      <div class="card step"><span class="step-n">01</span>
+    <div class="grid grid-4 scroll-stack" id="stepsStack">
+      <div class="card step stack-card"><span class="step-n">01</span>
         <span class="material-symbols-outlined">checkroom</span>
         <h3>Pick a product</h3><p>Tees, polos, hoodies and jerseys. 8 colours, no minimums.</p></div>
-      <div class="card step"><span class="step-n">02</span>
+      <div class="card step stack-card"><span class="step-n">02</span>
         <span class="material-symbols-outlined">draw</span>
         <h3>Design it live</h3><p>Upload your logo, add text, or let the AI draft the art for you.</p></div>
-      <div class="card step"><span class="step-n">03</span>
+      <div class="card step stack-card"><span class="step-n">03</span>
         <span class="material-symbols-outlined">task_alt</span>
         <h3>Approve the proof</h3><p>We send a digital proof in 2 hours. You approve with one tap.</p></div>
-      <div class="card step"><span class="step-n">04</span>
+      <div class="card step stack-card"><span class="step-n">04</span>
         <span class="material-symbols-outlined">local_shipping</span>
         <h3>Printed &amp; shipped</h3><p>Quality-checked, packed and tracked to your door.</p></div>
     </div>
@@ -470,8 +487,12 @@
 <script src="js/studio.js?v={{V}}"></script>
 <script src="js/ai.js?v={{V}}"></script>
 <script src="js/cart.js?v={{V}}"></script>
+<script src="js/admin.js?v={{V}}"></script>
 <script src="js/designs.js?v={{V}}"></script>
 <script src="js/pdp.js?v={{V}}"></script>
+<script src="js/scrollstack.js?v={{V}}"></script>
+<script src="js/cursorgrid.js?v={{V}}"></script>
+<script src="js/theme.js?v={{V}}"></script>
 <script src="js/init.js?v={{V}}"></script>
 </body>
 </html>

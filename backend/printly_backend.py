@@ -49,13 +49,21 @@ app.config.update(
     # Request bodies were previously unbounded. Saved designs and logo
     # uploads carry base64 image data, so they need real headroom — but not
     # unlimited, or one request can exhaust a small host's memory.
-    MAX_CONTENT_LENGTH=6 * 1024 * 1024,
+    # Sized for the largest single upload: a 5MB print-ready PNG (see
+    # artwork.py) becomes ~6.7MB once base64-encoded, so a 6MB ceiling would
+    # have rejected it before the blueprint's own check ever ran. Each
+    # endpoint still enforces its own, tighter limit.
+    MAX_CONTENT_LENGTH=10 * 1024 * 1024,
 )
 
 
 @app.errorhandler(413)
 def _too_large(_e):
-    return jsonify(ok=False, error="That file or design is too large (6 MB max)."), 413
+    # Derived, not written out — this message said "6 MB max" for a while
+    # after the real limit moved, which sends people hunting for the wrong
+    # problem.
+    mb = app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024)
+    return jsonify(ok=False, error=f"That file or design is too large ({mb} MB max)."), 413
 
 # Locked down in Phase 5 (see FRONTEND_ORIGIN) once there's a real deployed
 # domain; wide open for now so local dev / ngrok tunnels keep working.
@@ -145,7 +153,9 @@ from orders import orders_bp
 from designs import designs_bp
 from reviews import reviews_bp
 from shipping import shipping_bp
+from artwork import artwork_bp
 app.register_blueprint(auth_bp)
+app.register_blueprint(artwork_bp)
 app.register_blueprint(orders_bp)
 app.register_blueprint(designs_bp)
 app.register_blueprint(reviews_bp)

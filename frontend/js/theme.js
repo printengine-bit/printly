@@ -1,0 +1,59 @@
+/* ═══════════════ THEME ═══════════════
+   `data-theme` on <html> drives the whole palette (see the token blocks in
+   printly.css). The initial value is set by an inline script in <head>, not
+   here — by the time this file runs the page has already painted, and a
+   dark-to-light flip after first paint is the flash we're avoiding.
+
+   Three states, deliberately: "system" is the default and follows the OS,
+   and an explicit light/dark choice pins it. A two-way toggle can't express
+   "follow my OS", which is what most people actually want. */
+
+const THEME_KEY = 'printly-theme';
+
+function storedTheme(){
+  try{ return localStorage.getItem(THEME_KEY) || 'system'; }catch(e){ return 'system'; }
+}
+function resolvedTheme(){
+  const t = storedTheme();
+  if(t === 'light' || t === 'dark') return t;
+  return matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+function applyTheme(){
+  const t = resolvedTheme();
+  document.documentElement.dataset.theme = t;
+  const btn = document.getElementById('themeBtn');
+  if(btn){
+    const icon = t === 'light' ? 'dark_mode' : 'light_mode';
+    btn.querySelector('.material-symbols-outlined').textContent = icon;
+    btn.setAttribute('aria-label', t === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+    btn.title = storedTheme() === 'system'
+      ? 'Following your system theme' : 'Theme: ' + t;
+  }
+  // Canvases don't inherit CSS variables — they're painted, not styled — so
+  // every mockup surface has to be redrawn against the new palette.
+  repaintForTheme();
+}
+
+function toggleTheme(){
+  // Flip away from whatever is showing now; that also lifts "system".
+  const next = resolvedTheme() === 'light' ? 'dark' : 'light';
+  try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+  applyTheme();
+}
+
+function repaintForTheme(){
+  // Recolored mockups are cached per product+colour and bake in the stage
+  // backdrop, so the cache has to go when the palette changes.
+  if(typeof clearMockCache === 'function') clearMockCache();
+  if(typeof draw === 'function' && document.getElementById('teeCanvas')) draw();
+  if(typeof heroLoop === 'function' && document.getElementById('heroTee')) heroLoop();
+  if(typeof drawAiPreview === 'function') drawAiPreview();
+  if(typeof drawPdp === 'function' && state.pdp && state.pdp.id) drawPdp();
+  if(typeof paintCursorGrid === 'function') paintCursorGrid();
+}
+
+/* An OS-level change should follow through while "system" is selected. */
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', ()=>{
+  if(storedTheme() === 'system') applyTheme();
+});
