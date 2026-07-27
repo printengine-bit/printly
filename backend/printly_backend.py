@@ -17,7 +17,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from PIL import Image
+from PIL import Image, ImageChops
 
 load_dotenv()  # loads backend/.env if present — no-op if it doesn't exist
 
@@ -330,15 +330,18 @@ def generate(prompt: str, want: str = None):
 # ── Print prep: white-bg removal + 300 DPI export for DTF ──────
 def make_print_ready(png_bytes: bytes):
     img = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
-    # knock out near-white background so DTF prints only the art
-    datas = img.getdata()
-    out = []
-    for r, g, b, a in datas:
-        if r > 242 and g > 242 and b > 242:
-            out.append((r, g, b, 0))
-        else:
-            out.append((r, g, b, a))
-    img.putdata(out)
+    # Knock out the near-white background so DTF prints only the art.
+    #
+    # Done with channel operations rather than a per-pixel Python loop. The
+    # loop built a list holding one tuple per pixel — around 185MB of Python
+    # objects for a 1600x1600 image, on a host capped at 1GB for the whole
+    # service. These are the same comparison, evaluated in C: take the
+    # minimum of R/G/B per pixel, and clear alpha wherever that minimum is
+    # above the threshold (i.e. all three channels are near-white).
+    r, g, b, a = img.split()
+    min_channel = ImageChops.darker(ImageChops.darker(r, g), b)
+    keep = min_channel.point(lambda v: 0 if v > 242 else 255)
+    img.putalpha(ImageChops.multiply(a, keep))
     # upscale to A4-print size @300dpi if small (2480px wide max area)
     if img.width < 1600:
         f = 1600 / img.width

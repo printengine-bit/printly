@@ -8,4 +8,10 @@
 #
 # --chdir backend so printly_backend.py's relative FRONTEND_DIR still
 # resolves, exactly as it does when run directly.
-web: gunicorn --chdir backend printly_backend:app --worker-class gthread --workers 2 --threads 8 --timeout 120 --graceful-timeout 30 --bind 0.0.0.0:$PORT --access-logfile - --error-logfile -
+#
+# Sized for the Hobby plan's 1GB / 2 vCPU ceiling: 2 workers (one per vCPU)
+# x 4 threads. Each worker is a separate Python heap carrying Flask, Pillow
+# and requests, so worker count is the expensive dial — threads are nearly
+# free and are what actually absorb the I/O wait. Raising either without
+# raising the plan's memory limit risks the OOM killer mid-request.
+web: gunicorn --chdir backend printly_backend:app --worker-class gthread --workers 2 --threads 4 --timeout 120 --graceful-timeout 30 --max-requests 400 --max-requests-jitter 50 --bind 0.0.0.0:$PORT --access-logfile - --error-logfile -
