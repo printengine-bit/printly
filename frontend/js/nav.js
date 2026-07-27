@@ -9,6 +9,7 @@ function go(v){
   if(v==='orders') renderOrders();
   if(v==='admin') renderAdmin();
   if(v==='designs') renderDesigns();
+  if(v==='pdp') renderPdp();
   if(v==='studio') draw();
   document.getElementById('navLinks').classList.remove('open');
   window.scrollTo({top:0});

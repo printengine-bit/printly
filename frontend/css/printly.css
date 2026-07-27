@@ -363,6 +363,11 @@ input[type=file]{font-size:12px;padding:10px}
 }
 @media(max-width:768px){
   :root{--container-margin:16px;--section-gap:48px}
+  /* Touch targets: the compact 38px button is fine with a mouse but under
+     the 44px minimum for fingers, so it grows on small screens. */
+  .btn-sm{min-height:44px;padding:12px 18px}
+  .ftr a{padding:6px 0}
+  .aud a,.t-label[href],a.t-lime{display:inline-block;padding:10px 0}
 }
 @media(max-width:560px){
   .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}

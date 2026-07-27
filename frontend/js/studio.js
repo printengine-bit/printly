@@ -377,6 +377,25 @@ function heroLoop(){
 }
 heroLoop(); setInterval(heroLoop,2600);
 
+/* Home's "AI designer" callout — a static hoodie still, drawn with the same
+   engine rather than shipped as a separate marketing image. */
+function drawAiPreview(){
+  const c=document.getElementById('aiPreview'); if(!c) return;
+  const x=c.getContext('2d');
+  x.clearRect(0,0,c.width,c.height);
+  const mock=getRecoloredMock('hd','#111111')||mockImgs.hd;
+  if(mock){
+    const iw=mock.width||mock.naturalWidth, ih=mock.height||mock.naturalHeight;
+    const s=Math.min(c.width/iw,c.height/ih);
+    x.drawImage(mock,(c.width-iw*s)/2,(c.height-ih*s)/2,iw*s,ih*s);
+  }
+  x.textAlign='center';
+  x.fillStyle='#c8f232'; x.font='800 30px "Archivo Narrow"';
+  x.fillText('GEN-AI', c.width/2, c.height*0.47);
+  x.fillStyle='#ce0358'; x.font='800 22px "Archivo Narrow"';
+  x.fillText('DROP 01', c.width/2, c.height*0.55);
+}
+
 /* ═══════════════ STUDIO: add elements ═══════════════ */
 function addText(){
   const t=document.getElementById('txtInput').value.trim();

@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/printly.css?v={{V}}">
 <link rel="stylesheet" href="css/studio.css?v={{V}}">
+<link rel="stylesheet" href="css/pages.css?v={{V}}">
 </head>
 <body>
 
@@ -41,29 +42,101 @@
 
 <!-- ══════════════ HOME ══════════════ -->
 <section class="view on" id="v-home">
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <span class="badge badge-outline">Custom printing · Pune → All India</span>
+        <h1 class="t-hero" style="margin:20px 0 18px">
+          Design it in minutes.<br><span class="t-lime">Wear it in 48 hours.</span>
+        </h1>
+        <p class="t-body-lg t-mut" style="max-width:52ch;margin-bottom:28px">
+          Your brand. Your story. Printed. The high-velocity drop culture for
+          creators and crews — premium quality at lightning speed.
+        </p>
+        <div class="row" style="flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="go('studio')">
+            Open Design Studio <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+          <button class="btn btn-ghost" onclick="go('products')">Browse products</button>
+        </div>
+        <div class="hero-stats">
+          <div><b>48 hrs</b><span>Express delivery</span></div>
+          <div><b>40–60%</b><span>Bulk savings</span></div>
+          <div><b>1 pc</b><span>No minimums</span></div>
+        </div>
+      </div>
+      <div class="hero-stage">
+        <span class="badge badge-quiet" style="align-self:flex-start">Live preview</span>
+        <canvas id="heroTee" width="360" height="380"></canvas>
+        <span class="t-label t-dim" style="text-align:center">Same engine as the Design Studio</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="proof wrap" id="homeProof"></div>
+
   <div class="wrap section">
-    <span class="badge badge-outline">Custom printing · Pune → All India</span>
-    <h1 class="t-hero" style="margin:20px 0 18px;max-width:14ch">
-      Design it in minutes.<br><span class="t-lime">Wear it in 48 hours.</span>
-    </h1>
-    <p class="t-body-lg t-mut" style="max-width:52ch;margin-bottom:28px">
-      Your brand. Your story. Printed. The high-velocity drop culture for creators
-      and crews — premium quality at lightning speed.
-    </p>
-    <div class="row" style="flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="go('studio')">
-        Open Design Studio <span class="material-symbols-outlined">arrow_forward</span>
-      </button>
-      <button class="btn btn-ghost" onclick="go('products')">Browse products</button>
+    <h2 class="t-h2">How Printly <span class="t-lime">works</span></h2>
+    <p class="t-mut" style="margin:8px 0 32px">From concept to closet in four steps.</p>
+    <div class="grid grid-4">
+      <div class="card step"><span class="step-n">01</span>
+        <span class="material-symbols-outlined">checkroom</span>
+        <h3>Pick a product</h3><p>Tees, polos, hoodies and jerseys. 8 colours, no minimums.</p></div>
+      <div class="card step"><span class="step-n">02</span>
+        <span class="material-symbols-outlined">draw</span>
+        <h3>Design it live</h3><p>Upload your logo, add text, or let the AI draft the art for you.</p></div>
+      <div class="card step"><span class="step-n">03</span>
+        <span class="material-symbols-outlined">task_alt</span>
+        <h3>Approve the proof</h3><p>We send a digital proof in 2 hours. You approve with one tap.</p></div>
+      <div class="card step"><span class="step-n">04</span>
+        <span class="material-symbols-outlined">local_shipping</span>
+        <h3>Printed &amp; shipped</h3><p>Quality-checked, packed and tracked to your door.</p></div>
     </div>
-    <div class="grid grid-3" style="margin-top:44px;max-width:620px">
-      <div><div class="t-h3 t-lime">48 hrs</div><div class="t-label t-mut" style="margin-top:4px">Express delivery</div></div>
-      <div><div class="t-h3 t-lime">40–60%</div><div class="t-label t-mut" style="margin-top:4px">Bulk savings</div></div>
-      <div><div class="t-h3 t-lime">1 pc</div><div class="t-label t-mut" style="margin-top:4px">No minimums</div></div>
+  </div>
+
+  <div class="wrap section">
+    <h2 class="t-h2">Who orders from <span class="t-lime">Printly</span></h2>
+    <p class="t-mut" style="margin:8px 0 32px">Built for crews of 1 to 1,000.</p>
+    <div class="grid grid-3">
+      <div class="card card-hover aud">
+        <span class="badge badge-lime" style="align-self:flex-start;margin-bottom:14px">Corporates</span>
+        <h3>Branded merch</h3>
+        <p>Onboarding kits, annual days, launch events. GST invoice and bulk rates.</p>
+        <a class="t-lime t-label" href="#" onclick="go('products');return false">Bulk pricing →</a>
+      </div>
+      <div class="card card-hover aud">
+        <span class="badge badge-pink" style="align-self:flex-start;margin-bottom:14px">Colleges</span>
+        <h3>Batch &amp; fest tees</h3>
+        <p>Farewells, cultural fests, sports teams. One approval, we handle the rest.</p>
+        <a class="t-lime t-label" href="#" onclick="go('studio');return false">Get started →</a>
+      </div>
+      <div class="card card-hover aud">
+        <span class="badge badge-outline" style="align-self:flex-start;margin-bottom:14px">Creators</span>
+        <h3>Personal &amp; gifting</h3>
+        <p>Single-piece printing from ₹279. Couple tees, fan art — no minimums.</p>
+        <a class="t-lime t-label" href="#" onclick="go('studio');return false">Launch a drop →</a>
+      </div>
     </div>
-    <div class="card card-pad" style="margin-top:44px;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:12px">
-      <canvas id="heroTee" width="360" height="380" style="width:100%;max-width:340px;height:auto"></canvas>
-      <span class="t-label t-dim" style="text-align:center">Live preview — same engine as the Design Studio</span>
+  </div>
+
+  <div class="wrap section">
+    <div class="ai-cta">
+      <div>
+        <span class="badge badge-pink">AI-powered</span>
+        <h2 class="t-h2" style="margin:16px 0 12px">Unleash the<br><span class="t-lime">AI designer.</span></h2>
+        <p class="t-mut">Can't draw? Describe what you want and our generator produces
+          print-ready art for your next drop.</p>
+        <ul>
+          <li><span class="material-symbols-outlined">bolt</span> High-resolution, 300 DPI print output</li>
+          <li><span class="material-symbols-outlined">bolt</span> Five streetwear-tuned styles</li>
+          <li><span class="material-symbols-outlined">bolt</span> Background removed automatically</li>
+        </ul>
+        <button class="btn btn-primary" onclick="go('studio');studioTab('ai')">Try the AI designer free →</button>
+      </div>
+      <div class="hero-stage">
+        <canvas id="aiPreview" width="340" height="360"></canvas>
+        <span class="t-label t-dim">Generated, background-removed, print-ready</span>
+      </div>
     </div>
   </div>
 </section>
@@ -72,9 +145,25 @@
 <section class="view" id="v-products">
   <div class="wrap section">
     <h1 class="t-h1">Products &amp; <span class="t-lime">live pricing</span></h1>
-    <p class="t-mut" style="margin:8px 0 32px">Prices drop automatically as quantity rises. Pick one to start designing.</p>
+    <p class="t-mut" style="margin:8px 0 24px">Prices drop automatically as quantity rises. Pick one to start designing.</p>
+
+    <div class="search-row">
+      <input type="search" class="inp" id="prodSearch" placeholder="Search tees, hoodies, jerseys…" oninput="renderProducts()">
+      <select id="prodSort" onchange="renderProducts()" style="max-width:200px">
+        <option value="popular">Sort: Popular</option>
+        <option value="low">Price: low to high</option>
+        <option value="high">Price: high to low</option>
+        <option value="rated">Best rated</option>
+      </select>
+    </div>
+    <div class="filters" id="prodFilters"></div>
     <div class="grid grid-4" id="productGrid"></div>
   </div>
+</section>
+
+<!-- ══════════════ PRODUCT DETAIL ══════════════ -->
+<section class="view" id="v-pdp">
+  <div class="wrap section" id="pdpBody"></div>
 </section>
 
 <!-- ══════════════ DESIGN STUDIO ══════════════ -->
@@ -287,8 +376,13 @@
 <!-- ══════════════ ORDERS ══════════════ -->
 <section class="view" id="v-orders">
   <div class="wrap section">
-    <h1 class="t-h1">My <span class="t-lime">orders</span></h1>
-    <p class="t-mut" style="margin:8px 0 32px">Track every order from proof to doorstep.</p>
+    <div class="dash-head">
+      <div>
+        <h1 class="t-h1">My <span class="t-lime">orders</span></h1>
+        <p class="t-mut" style="margin-top:8px">Track every order from proof to doorstep.</p>
+      </div>
+      <div class="row" id="dashStats"></div>
+    </div>
     <div id="ordersBody"></div>
   </div>
 </section>
@@ -377,6 +471,7 @@
 <script src="js/ai.js?v={{V}}"></script>
 <script src="js/cart.js?v={{V}}"></script>
 <script src="js/designs.js?v={{V}}"></script>
+<script src="js/pdp.js?v={{V}}"></script>
 <script src="js/init.js?v={{V}}"></script>
 </body>
 </html>

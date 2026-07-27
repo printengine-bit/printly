@@ -199,7 +199,14 @@
   .st-left{order:2;border-top:1px solid var(--outline-variant)}
   .st-right{order:3;border-top:1px solid var(--outline-variant)}
   .st-stage{order:1;padding:16px;min-height:60vh}
-  .st-toolbar{position:static;transform:none;margin-bottom:12px}
+  /* 10 tools in one row overflow a 375px screen — let them wrap. */
+  .st-toolbar{position:static;transform:none;margin-bottom:12px;flex-wrap:wrap;justify-content:center;max-width:100%}
+  /* Touch targets */
+  .st-toolbar button{width:44px;height:44px}
+  .st-tab{min-height:44px}
+  .seg button{min-height:44px}
+  .layer-acts button{width:40px;height:40px}
+  .sw{width:34px;height:34px}
   .st-fab{position:static;width:100%;margin-top:16px;justify-content:center}
   .st-warn{position:static;transform:none;margin-top:12px}
   #teeCanvas,.st-ruler,.measure{width:min(520px,88vw);max-width:100%}

@@ -1,3 +1,4 @@
 /* ═══════════════ INIT ═══════════════ */
 initStudio(); draw(); renderProducts(); applyAuthUI(); checkSession();
-loadMocks(()=>{ draw(); renderProducts(); heroLoop(); });
+loadReviewSummary();
+loadMocks(()=>{ draw(); renderProducts(); heroLoop(); drawAiPreview(); });
