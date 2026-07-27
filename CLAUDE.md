@@ -70,6 +70,11 @@ returning visitors will keep the stale copy for a month.
   Don't create parallel state — extend this object.
 - **Escape interpolated strings.** Every render function builds
   `innerHTML` from server/user data; run it through `esc()` (`data.js`).
+- **Quantity comes from `state.sizes`, never a separate field.** The
+  per-size breakdown is the input; total is `sizeTotal(state.sizes)`.
+  Don't reintroduce a standalone quantity control — two inputs for one
+  number will drift apart. One-size products (`ONE_SIZE` in `data.js`)
+  use a single `One size` key.
 - **Thumbnails use `captureThumb()`, never `cv.toDataURL()` directly.**
   `draw()` paints the print-area guide and selection chrome, and a raw
   capture bakes that editor UI into cart/design/order thumbnails.
@@ -110,10 +115,6 @@ p95 ≈220ms.
 
 - **Razorpay** — order totals are still client-trusted. The server MUST
   recompute from a price table the moment payment lands.
-- **Size selection** — the app never captures a garment size. For bulk
-  orders this really wants a per-size breakdown (5×S, 10×M …), which
-  touches the cart and order shapes. The PDP shows a size *chart* and a
-  selector, but it is presentational and does not reach the cart.
 - **GST** — flat 5%. Real Indian apparel GST is 5% under ₹1,000 and 12%
   at or above, so higher-priced items are likely under-collecting.
 - **Loyalty redemption** — points accrue on a placeholder rule
