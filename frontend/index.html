@@ -37,7 +37,6 @@
       <button class="nav-btn" data-v="cart" onclick="go('cart')">Cart</button>
       <button class="nav-btn" data-v="orders" onclick="go('orders')">My Orders</button>
       <button class="nav-btn" data-v="designs" onclick="go('designs')">My Designs</button>
-      <button class="nav-btn" data-v="admin" onclick="go('admin')" style="display:none">Admin</button>
     </nav>
     <div class="hdr-right">
       <button class="cart-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Switch theme">
@@ -404,15 +403,6 @@
   </div>
 </section>
 
-<!-- ══════════════ ADMIN ══════════════ -->
-<section class="view" id="v-admin">
-  <div class="wrap section">
-    <h1 class="t-h1">Order <span class="t-lime">pipeline</span></h1>
-    <p class="t-mut" style="margin:8px 0 32px">Back-office view: move orders through each production stage.</p>
-    <div id="adminBody"></div>
-  </div>
-</section>
-
 <!-- ══════════════ AUTH MODAL ══════════════ -->
 <div class="modal-bg" id="loginModal">
   <div class="modal">
@@ -487,7 +477,6 @@
 <script src="js/studio.js?v={{V}}"></script>
 <script src="js/ai.js?v={{V}}"></script>
 <script src="js/cart.js?v={{V}}"></script>
-<script src="js/admin.js?v={{V}}"></script>
 <script src="js/designs.js?v={{V}}"></script>
 <script src="js/pdp.js?v={{V}}"></script>
 <script src="js/scrollstack.js?v={{V}}"></script>

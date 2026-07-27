@@ -7,7 +7,6 @@ function go(v){
   if(v==='products') renderProducts();
   if(v==='cart') renderCart();
   if(v==='orders') renderOrders();
-  if(v==='admin') renderAdmin();
   if(v==='designs') renderDesigns();
   if(v==='pdp') renderPdp();
   if(v==='studio') draw();

@@ -24,7 +24,7 @@ changed is that they're now *separate* files instead of one 311KB
 - `js/` loads in order and shares global scope (classic scripts, not
   modules): `mockup-data.js` → `data.js` → `mockups.js` → `nav.js` →
   `auth.js` → `products.js` → `studio.js` → `ai.js` → `cart.js` →
-  `designs.js` → `admin.js` → `pdp.js` → `scrollstack.js` →
+  `designs.js` → `pdp.js` → `scrollstack.js` →
   `cursorgrid.js` → `theme.js` → `init.js`. Order matters for top-level
   side effects; `esc()` lives in `data.js` because it loads first. The
   initial `data-theme` is set by an inline script in `<head>`, before the
@@ -56,6 +56,10 @@ changed is that they're now *separate* files instead of one 311KB
   resumes where the order was. `/api/admin/orders` returns per-line
   summaries only — putting `items_json` in the list made it 234KB for
   four orders, since each line carries a base64 thumbnail.
+  **The `/api/admin/*` routes currently have no UI.** The in-storefront
+  admin tab was removed deliberately; the replacement is a separate app
+  at `/admin` (see the super-admin plan). The endpoints are tested and
+  are what that app will call — don't delete them as dead code.
 - `designs.py` — saved designs + templates. `reviews.py` — verified-
   purchase-gated reviews. `shipping.py` — pincode delivery estimate.
 - `artwork.py` — print-ready files written to `ART_DIR` (defaults next

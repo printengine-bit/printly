@@ -20,8 +20,6 @@ function applyAuthUI(){
     pill.textContent='Sign in';
     pill.onclick=openLogin;
   }
-  document.querySelector('.nav-btn[data-v="admin"]').style.display =
-    (state.user && state.user.role==='admin') ? '' : 'none';
 }
 function userPillClick(){
   if(confirm('Sign out of Printly?')) doLogout();
@@ -52,7 +50,7 @@ async function doLogin(){
 async function doLogout(){
   try{ await fetch(BACKEND+'/api/auth/logout',{method:'POST',credentials:'include'}); }catch(e){}
   state.user=null; applyAuthUI(); toast('Signed out');
-  if(state.view==='admin'||state.view==='orders') go('home');
+  if(state.view==='orders') go('home');
 }
 async function checkSession(){
   try{

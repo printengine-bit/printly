@@ -53,7 +53,9 @@
   --error-container:#93000a;
 
   /* ── Theme-dependent surfaces that were previously hardcoded ── */
-  --scrim:rgba(0,0,0,.6);              /* modal / drawer backdrop */
+  /* Unused by the storefront — kept because the admin panel at /admin needs
+     a backdrop token and will inherit this block. */
+  --scrim:rgba(0,0,0,.6);
   --hdr-bg:rgba(19,19,19,.8);          /* translucent sticky header */
   --sheet-bg:rgba(19,19,19,.9);        /* blurred overlay panels */
   --stage:#000;                        /* studio canvas surround */
