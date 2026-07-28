@@ -43,7 +43,7 @@ changed is that they're now *separate* files instead of one 311KB
 
 **Admin panel** (`frontend/admin/`) — a *separate app* served at `/admin`,
 sharing no file with the storefront: `index.html`, `css/admin.css`,
-`js/{api,theme,dashboard,settings,inventory,app}.js`. Staff never download studio
+`js/{api,theme,dashboard,settings,inventory,orders,production,app}.js`. Staff never download studio
 code and customers never download admin code. It reuses the storefront's
 session cookie (same origin), so there is only one login. The palette
 tokens are deliberately duplicated rather than imported — same design
@@ -70,6 +70,11 @@ language, independent files, so neither app can break the other.
 - `admin_api.py` — panel session, dashboard, `pulse` (polled live data),
   company profile, staff CRUD, audit log. `log()` here is how any staff
   action gets recorded.
+- `production.py` — the print floor's view: open orders grouped by *blank*
+  (product + garment colour) so a batch of twelve green polos is pulled
+  once rather than per order; the artwork file list matched back to orders,
+  with orphan detection; and proof-SLA tracking against the storefront's
+  2-hour promise.
 - `catalog.py` — products, price tiers, colour x size variants, stock and
   the movement ledger. `quote()` is the **only** authority on what an order
   costs; `catalog_payload()` is the JSON the storefront is built from.
@@ -88,8 +93,8 @@ language, independent files, so neither app can break the other.
   resumes where the order was. `/api/admin/orders` returns per-line
   summaries only — putting `items_json` in the list made it 234KB for
   four orders, since each line carries a base64 thumbnail.
-  **The order routes have no UI yet** — the panel's Orders section lands
-  in phase 2. They're tested and are what it will call; not dead code.
+  Bulk stage moves report per-order outcomes rather than failing the whole
+  call — a cancelled order in the selection legitimately can't move.
 - `designs.py` — saved designs + templates. `reviews.py` — verified-
   purchase-gated reviews. `shipping.py` — pincode delivery estimate.
 - `artwork.py` — print-ready files written to `ART_DIR` (defaults next

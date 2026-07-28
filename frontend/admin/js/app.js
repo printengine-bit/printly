@@ -12,9 +12,9 @@ const SECTIONS = {
   dashboard: {label:'Dashboard', icon:'dashboard', subs:[]},
   inventory: {label:'Inventory', icon:'inventory_2',
     subs:['Products','Variants & stock','Stock movements','Low stock','Suppliers']},
-  orders:    {label:'Orders', icon:'receipt_long', phase:2,
+  orders:    {label:'Orders', icon:'receipt_long',
     subs:['All orders','Production queue','Awaiting proof','Ready to dispatch','Cancelled']},
-  production:{label:'Production', icon:'print', phase:2,
+  production:{label:'Production', icon:'print',
     subs:['Print jobs','Artwork files','Proof log']},
   dispatch:  {label:'Dispatch', icon:'local_shipping', phase:3,
     subs:['Pending shipments','Delivery notes','Shipping labels','Courier & AWB','Manifest']},
@@ -123,8 +123,13 @@ function buildMenu(){
 function slug(s){ return s.toLowerCase().replace(/[^a-z]+/g,'-').replace(/^-|-$/g,''); }
 
 function goTo(module, sub){
-  location.hash = '#/' + module + (sub ? '/' + sub : '');
+  const next = '#/' + module + (sub ? '/' + sub : '');
   if(innerWidth <= 900) closeSide();
+  // Assigning an unchanged hash fires no hashchange, so navigating to the
+  // view you're already on would silently do nothing — which breaks both
+  // "click the nav item to refresh" and returning to a list after an action.
+  if(location.hash === next) return route();
+  location.hash = next;
 }
 
 function route(){
@@ -152,6 +157,8 @@ function route(){
   if(target === 'dashboard') return renderDashboard(el);
   if(target === 'settings')  return renderSettings(el, sub || 'company');
   if(target === 'inventory') return renderInventory(el, sub || 'products');
+  if(target === 'orders')    return renderOrders(el, sub || 'all-orders');
+  if(target === 'production')return renderProduction(el, sub || 'print-jobs');
   renderStub(el, target, s);
 }
 

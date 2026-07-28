@@ -321,6 +321,48 @@ def cancel_order(order_id):
         db.execute("SELECT * FROM orders WHERE id=?", (row["id"],)).fetchone()))
 
 
+@orders_bp.route("/admin/orders/bulk", methods=["POST"])
+@require("orders")
+def bulk_status():
+    """Move several orders a stage at once — the whole point of a queue view
+    is not clicking through twenty drawers to mark a batch printed.
+
+    Partial success is normal (a cancelled order in the selection can't move),
+    so this reports per-order outcomes instead of failing the whole call.
+    """
+    d = request.get_json(force=True, silent=True) or {}
+    ids = d.get("ids")
+    to = d.get("to")
+    if not isinstance(ids, list) or not ids:
+        return jsonify(ok=False, error="Select some orders first."), 400
+    if isinstance(to, bool) or not isinstance(to, int) or not 0 <= to <= MAX_STATUS:
+        return jsonify(ok=False, error="That isn't a valid stage."), 400
+    if len(ids) > 200:
+        return jsonify(ok=False, error="Too many orders in one go."), 400
+
+    db = get_db()
+    moved, skipped = [], []
+    for oid in ids:
+        row_id = _row_id_from_display(oid) if isinstance(oid, str) else None
+        row = db.execute("SELECT * FROM orders WHERE id=?", (row_id,)).fetchone() \
+            if row_id is not None else None
+        if not row:
+            skipped.append({"id": oid, "why": "not found"})
+            continue
+        if row["cancelled"]:
+            skipped.append({"id": oid, "why": "cancelled"})
+            continue
+        if row["status"] == to:
+            skipped.append({"id": oid, "why": "already there"})
+            continue
+        db.execute("UPDATE orders SET status=?, updated=CURRENT_TIMESTAMP WHERE id=?",
+                   (to, row["id"]))
+        _log_event(db, row["id"], "stage", row["status"], to)
+        moved.append(oid)
+    db.commit()
+    return jsonify(ok=True, moved=moved, skipped=skipped)
+
+
 @orders_bp.route("/admin/orders/<order_id>/note", methods=["POST"])
 @require("orders")
 def add_order_note(order_id):

@@ -204,10 +204,12 @@ from shipping import shipping_bp
 from artwork import artwork_bp
 from admin_api import admin_bp
 from catalog import catalog_bp, catalog_payload
+from production import production_bp
 app.register_blueprint(auth_bp)
 app.register_blueprint(artwork_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(catalog_bp)
+app.register_blueprint(production_bp)
 app.register_blueprint(orders_bp)
 app.register_blueprint(designs_bp)
 app.register_blueprint(reviews_bp)

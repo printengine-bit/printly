@@ -293,3 +293,100 @@ tr:last-child td{border-bottom:none}
 .stock-cell.stock-low{border-color:var(--warn-ink);color:var(--warn-ink)}
 .stock-cell.stock-neg{border-color:var(--pink);color:var(--pink-ink);font-weight:700}
 .tier-row .tiny{white-space:nowrap}
+
+/* ── Orders ───────────────────────────────────────────────────── */
+.admin-search{position:relative;margin:0}
+.admin-search .material-symbols-outlined{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  color:var(--ink-mut);font-size:20px;pointer-events:none;
+}
+.admin-search input{padding-left:40px}
+.cbx{width:18px;min-height:18px;accent-color:var(--lime)}
+.row-off td{opacity:.5}
+.badge-mid{background:rgba(206,3,88,.18);color:var(--pink-ink)}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap}
+.chip{
+  padding:9px 15px;min-height:44px;border-radius:var(--r-full);
+  background:var(--panel-2);border:1px solid var(--line);
+  color:var(--ink-mut);font-size:12.5px;font-weight:600;
+  display:inline-flex;align-items:center;
+}
+.chip:hover{border-color:var(--lime);color:var(--ink)}
+.chip.on{background:var(--lime);border-color:var(--lime);color:var(--on-lime)}
+.bulk-bar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--panel-2);border:1px solid var(--lime);
+  border-radius:var(--r);padding:12px 16px;margin-bottom:14px;
+}
+.size-chip{
+  display:inline-block;padding:3px 9px;margin:2px 4px 2px 0;border-radius:var(--r-full);
+  background:var(--panel-3);font-size:11.5px;
+}
+.size-chip b{color:var(--lime-ink)}
+.size-chips{margin-top:6px}
+.lbl{text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;font-weight:700}
+
+/* ── Order drawer ─────────────────────────────────────────────── */
+.drawer-scrim{
+  position:fixed;inset:0;background:var(--scrim);z-index:140;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.drawer-scrim.on{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(580px,100%);z-index:141;
+  background:var(--panel);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .24s ease;
+}
+.drawer.on{transform:none}
+.drawer-head{
+  display:flex;align-items:center;gap:14px;padding:18px 22px;
+  border-bottom:1px solid var(--line);flex-shrink:0;
+}
+.drawer-head .badge{margin-left:auto}
+.drawer-body{overflow-y:auto;padding:4px 22px 32px}
+.drawer-body section{padding:20px 0;border-bottom:1px solid var(--line)}
+.drawer-body section:last-child{border-bottom:none}
+
+.addr{display:flex;flex-direction:column;gap:3px;font-size:14px;line-height:1.5}
+.addr a{color:var(--lime-ink)}
+.addr .btn{align-self:flex-start;margin-top:10px}
+.ord-line{
+  background:var(--panel-2);border:1px solid var(--line);
+  border-radius:var(--r);padding:16px;margin-bottom:14px;
+}
+.ord-line-top{display:flex;gap:14px;align-items:flex-start}
+.ord-thumb{
+  width:64px;height:64px;object-fit:cover;border-radius:var(--r-sm);
+  background:var(--panel-3);flex-shrink:0;
+}
+.ord-total{display:flex;justify-content:space-between;padding-top:12px;font-size:15px}
+.spec{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+.spec-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:13px}
+.spec-head .btn,.spec-head .tiny.dim:last-child{margin-left:auto}
+.spec-row{
+  display:flex;flex-direction:column;gap:3px;font-size:12.5px;
+  padding:8px 10px;border-radius:var(--r-sm);background:var(--panel);
+  margin-bottom:6px;
+}
+.spec-row.bad{border:1px solid var(--pink)}
+.spec-kind{font-size:10.5px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--lime-ink)}
+.timeline{list-style:none;display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+.timeline li{display:flex;flex-direction:column;gap:2px;font-size:13px;
+  padding-left:14px;border-left:2px solid var(--line)}
+.note-row{display:flex;gap:8px}
+.note-row input{flex:1}
+
+@media(max-width:900px){ .drawer{width:100%} }
+
+@media(max-width:900px){
+  /* box-sizing is border-box app-wide, so `width` is the whole box: set it
+     to 44 and let the padding shrink the glyph back to checkbox size. */
+  .cbx{width:44px;height:44px;padding:11px}
+  /* Icon-only buttons are tall enough but too narrow to hit. */
+  .btn-sm{min-width:44px}
+  /* The tel: and mailto: links in the address block are the ones you
+     actually tap on a phone. */
+  .drawer-body a{min-height:44px;display:inline-flex;align-items:center}
+}
