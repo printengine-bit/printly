@@ -22,9 +22,11 @@
 .st-tabs{display:flex;background:var(--surface-container-highest);border-radius:var(--r-full);padding:4px;margin-bottom:20px}
 .st-tab{
   flex:1;padding:9px 4px;border-radius:var(--r-full);
+  display:flex;align-items:center;justify-content:center;gap:6px;
   font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
   color:var(--on-surface-variant);transition:background .18s,color .18s;
 }
+.st-tab .material-symbols-outlined{font-size:17px}
 .st-tab.on{background:var(--lime);color:var(--on-lime)}
 .st-panel{display:none}
 .st-panel.on{display:block}
@@ -100,12 +102,15 @@
   width:40px;height:40px;display:flex;align-items:center;justify-content:center;
   border-radius:var(--r-sm);color:var(--on-surface);transition:background .18s,color .18s;
 }
-.st-toolbar button:hover{background:var(--surface-container-highest);color:var(--lime-ink)}
+.st-toolbar button:hover:not(:disabled){background:var(--surface-container-highest);color:var(--lime-ink)}
+.st-toolbar button:disabled{opacity:.3;cursor:default}
 .st-toolbar .sep{width:1px;height:22px;background:var(--outline-variant);margin:0 4px}
 
 .st-canvas-wrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;max-height:100%}
+/* Width and offset are set by drawRuler() so it sits over the print zone,
+   which needs flex-start — centring would fight the computed margin. */
 .st-ruler{
-  display:flex;justify-content:space-between;
+  display:flex;justify-content:space-between;align-self:flex-start;
   width:min(520px,60vh);font-size:10px;color:var(--outline);
   font-variant-numeric:tabular-nums;
   border-bottom:1px solid var(--outline-variant);padding-bottom:3px;
@@ -152,7 +157,10 @@
 .mz.quiet{background:transparent;color:var(--outline)}
 
 /* ── Layers + summary ─────────────────────────────────────────── */
-.st-layers{flex:1;overflow-y:auto;padding:20px;min-height:0}
+/* No scrollbar of its own. Giving this a fixed height and its own overflow
+   crushed the getting-started guide into a 150px keyhole while the summary
+   below had room to spare. The whole column scrolls as one instead. */
+.st-layers{flex:0 0 auto;padding:20px}
 .layer{
   display:flex;align-items:center;gap:12px;padding:10px;
   background:var(--surface-container-low);
@@ -179,7 +187,73 @@
 .layer-acts button:hover{background:var(--surface-container-highest);color:var(--primary)}
 .layer-acts button.del:hover{background:var(--error-container);color:var(--error)}
 
-/* ── Size breakdown ───────────────────────────────────────────── */
+/* ── Getting-started guide ────────────────────────────────────────
+   Lives in the empty layers column, so it costs no layout of its own and
+   disappears the moment there's a design to list instead. */
+.coach{padding:4px 0}
+.coach-h{
+  font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--outline);margin-bottom:10px;
+}
+.coach-step{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:9px 11px;margin-bottom:6px;border-radius:var(--r-sm);
+  background:var(--surface-container-low);border:1px solid var(--outline-variant);
+  transition:border-color .18s,background .18s;
+}
+button.coach-step{cursor:pointer}
+button.coach-step:hover{border-color:var(--lime);background:var(--surface-container-high)}
+.coach-n{
+  width:24px;height:24px;flex-shrink:0;border-radius:var(--r-full);
+  background:var(--lime);color:var(--on-lime);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;
+}
+.coach-txt{flex:1;min-width:0}
+.coach-txt b{display:block;font-size:13px;font-weight:700;color:var(--primary)}
+.coach-txt i{display:block;font-style:normal;font-size:11px;line-height:1.5;
+  color:var(--on-surface-variant);margin-top:2px}
+.coach-ico{font-size:20px;color:var(--outline);flex-shrink:0}
+
+/* ── Size picker ──────────────────────────────────────────────── */
+/* Single-item view: chips + one stepper. */
+.size-pick{margin-bottom:12px}
+/* Share the panel width so all six sit on one row instead of wrapping. */
+.size-pick .sizes{margin-bottom:12px;gap:6px}
+.size-pick .size-btn{flex:1;min-width:38px;padding:11px 4px}
+.one-size{
+  display:inline-block;padding:9px 16px;border-radius:var(--r-sm);
+  background:var(--surface-container-highest);
+  font-size:13px;font-weight:700;margin-bottom:12px;
+}
+.qty-row{display:flex;align-items:center;gap:6px}
+.qty-row.off{opacity:.45}
+.qty-row.off .size-step{pointer-events:none}
+
+/* The way into the wholesale view — and the pitch for taking it. */
+.bulk-toggle{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:11px 12px;margin-bottom:12px;border-radius:var(--r-sm);
+  background:var(--tint-lime);border:1px dashed var(--lime);
+  font-size:11.5px;line-height:1.4;color:var(--on-surface-variant);
+  transition:background .18s;
+}
+.bulk-toggle:hover{background:var(--surface-container-highest)}
+.bulk-toggle b{color:var(--lime-ink);font-weight:800}
+.bulk-toggle .material-symbols-outlined{font-size:18px;color:var(--lime-ink);flex-shrink:0}
+
+.tier-hint{
+  display:flex;align-items:center;gap:8px;margin-bottom:10px;
+  font-size:11.5px;color:var(--on-surface-variant);
+}
+.tier-hint b{color:var(--lime-ink)}
+.tier-hint .material-symbols-outlined{font-size:16px;color:var(--lime-ink)}
+.tier-hint.best{color:var(--lime-ink);font-weight:700}
+.price-note{font-size:12px;color:var(--outline);padding:8px 0 2px}
+.size-note{font-size:11px;line-height:1.5;color:var(--on-surface-variant);margin-top:10px}
+.size-note b{color:var(--lime-ink)}
+
+/* ── Size breakdown (bulk view) ───────────────────────────────── */
 .size-grid{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
 .size-row{display:flex;align-items:center;gap:6px}
 .size-key{
@@ -204,7 +278,15 @@
 .size-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .size-num:focus{border-color:var(--lime);box-shadow:0 0 0 2px rgba(200,242,50,.25);outline:none}
 
-.st-summary{padding:20px;background:var(--surface-container-high);border-top:1px solid var(--outline-variant)}
+/* Never given its own scrollbar: "Add to cart" lives at the bottom of this
+   block, and hiding the primary action inside a nested scroll box is worse
+   than scrolling the column. The layers list absorbs the squeeze instead,
+   down to a floor, after which the whole panel scrolls. */
+.st-summary{
+  padding:20px;background:var(--surface-container-high);
+  border-top:1px solid var(--outline-variant);
+  flex-shrink:0;margin-top:auto;   /* sits at the foot when there's room */
+}
 .price-line{display:flex;justify-content:space-between;font-size:13px;padding:5px 0}
 .price-line span:first-child{color:var(--on-surface-variant)}
 .price-line span:last-child{color:var(--primary);font-weight:700}
@@ -230,15 +312,23 @@
   .st-toolbar button{width:44px;height:44px}
   .st-tab{min-height:44px}
   .seg button{min-height:44px}
-  .layer-acts button{width:40px;height:40px}
+  .layer-acts button{width:44px;height:44px}
+  /* The product picker had min-height:auto stripped off it for the desktop
+     inline look, which left a 20px tap target on the first control anyone
+     touches. The file input ships at 39px by default. */
+  .st-product select{min-height:44px}
+  #imgInput{min-height:44px}
   .sw{width:34px;height:34px}
   /* Size steppers get thumb-sized on touch. */
   .size-step{width:44px;height:44px;font-size:18px}
   .size-num{min-height:44px;font-size:15px}
   .size-grid{gap:8px}
+  .size-pick .size-btn{min-height:44px}
+  .bulk-toggle{min-height:44px}
+  .coach-step{min-height:44px}
   .st-fab{position:static;width:100%;margin-top:16px;justify-content:center}
   .st-warn{position:static;transform:none;margin-top:12px}
   #teeCanvas,.st-ruler,.measure{width:min(520px,88vw);max-width:100%}
-  .st-layers{overflow:visible}
+  .st-layers{overflow:visible;min-height:0}
   .st-summary{position:sticky;bottom:0;z-index:20}
 }

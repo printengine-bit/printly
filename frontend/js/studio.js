@@ -15,6 +15,10 @@ function initStudio(){
   updateProductSub();
   resetSizesForProduct();
   updatePrice();
+  // Without this the layers column is a bare heading until the first edit —
+  // the empty state (and the getting-started guide inside it) never showed
+  // on the one screen that most needs it.
+  renderLayers();
 }
 /* Left-panel tab switcher (Base / Assets / AI) */
 function studioTab(name){
@@ -52,22 +56,51 @@ function toggleJerseyKit(){
   document.getElementById('jerseyKit').style.display =
     state.product.id==='js' ? 'block' : 'none';
 }
-function studioProductChange(){
-  const old=pa();
-  state.product=PRODUCTS.find(p=>p.id===document.getElementById('stProduct').value);
-  const P=pa();
-  // keep existing artwork inside the new product's print area
+/* Move artwork from one print area to another, keeping where it sits on the
+   garment rather than its absolute pixel position — so a centred design
+   stays centred. `shrink` also scales the artwork down to fit a smaller
+   zone; that's right when the *product* changes (a tote's zone is much
+   smaller than a hoodie's) and wrong when only the *size* changes, where
+   the print is a fixed physical thing and the garment moved around it. */
+function remapLayers(old,P,shrink){
   ['front','back'].forEach(s=>{
     state.layers[s].forEach(L=>{
       const rx=(L.x-old.x)/old.w, ry=(L.y-old.y)/old.h;
       L.x=P.x+rx*P.w; L.y=P.y+ry*P.h;
-      if(P.w<old.w){
+      if(shrink && P.w<old.w){
         const f=P.w/old.w;
         if(L.type==='text') L.size=Math.max(10,L.size*f);
         else { L.w*=f; L.h*=f; }
       }
     });
   });
+}
+
+/* Redraw against a different garment size when the order's smallest size
+   changes. Called after every size edit; a no-op unless the size actually
+   moved, so it costs nothing on a quantity bump. */
+function applyPreviewSize(){
+  if(typeof previewSize!=='function' || !document.getElementById('teeCanvas')) return;
+  const pid=state.product.id, side=state.side, size=previewSize();
+  const stamp=pid+'|'+side+'|'+size;
+  if(state._drawnStamp===stamp) return;
+  // Only remap when the garment SIZE moved. A product change does its own
+  // remap (with shrinking), and a side flip lands on a different set of
+  // layers that were never in this zone to begin with.
+  const sizeOnly = state._drawnStamp && state._drawnStamp.indexOf(pid+'|'+side+'|')===0;
+  const old=state._drawnPA;
+  const P=pa();
+  state._drawnStamp=stamp;
+  state._drawnPA={x:P.x,y:P.y,w:P.w,h:P.h};
+  if(old && sizeOnly) remapLayers(old,P,false);
+  draw();
+}
+
+function studioProductChange(){
+  const old=pa();
+  state.product=PRODUCTS.find(p=>p.id===document.getElementById('stProduct').value);
+  const P=pa();
+  remapLayers(old,P,true);   // keep existing artwork inside the new zone
   toggleJerseyKit();
   updateProductSub();
   resetSizesForProduct();   // size keys differ (a tote is one-size)
@@ -79,7 +112,7 @@ function setSide(s){
   document.getElementById('tabF').classList.toggle('on',s==='front');
   document.getElementById('tabB').classList.toggle('on',s==='back');
   document.getElementById('sideLabel').textContent=s;
-  renderLayers(); draw();
+  renderLayers(); applyPreviewSize(); draw();
 }
 
 /* ═══════════════ STUDIO: drawing ═══════════════ */
@@ -270,7 +303,12 @@ function updateMeasure(){
   const box=document.getElementById('measureBar'); if(!box) return;
   const P=pa(), k=pxcm();
   const zone=document.getElementById('zoneLabel');
-  if(zone) zone.textContent=`Primary print zone · ${P.cmW} × ${P.cmH} cm`;
+  const size=typeof previewSize==='function'?previewSize():'';
+  const sized=sizeKeys(state.product.id).length>1;
+  if(zone) zone.innerHTML = sized
+    ? `Print zone on <b>${esc(size)}</b> · ${P.cmW} × ${P.cmH} cm`
+    : `Print zone · ${P.cmW} × ${P.cmH} cm`;
+  drawRuler(P,k);
 
   let html='', outside=false;
   const L=state.layers[state.side][state.sel];
@@ -292,7 +330,47 @@ function updateMeasure(){
 
   // The mockup surfaces this as a floating pill rather than an inline chip.
   const warn=document.getElementById('stWarn');
-  if(warn) warn.classList.toggle('on',outside);
+  if(warn){
+    warn.classList.toggle('on',outside);
+    // previewSize() is the SMALLEST size in the order, so this warning is
+    // already the strictest one: if it fits what's on screen it fits every
+    // garment in the order. Naming the size is what makes that legible.
+    document.getElementById('stWarnText').textContent =
+      sizeKeys(state.product.id).length>1
+        ? `Outside the print area on ${previewSize()}`
+        : 'Object outside print area';
+  }
+  syncToolbar();
+}
+
+/* The ruler used to be four hardcoded numbers that meant nothing. It now
+   spans the print zone itself and is relabelled every draw, so it stays
+   true when the garment size changes the zone underneath it. */
+function drawRuler(P,k){
+  const el=document.getElementById('stRuler'); if(!el) return;
+  const disp=cv.getBoundingClientRect().width||520;
+  const f=disp/520;                              // canvas px → screen px
+  const w=P.w*f;
+  el.style.marginLeft=(P.x*f)+'px';
+  el.style.width=w+'px';
+  // The zone is only ~135px wide on a desktop canvas and less on a phone, so
+  // tick density comes from the space available, not from a fixed step —
+  // five labels in that width overlap into mush.
+  const cm=P.cmW, maxTicks=Math.max(2,Math.min(5,Math.floor(w/48)));
+  let step=50;
+  for(const s of [5,10,20,25,50]){ if(cm/s+1<=maxTicks){ step=s; break; } }
+  const ticks=[];
+  for(let v=0;v<=cm-step*0.4;v+=step) ticks.push(v);
+  el.innerHTML=ticks.map((v,i)=>`<span>${i?v:'0cm'}</span>`).join('')
+    +`<span>${cm}</span>`;
+}
+/* Eight of the ten toolbar icons do nothing until something is selected, and
+   answering every click with "Select an item first" taught nobody anything.
+   Dim them instead, so the two that always work stand out. */
+function syncToolbar(){
+  const live=state.sel>=0;
+  document.querySelectorAll('.st-toolbar button[data-needsel]')
+    .forEach(b=>b.disabled=!live);
 }
 function alignSel(mode){
   const L=state.layers[state.side][state.sel];
@@ -430,13 +508,42 @@ function addImage(){
   };
   r.readAsDataURL(f);
 }
+/* The layers column is empty for everyone's first minute here, which makes
+   it the best place in the studio to say what to do — a wall of tool panels
+   with no order to them is what made this page read as confusing. Steps 1
+   and 2 open the panel they're talking about. */
+function coachHTML(){
+  const steps=[
+    ['base','apparel','Pick the garment','Style and colour, on the left'],
+    ['assets','draw','Put your design on it','Type text, drop in a logo, or let AI draw one'],
+    ['','straighten','Choose a size','Then add to cart — digital proof within 2 hours'],
+  ];
+  return `<div class="coach">
+    <div class="coach-h">Three steps to your print</div>
+    ${steps.map(([tab,icon,title,sub],i)=>`
+      <${tab?'button':'div'} class="coach-step"${tab?` onclick="studioTab('${tab}')"`:''}>
+        <span class="coach-n">${i+1}</span>
+        <span class="coach-txt"><b>${title}</b><i>${sub}</i></span>
+        <span class="material-symbols-outlined coach-ico">${icon}</span>
+      </${tab?'button':'div'}>`).join('')}
+  </div>`;
+}
 function renderLayers(){
   const el=document.getElementById('layerList'); const Ls=state.layers[state.side];
+  const head=document.getElementById('layerHead');
+  const empty=!Ls.length && !state.layers[state.side==='front'?'back':'front'].length;
+  // "Active layers" over a getting-started guide reads as a broken list.
+  if(head) head.hidden=empty;
   if(!Ls.length){
-    el.innerHTML=`<div class="empty" style="padding:32px 8px">
-      <span class="material-symbols-outlined">layers_clear</span>
-      <p style="font-size:13px">Nothing on this side yet.<br>Add text, a logo, or use AI.</p>
-    </div>`;
+    const other=state.side==='front'?'back':'front';
+    el.innerHTML = state.layers[other].length
+      ? `<div class="empty" style="padding:32px 8px">
+          <span class="material-symbols-outlined">layers_clear</span>
+          <p style="font-size:13px">Nothing on the ${state.side} yet.<br>
+            Your design is on the ${other} — switch sides to see it.</p>
+        </div>`
+      : coachHTML();
+    if(typeof syncCta==='function') syncCta();
     return;
   }
   // Newest on top, matching how the canvas stacks them.
@@ -462,6 +569,7 @@ function renderLayers(){
       </div>
     </div>`;
   }).reverse().join('');
+  if(typeof syncCta==='function') syncCta();
 }
 /* Snapshot the canvas WITHOUT the editing chrome.
    draw() paints the selection box, size readout, delete badge and scale
@@ -589,7 +697,10 @@ function printSpec(side){
       cropped: b.x<P.x-1 || b.y<P.y-1 || b.x+b.w>P.x+P.w+1 || b.y+b.h>P.y+P.h+1,
     };
   });
-  const zone = {w:P.cmW, h:P.cmH};
+  // Which garment the zone belongs to. Without it the cm figures below are
+  // unreadable on the print floor — a 38cm zone is an M or a 3XL depending
+  // on nothing the order otherwise records.
+  const zone = {w:P.cmW, h:P.cmH, size:previewSize()};
   state.side = prev;
   return spec.length ? {zone, layers:spec} : null;
 }
@@ -654,6 +765,14 @@ cv.addEventListener('wheel',e=>{
   if(state.sel<0)return; e.preventDefault();
   bump(state.sel, e.deltaY<0?1.06:0.94);
 },{passive:false});
+// The ruler is measured against the canvas's RENDERED width, which the
+// stylesheet ties to the viewport — so it has to be redrawn when that
+// changes or it stops lining up with the print zone.
+let rulerTick=0;
+addEventListener('resize',()=>{
+  clearTimeout(rulerTick);
+  rulerTick=setTimeout(()=>{ if(document.getElementById('v-studio').classList.contains('on')) draw(); },120);
+});
 // keyboard: Delete / Backspace removes selected element (when not typing in a field)
 window.addEventListener('keydown',e=>{
   const t=e.target.tagName;

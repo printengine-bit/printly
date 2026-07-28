@@ -178,7 +178,10 @@ function pdpColor(c){
 }
 function pdpSize(s){
   state.pdp.size=s;
-  document.querySelectorAll('.size-btn').forEach(b=>b.classList.toggle('on',b.textContent===s));
+  // Scoped to this view: the studio's size chips reuse .size-btn and are
+  // still in the DOM while hidden, so an unscoped query moved their
+  // selection too.
+  document.querySelectorAll('#v-pdp .size-btn').forEach(b=>b.classList.toggle('on',b.textContent===s));
 }
 
 async function checkPincode(){

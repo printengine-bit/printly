@@ -1,15 +1,35 @@
 /* ═══════════════ PRICING ═══════════════ */
+/* Mirrors company.free_shipping_over in the database. The server recomputes
+   every total from its own copy and rejects a mismatch over ₹1, so if the
+   admin changes the threshold this constant has to follow. */
+const FREE_SHIP_OVER=10000;
 function unitPrice(p,q){
   let u=p.tiers[0][1];
   p.tiers.forEach(([min,pr])=>{ if(q>=min)u=pr; });
   return u;
 }
-/* Render the per-size steppers. These ARE the quantity input — the total
-   is derived from them, so there's no second control that can disagree. */
+/* ── Size picker ──────────────────────────────────────────────────
+   Two faces over one piece of state. `state.sizes` is still the only place
+   a quantity lives; `state.orderMode` only decides which control edits it.
+
+   'single' is the default because it's what nearly every visitor is doing —
+   one garment, one size, a quantity. The full per-size breakdown is a
+   wholesale order form, and leading with it made the studio read like a
+   trade portal. It's one click away behind the bulk button. */
 function renderSizeGrid(){
   const el=document.getElementById('sizeGrid'); if(!el) return;
   const keys=sizeKeys(state.product.id);
-  el.innerHTML=keys.map(k=>`
+  const bulk=state.orderMode==='bulk';
+  el.className=bulk?'size-grid':'size-pick';
+  el.innerHTML=bulk?bulkRows(keys):singleRows(keys);
+  const title=document.getElementById('qtyTitle');
+  if(title) title.textContent=bulk?'Size breakdown':'Size';
+  renderBulkToggle(keys);
+}
+
+/* One row per size — the wholesale view. */
+function bulkRows(keys){
+  const rows=keys.map(k=>`
     <div class="size-row">
       <span class="size-key">${esc(k)}</span>
       <button class="size-step" onclick="bumpSize('${esc(k)}',-1)" aria-label="Fewer ${esc(k)}">−</button>
@@ -17,7 +37,59 @@ function renderSizeGrid(){
              value="${state.sizes[k]||0}" oninput="setSize('${esc(k)}',this.value)" aria-label="${esc(k)} quantity">
       <button class="size-step" onclick="bumpSize('${esc(k)}',1)" aria-label="More ${esc(k)}">+</button>
     </div>`).join('');
+  // One artwork gets printed on every size in the order, so the canvas shows
+  // the smallest one — clear that fits them all.
+  const ordered=keys.filter(k=>+state.sizes[k]>0);
+  const note=ordered.length>1
+    ? `<p class="size-note">Canvas shows <b>${esc(ordered[0])}</b>, the smallest size you've
+         ordered — a design that fits there fits every size in the order.</p>` : '';
+  return rows+note;
 }
+
+/* Size chips plus a quantity stepper. Nothing is pre-selected: the whole
+   point of asking is that we don't know, and a default M that looks chosen
+   is how a customer ends up with the wrong shirt. */
+function singleRows(keys){
+  const pick=currentSize();
+  const qty=pick?(+state.sizes[pick]||1):1;
+  const head=keys.length>1
+    ? `<div class="sizes">${keys.map(k=>`<button class="size-btn${k===pick?' on':''}"
+         onclick="pickSize('${esc(k)}')">${esc(k)}</button>`).join('')}</div>`
+    : `<div class="one-size">${esc(keys[0])}</div>`;
+  return `${head}
+    <div class="qty-row${pick?'':' off'}">
+      <span class="size-key">Qty</span>
+      <button class="size-step" onclick="bumpQty(-1)" aria-label="One fewer">−</button>
+      <input class="size-num" type="number" min="1" max="9999" inputmode="numeric"
+             value="${qty}" ${pick?'':'disabled'} oninput="setQty(this.value)" aria-label="Quantity">
+      <button class="size-step" onclick="bumpQty(1)" aria-label="One more">+</button>
+    </div>`;
+}
+
+/* In single mode exactly one size carries the whole quantity, so "which
+   size is selected" is derived rather than stored — no second field to
+   drift out of step with the breakdown. */
+function currentSize(){
+  return sizeKeys(state.product.id).find(k=>+state.sizes[k]>0)||'';
+}
+function pickSize(k){
+  const qty=Math.max(1,sizeTotal(state.sizes)||1);
+  sizeKeys(state.product.id).forEach(x=>state.sizes[x]=0);
+  state.sizes[k]=qty;                       // keep the quantity they'd set
+  renderSizeGrid(); updatePrice();
+}
+function bumpQty(d){
+  const k=currentSize();
+  if(!k){ toast('Pick a size first'); return; }
+  state.sizes[k]=Math.max(1,(+state.sizes[k]||1)+d);
+  renderSizeGrid(); updatePrice();
+}
+function setQty(v){
+  const k=currentSize(); if(!k) return;
+  state.sizes[k]=Math.max(1,Math.min(9999,parseInt(v,10)||1));
+  updatePrice();          // don't re-render: it would fight the caret
+}
+
 function bumpSize(k,d){
   state.sizes[k]=Math.max(0,(+state.sizes[k]||0)+d);
   renderSizeGrid(); updatePrice();
@@ -27,27 +99,118 @@ function setSize(k,v){
   state.sizes[k]=n;
   updatePrice();          // don't re-render: it would fight the caret
 }
+
+/* The bulk entry point doubles as the pitch: showing the next tier's price
+   is the only reason someone would click it. Hidden for one-size products,
+   where "single" and "bulk" are the same one-row control. */
+function renderBulkToggle(keys){
+  const b=document.getElementById('bulkToggle'); if(!b) return;
+  keys=keys||sizeKeys(state.product.id);
+  if(keys.length<2){ b.hidden=true; return; }
+  b.hidden=false;
+  if(state.orderMode==='bulk'){
+    b.innerHTML=`<span class="material-symbols-outlined">arrow_back</span>
+      <span>Back to a single item</span>`;
+    return;
+  }
+  const t=(state.product.tiers||[])[1];
+  b.innerHTML=`<span class="material-symbols-outlined">groups</span>
+    <span><b>Bulk order</b>${t?` — mix sizes, from ₹${t[1].toLocaleString('en-IN')} each at ${t[0]}+`
+                             :' — order a mix of sizes'}</span>`;
+}
+
+function toggleOrderMode(){
+  if(state.orderMode==='bulk'){
+    // Collapsing a real breakdown would quietly drop sizes, so keep the
+    // biggest line and say so rather than picking for them in silence.
+    const keys=sizeKeys(state.product.id);
+    const filled=keys.filter(k=>+state.sizes[k]>0);
+    if(filled.length>1){
+      const best=filled.reduce((a,b)=>+state.sizes[b]>+state.sizes[a]?b:a);
+      keys.forEach(k=>{ if(k!==best) state.sizes[k]=0; });
+      toast(`Kept ${state.sizes[best]}×${best} — switch back to bulk for a size mix`);
+    }
+    state.orderMode='single';
+  } else {
+    state.orderMode='bulk';
+  }
+  renderSizeGrid(); updatePrice();
+}
+
 /* Reset the breakdown when the product changes, since size keys differ
-   (a tote has no S/M/L). Carries the existing total over. */
+   (a tote has no S/M/L). The quantity carries over only when the new
+   product is one-size — otherwise there's no size to carry it onto, and
+   guessing one is exactly what we're avoiding. */
 function resetSizesForProduct(){
   const keys=sizeKeys(state.product.id);
   const existing=Object.keys(state.sizes);
-  const sameShape = existing.length===keys.length && keys.every(k=>k in state.sizes);
-  if(!sameShape) state.sizes=newSizeBreakdown(state.product.id, sizeTotal(state.sizes)||25);
+  const sameShape=existing.length===keys.length && keys.every(k=>k in state.sizes);
+  if(!sameShape){
+    const carry=keys.length===1?Math.max(1,sizeTotal(state.sizes)):0;
+    state.sizes=newSizeBreakdown(state.product.id, carry);
+  }
+  if(keys.length===1 && !(+state.sizes[keys[0]]>0)) state.sizes[keys[0]]=1;
   renderSizeGrid();
 }
 
 function updatePrice(){
   const q=sizeTotal(state.sizes);
   document.getElementById('qtyLabel').textContent=q;
-  const p=state.product, u=unitPrice(p,Math.max(1,q)), sub=u*q;
-  const gst=Math.round(sub*0.05), ship=q>=50?0:99, tot=sub+gst+ship;
-  document.getElementById('priceBox').innerHTML=`
-    <div class="price-line"><span>Unit price</span><span>₹${u.toLocaleString('en-IN')}</span></div>
-    <div class="price-line"><span>${esc(p.name)} × ${q}</span><span>₹${sub.toLocaleString('en-IN')}</span></div>
-    <div class="price-line"><span>GST 5%</span><span>₹${gst.toLocaleString('en-IN')}</span></div>
-    <div class="price-line"><span>Shipping</span><span>${ship===0?'<span class="t-lime">FREE</span>':'₹'+ship}</span></div>
-    <div class="price-line total"><span>Total</span><span>₹${tot.toLocaleString('en-IN')}</span></div>`;
+  const p=state.product, u=unitPrice(p,Math.max(1,q));
+  const box=document.getElementById('priceBox');
+
+  if(q<1){
+    // A total of ₹99 with nothing in the order is just the shipping line
+    // showing through, and it reads as a broken price.
+    box.innerHTML=`
+      <div class="price-line"><span>Unit price</span><span>₹${u.toLocaleString('en-IN')}</span></div>
+      <div class="price-note">Choose a size to see the total.</div>`;
+  } else {
+    // Free shipping is a rupee threshold, not a piece count. This line used
+    // to read `q>=50`, so the studio quoted free delivery on fifty cheap
+    // pieces the cart and the server then billed ₹99 for — and charged for
+    // delivery on eight hoodies they'd waive. Same rule everywhere.
+    const sub=u*q, gst=Math.round(sub*0.05),
+          ship=sub>FREE_SHIP_OVER?0:99, tot=sub+gst+ship;
+    box.innerHTML=`
+      <div class="price-line"><span>Unit price</span><span>₹${u.toLocaleString('en-IN')}</span></div>
+      <div class="price-line"><span>${esc(p.name)} × ${q}</span><span>₹${sub.toLocaleString('en-IN')}</span></div>
+      <div class="price-line"><span>GST 5%</span><span>₹${gst.toLocaleString('en-IN')}</span></div>
+      <div class="price-line"><span>Shipping</span><span>${ship===0?'<span class="t-lime">FREE</span>':'₹'+ship}</span></div>
+      <div class="price-line total"><span>Total</span><span>₹${tot.toLocaleString('en-IN')}</span></div>`;
+  }
+  renderTierHint(q);
+  // Every size edit runs through here, and the canvas draws whichever
+  // garment size the order is anchored to — so this is where the two meet.
+  if(typeof applyPreviewSize==='function') applyPreviewSize();
+  syncCta();
+}
+
+/* How far the next price break is. The tier table is already on the product
+   page; here it only matters as "N more pieces and everything gets cheaper". */
+function renderTierHint(q){
+  const el=document.getElementById('tierHint'); if(!el) return;
+  const tiers=state.product.tiers||[];
+  if(q<1 || tiers.length<2){ el.hidden=true; return; }
+  const next=tiers.find(([min])=>min>q);
+  el.hidden=false;
+  el.className='tier-hint'+(next?'':' best');
+  el.innerHTML=next
+    ? `<span class="material-symbols-outlined">trending_down</span>
+       Add ${next[0]-q} more → <b>₹${next[1].toLocaleString('en-IN')}</b> each`
+    : `<span class="material-symbols-outlined">verified</span> Best price unlocked`;
+}
+
+/* The primary button says what's missing instead of letting you press it and
+   get a toast. Both conditions are still re-checked in addToCart(). */
+function syncCta(){
+  const btn=document.getElementById('addBtn'); if(!btn) return;
+  const hasDesign=state.layers.front.length||state.layers.back.length;
+  let label='Add to cart', icon='arrow_forward', off=false;
+  if(!hasDesign){ label='Add a design first'; icon='draw'; off=true; }
+  else if(sizeTotal(state.sizes)<1){ label='Choose a size'; icon='straighten'; off=true; }
+  btn.disabled=off;
+  btn.innerHTML=`${label} <span class="material-symbols-outlined">${icon}</span>`;
 }
 
 /* ═══════════════ CART & ORDERS ═══════════════ */
@@ -86,7 +249,6 @@ function addToCart(){
 /* The cart line only needs enough to redraw a preview; the printable copy of
    an uploaded image goes to the artwork endpoint instead of into the order. */
 function stripImg(L){ if(L.type==='img'){const c={...L}; delete c.img; c.note='uploaded image'; return c;} return L; }
-const FREE_SHIP_OVER=10000;
 function renderCart(){
   const el=document.getElementById('cartBody');
   if(!state.cart.length){

@@ -84,18 +84,69 @@ function mockKey(pid){
   if(state.side==='back' && MOCK.mocks[pid+'_back']) return pid+'_back';
   return pid;
 }
+/* ── Garment size ─────────────────────────────────────────────────
+   The mockup photos are one garment. Which one: REF_SIZE. Everything else
+   is that photo scaled by how much bigger or smaller the real garment is,
+   taken from the same size chart the product page already prints — so a new
+   product needs no extra data to size correctly.
+
+   Chest drives it, not length. A photo can only be scaled uniformly without
+   distorting the fabric, and chest is the dimension you actually read off a
+   front-on shot. Across the full S–3XL run the two ratios differ by about
+   7%, which is well inside the tolerance of a printable-area figure.
+
+   ⚠️ This scales whatever MOCK.print says the reference garment's print
+   zone is. If those base figures are wrong (rn front claims 38x50cm, which
+   is generous for an M), every size is wrong by the same factor. Measure a
+   real blank before trusting the numbers, not the scaling. */
+const REF_SIZE='M';
+
+function sizeScale(pid,size){
+  const p=product(pid), ch=p&&p.chart;
+  if(!ch||!ch.chest||ch.chest.length<2) return 1;      // one-size product
+  const i=SIZES.indexOf(size), r=SIZES.indexOf(REF_SIZE);
+  if(i<0||r<0||!ch.chest[i]||!ch.chest[r]) return 1;
+  return ch.chest[i]/ch.chest[r];
+}
+/* The biggest garment has to fit the canvas, so the whole run is normalised
+   against it rather than against the reference. A 3XL fills the frame and
+   everything below sits in proportion — which is the point of drawing them
+   at different sizes at all. */
+function maxSizeScale(pid){
+  const p=product(pid), ch=p&&p.chart;
+  if(!ch||!ch.chest||ch.chest.length<2) return 1;
+  return Math.max(...SIZES.map(s=>sizeScale(pid,s)));
+}
+/* Which garment size the canvas is showing. Single mode follows the size
+   they picked; bulk previews the SMALLEST size in the order, because that's
+   the one a design is liable to overflow. */
+function previewSize(){
+  const pid=state.product.id, keys=sizeKeys(pid);
+  if(keys.length===1) return keys[0];
+  const ordered=SIZES.filter(k=>+state.sizes[k]>0);
+  if(ordered.length) return ordered[0];                // SIZES is S→3XL
+  return SIZES.includes(REF_SIZE)?REF_SIZE:keys[0];
+}
+
 /* map a print area from mockup-space (720w) to canvas 520x560, letterboxed */
-function mockLayout(pid){
+function mockLayout(pid,sizeOverride){
   const key=mockKey(pid);
   const img=mockImgs[key]; if(!img) return null;
   const iw=img.naturalWidth, ih=img.naturalHeight;
-  const scale=Math.min(520/iw, 560/ih);
+  const s=sizeScale(pid, sizeOverride||previewSize())/maxSizeScale(pid);
+  const scale=Math.min(520/iw, 560/ih)*s;
   const dw=iw*scale, dh=ih*scale;
   const ox=(520-dw)/2, oy=(560-dh)/2;
   const P=MOCK.print[key]||MOCK.print.rn;
+  // The zone's px box scales with the photo but its cm figures scale with
+  // the real garment, so px-per-cm comes out identical at every size. That
+  // is what keeps a 20cm print 20cm wide when you switch from S to 3XL —
+  // only the garment around it changes.
+  const g=sizeScale(pid, sizeOverride||previewSize());
   return {scale,ox,oy,dw,dh,key,
     px:ox+(P.cx-P.w/2)*scale, py:oy+(P.cy-P.h/2)*scale,
-    pw:P.w*scale, ph:P.h*scale, cmW:P.cmW, cmH:P.cmH};
+    pw:P.w*scale, ph:P.h*scale,
+    cmW:+(P.cmW*g).toFixed(1), cmH:+(P.cmH*g).toFixed(1)};
 }
 
 let state = {
@@ -114,4 +165,9 @@ let state = {
      separately. Bulk apparel orders are always a breakdown (5×S, 10×M …),
      so a lone "quantity" field can't express a real order. */
   sizes:newSizeBreakdown(),
+  /* Which face the size picker wears. 'single' is one size + a quantity,
+     which is what almost every visitor wants; 'bulk' opens the full
+     breakdown. Both write into `sizes` above — this is a view mode, not a
+     second place quantity is stored. */
+  orderMode:'single',
 };

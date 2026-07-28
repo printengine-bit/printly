@@ -158,7 +158,20 @@ once and an edited stylesheet silently kept serving the cached copy.
   per-size breakdown is the input; total is `sizeTotal(state.sizes)`.
   Don't reintroduce a standalone quantity control — two inputs for one
   number will drift apart. One-size products (`ONE_SIZE` in `data.js`)
-  use a single `One size` key.
+  use a single `One size` key. The studio's size picker has **two faces**
+  over that one object: `state.orderMode` is `'single'` (size chips + a
+  quantity, where exactly one key is non-zero and "which size" is *derived*
+  by `currentSize()`) or `'bulk'` (the full per-size grid). It's a view
+  mode — neither face stores a quantity of its own.
+- **Nothing is pre-selected in the size picker.** A default M that looks
+  chosen is how someone orders the wrong shirt. The only exception is a
+  one-size product, where there's nothing to get wrong. `pickProduct()`
+  carries the PDP's visibly-selected size across; that's a choice the
+  customer saw, not a guess.
+- **Free shipping is a rupee threshold** (`FREE_SHIP_OVER`, mirroring
+  `company.free_shipping_over`), not a piece count, in the studio preview,
+  the cart and `catalog.quote()` alike. The studio used a `qty >= 50` rule
+  and quoted totals the cart then contradicted.
 - **Decorative motion is progressive enhancement.** `scrollstack.js`
   only adds its `is-stacked` class once JS runs and reduced motion isn't
   requested, so the CSS in the stylesheet must stand on its own as the
@@ -179,6 +192,24 @@ once and an edited stylesheet silently kept serving the cached copy.
 - **Print areas** live in `MOCK.print[key]` as `{cx,cy,w,h,cmW,cmH}`
   in 720px-wide mockup-space; `mockLayout()` converts these into
   canvas coordinates. Don't hardcode pixel positions elsewhere.
+- **The canvas is drawn to the garment size.** `MOCK.print` describes
+  `REF_SIZE` (M); every other size is that photo scaled by the chest ratio
+  out of the product's own size chart (`sizeScale()` in `mockups.js`).
+  `mockLayout()` scales the zone's px box *and* its cm figures by the same
+  factor, so **`pxcm()` is identical at every size** — that's the invariant
+  that keeps a 20cm print 20cm wide when you switch S→3XL, and it must not
+  be broken. `previewSize()` returns the **smallest size in the order**, so
+  the "will be cropped" warning is automatically the strictest one: fits on
+  screen ⇒ fits every garment ordered. `printSpec()` records
+  `zone.size`; without it the cm figures are unreadable on the print floor.
+  A *product* change remaps artwork with shrinking, a *size* change without
+  — the print is a fixed physical thing, the garment moves around it.
+  ⚠️ The base zone figures (`rn` front claims 38×50cm on an M) look
+  generous; scaling can't fix wrong reference data.
+- **`drawRuler()` measures the print zone**, is positioned over it from the
+  canvas's *rendered* width, and relabels on every draw. Any change to the
+  canvas's CSS width needs a `draw()` — that's what the resize listener in
+  `studio.js` is for.
 - **Recolor** uses a multiply-blend against the original photo
   (`getRecoloredMock`) — this is intentional and keeps fabric folds/
   shadows intact. Don't replace it with a flat color fill.

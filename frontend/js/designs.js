@@ -80,7 +80,9 @@ async function loadDesign(id){
     state.designName = d.design.is_template ? null : d.design.name;
 
     closeTemplates();
-    toggleJerseyKit(); updateProductSub(); updatePrice();
+    // The saved design can be for a different garment, and a tote's size
+    // keys aren't a tee's — rebuild the breakdown before pricing it.
+    toggleJerseyKit(); updateProductSub(); resetSizesForProduct(); updatePrice();
     setSide('front'); renderLayers(); draw();
     go('studio');
     toast(d.design.is_template ? 'Template loaded — make it yours' : 'Opened “'+d.design.name+'”');

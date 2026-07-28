@@ -33,14 +33,15 @@ function product(pid){ return PRODUCTS.find(p => p.id === pid); }
 function isSized(pid){ const p=product(pid); return p ? !p.one_size : true; }
 function sizeKeys(pid){ return isSized(pid) ? SIZES : [ONE_SIZE_KEY]; }
 
-/* A fresh breakdown for a product. Defaults the whole opening quantity to
-   M (or the single size) so the studio still has a sensible starting
-   price rather than showing ₹0. */
-function newSizeBreakdown(pid='rn', total=25){
+/* A fresh breakdown for a product. Opens empty on purpose: pre-selecting a
+   size the customer never chose is how someone ends up with an M they
+   didn't want. A one-size product is the exception — there's nothing to
+   get wrong — and `resetSizesForProduct()` fills that in. */
+function newSizeBreakdown(pid='rn', total=0){
   const keys=sizeKeys(pid);
   const b={};
   keys.forEach(k=>b[k]=0);
-  b[keys.includes('M') ? 'M' : keys[0]] = total;
+  if(total>0) b[keys.includes('M') ? 'M' : keys[0]] = total;
   return b;
 }
 function sizeTotal(sizes){

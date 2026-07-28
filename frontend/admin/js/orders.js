@@ -173,7 +173,11 @@ function specBlock(side, spec, artUrl){
   return `<div class="spec">
     <div class="spec-head">
       <b>${side==='front'?'Front':'Back'}</b>
-      <span class="tiny dim">print zone ${spec.zone.w} × ${spec.zone.h} cm</span>
+      <span class="tiny dim">print zone ${spec.zone.w} × ${spec.zone.h} cm${
+        // The zone scales with the garment, so the figures above only mean
+        // something alongside the size they were measured on. Orders placed
+        // before size-accurate previews don't carry one.
+        spec.zone.size ? ' on ' + esc(spec.zone.size) : ''}</span>
       ${artUrl ? `<a class="btn btn-primary btn-sm" href="${esc(artUrl)}" download>
         <span class="material-symbols-outlined" style="font-size:16px">download</span>
         Artwork</a>` : '<span class="tiny dim">no print file</span>'}
