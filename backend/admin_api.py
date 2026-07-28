@@ -102,10 +102,24 @@ def dashboard():
     if noaddr:
         alerts.append({"level": "warn", "module": "orders",
                        "text": f"{noaddr} order(s) have no delivery address"})
+    from catalog import low_stock_rows
+    low = low_stock_rows(db)
+    negative = [r for r in low if r["stock_qty"] < 0]
+    if negative:
+        alerts.append({"level": "warn", "module": "inventory",
+                       "text": "%d variant(s) have gone negative — sold more than "
+                               "was counted in" % len(negative)})
+    elif low:
+        alerts.append({"level": "warn", "module": "inventory",
+                       "text": "%d variant(s) are at or below their reorder point" % len(low)})
     company = db.execute("SELECT * FROM company WHERE id=1").fetchone()
     if not company["legal_name"]:
         alerts.append({"level": "info", "module": "settings",
                        "text": "Company profile is empty — delivery notes can't be printed"})
+    if company["gst_percent"] and not company["gstin"]:
+        alerts.append({"level": "warn", "module": "inventory",
+                       "text": "Charging %g%% GST with no GSTIN on file"
+                               % company["gst_percent"]})
     recent = db.execute("""
         SELECT a.*, u.name AS actor_name FROM audit_log a
         LEFT JOIN users u ON u.id=a.actor_id

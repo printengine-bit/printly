@@ -12,7 +12,7 @@
 #
 #  Run:  python printly_backend.py
 # ═══════════════════════════════════════════════════════════════
-import os, io, sys, base64, time, requests
+import os, io, sys, json, base64, time, requests
 from datetime import timedelta
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, send_from_directory
@@ -115,6 +115,15 @@ def frontend():
     v = _ASSET_V if os.environ.get("FLASK_ENV") == "production" else _asset_version()
     with open(os.path.join(FRONTEND_DIR, "index.html"), encoding="utf-8") as f:
         html = f.read().replace("{{V}}", v)
+    # The catalogue is inlined rather than fetched: init.js builds the studio
+    # and product grid synchronously at boot, so a fetch would mean making
+    # all of that async for no user-visible gain. index.html is no-cache, so
+    # a price edited in the admin panel is live on the next page load.
+    #
+    # `<` is escaped because product names are admin-editable free text and
+    # a literal </script> in one would otherwise close this block early.
+    catalog = json.dumps(catalog_payload()).replace("<", "\\u003c")
+    html = html.replace("{{CATALOG}}", catalog)
     resp = app.make_response(html)
     resp.headers["Content-Type"] = "text/html; charset=utf-8"
     resp.headers["Cache-Control"] = "no-cache"
@@ -194,9 +203,11 @@ from reviews import reviews_bp
 from shipping import shipping_bp
 from artwork import artwork_bp
 from admin_api import admin_bp
+from catalog import catalog_bp, catalog_payload
 app.register_blueprint(auth_bp)
 app.register_blueprint(artwork_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(catalog_bp)
 app.register_blueprint(orders_bp)
 app.register_blueprint(designs_bp)
 app.register_blueprint(reviews_bp)

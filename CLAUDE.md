@@ -30,6 +30,12 @@ changed is that they're now *separate* files instead of one 311KB
   initial `data-theme` is set by an inline script in `<head>`, before the
   stylesheets — moving that into `theme.js` reintroduces a colour flash
   on every load.
+- **The catalogue is not in the code.** Products, prices, fabric text,
+  care lists and size charts live in the database and are inlined into
+  `index.html` as `window.PRINTLY_CATALOG` by the `/` route. `data.js`
+  reads that; it no longer declares `PRODUCTS`. Editing a product means
+  the admin panel, not a JS file. The payload keeps the exact shape the
+  old array had, so every render function downstream is unchanged.
 - `mockups/*.jpg` — the 8 garment photos, loaded at runtime.
   `window.PRINTLY_MOCKS` (in `js/mockup-data.js`) holds paths to these,
   keeping the `rn` / `rn_back` key naming. Replacing a photo is now just
@@ -37,7 +43,7 @@ changed is that they're now *separate* files instead of one 311KB
 
 **Admin panel** (`frontend/admin/`) — a *separate app* served at `/admin`,
 sharing no file with the storefront: `index.html`, `css/admin.css`,
-`js/{api,theme,dashboard,settings,app}.js`. Staff never download studio
+`js/{api,theme,dashboard,settings,inventory,app}.js`. Staff never download studio
 code and customers never download admin code. It reuses the storefront's
 session cookie (same origin), so there is only one login. The palette
 tokens are deliberately duplicated rather than imported — same design
@@ -64,19 +70,26 @@ language, independent files, so neither app can break the other.
 - `admin_api.py` — panel session, dashboard, `pulse` (polled live data),
   company profile, staff CRUD, audit log. `log()` here is how any staff
   action gets recorded.
+- `catalog.py` — products, price tiers, colour x size variants, stock and
+  the movement ledger. `quote()` is the **only** authority on what an order
+  costs; `catalog_payload()` is the JSON the storefront is built from.
+  `apply_stock()` deliberately never blocks a sale — stock starts at zero
+  because nobody has counted the blanks, so refusing orders on a zero count
+  would take the shop offline. Negative stock is surfaced as an alert.
 - `orders.py` — place/list orders, admin pipeline, loyalty award. Order
   IDs (`PL-1001`) are computed from the integer PK, never stored — don't
   reintroduce a string primary key, it raced under concurrent inserts.
+  **Order totals are computed server-side** from `price_tiers` and the
+  company's GST/shipping settings; the browser's figure is only compared
+  against it, and a mismatch over Rs 1 is a 409, never a silent charge.
   A delivery address is **required** to place an order. Stages move in
   either direction and every change writes to `order_events`; cancelling
   sets a separate `cancelled` flag rather than a 7th stage, so restoring
   resumes where the order was. `/api/admin/orders` returns per-line
   summaries only — putting `items_json` in the list made it 234KB for
   four orders, since each line carries a base64 thumbnail.
-  **The `/api/admin/*` routes currently have no UI.** The in-storefront
-  admin tab was removed deliberately; the replacement is a separate app
-  at `/admin` (see the super-admin plan). The endpoints are tested and
-  are what that app will call — don't delete them as dead code.
+  **The order routes have no UI yet** — the panel's Orders section lands
+  in phase 2. They're tested and are what it will call; not dead code.
 - `designs.py` — saved designs + templates. `reviews.py` — verified-
   purchase-gated reviews. `shipping.py` — pincode delivery estimate.
 - `artwork.py` — print-ready files written to `ART_DIR` (defaults next

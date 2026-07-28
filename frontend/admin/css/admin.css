@@ -279,3 +279,17 @@ tr:last-child td{border-bottom:none}
     color:var(--ink-mut);flex-shrink:0;
   }
 }
+
+/* ── Inventory ────────────────────────────────────────────────── */
+.swatch-dot{
+  display:inline-block;width:13px;height:13px;border-radius:3px;
+  border:1px solid var(--line);vertical-align:-2px;margin-right:7px;
+}
+.stock-cell{
+  width:76px;min-height:38px;padding:7px 9px;text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+/* A count that's fine shouldn't shout; the two that need action should. */
+.stock-cell.stock-low{border-color:var(--warn-ink);color:var(--warn-ink)}
+.stock-cell.stock-neg{border-color:var(--pink);color:var(--pink-ink);font-weight:700}
+.tier-row .tiny{white-space:nowrap}

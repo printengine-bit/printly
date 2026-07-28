@@ -13,28 +13,10 @@ state.pdp = {id:null, side:'front', color:'#FFFFFF', size:'M'};
    parse error that silently discards this entire file — the whole product
    detail page stops existing, with nothing in the console to say why. */
 
-/* Chest is half-circumference laid flat, which is how Indian apparel size
-   charts are normally quoted. Values differ per fit. */
-const SIZE_CHART={
-  rn:{label:'Regular fit',  chest:[46,48,51,54,56,59], length:[68,71,74,76,79,81]},
-  po:{label:'Regular fit',  chest:[47,49,52,55,57,60], length:[69,71,74,76,79,81]},
-  hd:{label:'Oversized fit',chest:[54,56,59,61,64,66], length:[68,70,72,74,76,78]},
-  js:{label:'Athletic fit', chest:[45,47,50,53,55,58], length:[70,72,74,76,78,80]},
-  tb:{label:'One size',     chest:[38], length:[42]},
-};
-
-const FABRIC={
-  rn:{spec:'180 GSM · 100% combed cotton, bio-washed',
-      care:['Machine wash cold, inside out','Do not bleach','Tumble dry low','Warm iron, avoid the print']},
-  po:{spec:'220 GSM · pique cotton with rib collar',
-      care:['Machine wash cold','Do not bleach','Hang dry in shade','Iron on reverse']},
-  hd:{spec:'320 GSM · brushed fleece, cotton-poly blend',
-      care:['Machine wash cold, inside out','Do not bleach','Tumble dry low','Do not iron the print']},
-  js:{spec:'130 GSM · dry-fit polyester, moisture wicking',
-      care:['Machine wash cold','No fabric softener','Hang dry','Do not iron directly']},
-  tb:{spec:'12 oz · heavy canvas cotton',
-      care:['Spot clean or hand wash','Do not bleach','Air dry flat']},
-};
+/* Fabric text, care instructions and the size chart all live on the
+   product row now (seeded from what used to be hardcoded here), so adding
+   a product in the admin panel gives it a complete detail page instead of
+   one missing half its content. */
 
 function openProduct(pid){
   state.pdp.id=pid;
@@ -49,8 +31,8 @@ function renderPdp(){
   const p=PRODUCTS.find(x=>x.id===state.pdp.id);
   if(!p){ el.innerHTML='<div class="empty">Product not found.</div>'; return; }
 
-  const f=FABRIC[p.id]||{spec:'Premium fabric',care:[]};
-  const chart=SIZE_CHART[p.id];
+  const f={spec:p.fabric||'Premium fabric', care:p.care||[]};
+  const chart=p.chart && p.chart.chest ? {label:p.fit, ...p.chart} : null;
   const hasBack=!!(MOCK.mocks[p.id+'_back']);
 
   el.innerHTML=`

@@ -468,6 +468,9 @@
   </div>
 </footer>
 
+<!-- Catalogue from the database, substituted server-side by the `/` route.
+     data.js reads this instead of declaring products inline. -->
+<script>window.PRINTLY_CATALOG = {{CATALOG}};</script>
 <script src="js/mockup-data.js?v={{V}}"></script>
 <script src="js/data.js?v={{V}}"></script>
 <script src="js/mockups.js?v={{V}}"></script>

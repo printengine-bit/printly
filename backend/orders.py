@@ -6,6 +6,7 @@ from flask import Blueprint, request, jsonify, session
 from db import get_db
 from auth import login_required
 from permissions import require
+from catalog import quote, apply_stock
 
 orders_bp = Blueprint("orders", __name__, url_prefix="/api")
 
@@ -151,8 +152,7 @@ def create_order():
 
     # The size breakdown is what the print floor actually works from, so
     # reject anything malformed here rather than letting a bad order reach
-    # production. (Money totals stay client-trusted until Razorpay lands —
-    # tracked separately.)
+    # production. Money is checked separately, below.
     err = _validate_sizes(items)
     if err:
         return jsonify(ok=False, error=err), 400
@@ -161,10 +161,24 @@ def create_order():
     if err:
         return jsonify(ok=False, error=err), 400
 
-    # NOTE: total is client-computed for now — there's no real payment yet.
-    # The moment Razorpay is wired in, this MUST be recomputed server-side
-    # from a price table instead of trusted from the request body.
     db = get_db()
+    # The server prices the order. `total` from the request is only ever
+    # compared against this, never stored — prices, GST and shipping are all
+    # admin-editable now, so a stale tab or a crafted request would
+    # otherwise set its own price. A mismatch means the customer was shown
+    # something different from what we'd charge, so refuse rather than
+    # quietly billing a number they never saw.
+    q, err = quote(db, items)
+    if err:
+        return jsonify(ok=False, error=err), 400
+    if abs(q["total"] - float(total)) > 1.0:
+        return jsonify(
+            ok=False,
+            error="Prices have changed since you opened the cart. Refresh and try again.",
+            total=q["total"],
+        ), 409
+    total = q["total"]
+
     cur = db.execute(
         """INSERT INTO orders(user_id,total_inr,items_json,ship_name,ship_phone,
                               ship_line1,ship_line2,ship_city,ship_state,ship_pincode)
@@ -173,6 +187,13 @@ def create_order():
          ship["line1"], ship["line2"], ship["city"], ship["state"], ship["pincode"]),
     )
     _log_event(db, cur.lastrowid, "placed", None, 0)
+    # Blanks leave the shelf when the order is placed, not when it ships —
+    # they're committed to this order either way. Never blocks the sale; see
+    # apply_stock() for why.
+    missing = apply_stock(db, items, cur.lastrowid, -1, "order")
+    if missing:
+        _log_event(db, cur.lastrowid, "note",
+                   note="No stock record for: " + ", ".join(missing[:6]))
     # Loyalty points. ⚠️ PLACEHOLDER RULE — 1 point per ₹100 spent, with no
     # redemption path yet. The real earn/burn policy is a business decision
     # that hasn't been made; this exists so the dashboard has something
@@ -289,6 +310,12 @@ def cancel_order(order_id):
         db.execute("UPDATE orders SET cancelled=?, updated=CURRENT_TIMESTAMP WHERE id=?",
                    (cancelled, row["id"]))
         _log_event(db, row["id"], "cancelled" if cancelled else "restored", note=note)
+        # Blanks go back on the shelf when an order is cancelled, and come
+        # off again if it's restored — otherwise stock drifts down by one
+        # order every time somebody changes their mind.
+        items = json.loads(row["items_json"])
+        apply_stock(db, items, row["id"], 1 if cancelled else -1,
+                    "cancel" if cancelled else "order")
         db.commit()
     return jsonify(ok=True, order=_order_public(
         db.execute("SELECT * FROM orders WHERE id=?", (row["id"],)).fetchone()))

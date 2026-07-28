@@ -10,7 +10,7 @@ let SESSION = null;
    panel is visible from day one — `phase` marks what's still to come. */
 const SECTIONS = {
   dashboard: {label:'Dashboard', icon:'dashboard', subs:[]},
-  inventory: {label:'Inventory', icon:'inventory_2', phase:1,
+  inventory: {label:'Inventory', icon:'inventory_2',
     subs:['Products','Variants & stock','Stock movements','Low stock','Suppliers']},
   orders:    {label:'Orders', icon:'receipt_long', phase:2,
     subs:['All orders','Production queue','Awaiting proof','Ready to dispatch','Cancelled']},
@@ -151,6 +151,7 @@ function route(){
   const el = document.getElementById('content');
   if(target === 'dashboard') return renderDashboard(el);
   if(target === 'settings')  return renderSettings(el, sub || 'company');
+  if(target === 'inventory') return renderInventory(el, sub || 'products');
   renderStub(el, target, s);
 }
 

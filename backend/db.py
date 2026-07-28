@@ -58,6 +58,66 @@ def init_db():
         items_json TEXT NOT NULL,
         created TEXT DEFAULT CURRENT_TIMESTAMP,
         updated TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    # ── Catalogue ────────────────────────────────────────────────
+    # Products used to be a hardcoded array in frontend/js/data.js, shipped
+    # to the browser. Nothing about stock, admin-editable pricing or
+    # server-computed totals was possible while that was true.
+    c.execute("""CREATE TABLE IF NOT EXISTS products(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        emoji TEXT NOT NULL DEFAULT '',
+        fabric TEXT NOT NULL DEFAULT '',
+        care_json TEXT NOT NULL DEFAULT '[]',
+        fit_label TEXT NOT NULL DEFAULT '',
+        size_chart_json TEXT NOT NULL DEFAULT '{}',
+        base_price REAL NOT NULL DEFAULT 0,
+        -- Blank until Printly is GST-registered. Kept here so the column
+        -- doesn't need adding under time pressure the day it is.
+        hsn_code TEXT NOT NULL DEFAULT '',
+        one_size INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        sort INTEGER NOT NULL DEFAULT 0,
+        created TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated TEXT DEFAULT CURRENT_TIMESTAMP)""")
+
+    # Bulk pricing. Highest min_qty at or below the ordered quantity wins.
+    c.execute("""CREATE TABLE IF NOT EXISTS price_tiers(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL REFERENCES products(id),
+        min_qty INTEGER NOT NULL,
+        unit_price REAL NOT NULL)""")
+    c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_tier ON price_tiers(product_id,min_qty)")
+
+    # The actual stockable unit: one product in one colour in one size.
+    c.execute("""CREATE TABLE IF NOT EXISTS variants(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL REFERENCES products(id),
+        color_hex TEXT NOT NULL,
+        color_name TEXT NOT NULL,
+        size_label TEXT NOT NULL,
+        sku TEXT NOT NULL,
+        stock_qty INTEGER NOT NULL DEFAULT 0,
+        low_stock_at INTEGER NOT NULL DEFAULT 10,
+        active INTEGER NOT NULL DEFAULT 1)""")
+    c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_variant ON variants(product_id,color_hex,size_label)")
+    c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_sku ON variants(sku)")
+
+    # Append-only ledger. stock_qty is a running total you could rebuild
+    # from these rows — keep it that way, so a wrong count is always
+    # explainable rather than just wrong.
+    c.execute("""CREATE TABLE IF NOT EXISTS stock_moves(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        variant_id INTEGER NOT NULL REFERENCES variants(id),
+        delta INTEGER NOT NULL,
+        reason TEXT NOT NULL,
+        order_id INTEGER,
+        actor_id INTEGER REFERENCES users(id),
+        note TEXT NOT NULL DEFAULT '',
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_moves_variant ON stock_moves(variant_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_moves_created ON stock_moves(created)")
+
     # Single-row business identity. Delivery notes and shipping labels are
     # unprintable without it, and the GSTIN stays blank until Printly is
     # actually registered — see the note on doc_prefix below.
@@ -78,6 +138,15 @@ def init_db():
         challan_next INTEGER NOT NULL DEFAULT 1,
         updated TEXT DEFAULT CURRENT_TIMESTAMP)""")
     c.execute("INSERT OR IGNORE INTO company(id) VALUES(1)")
+    # Tax and shipping. These were constants in the browser (cart.js), which
+    # made them both unchangeable by the shop and trivially editable by the
+    # customer. The server is now the only place they're read from.
+    # gst_percent starts at the 5% the storefront was already charging —
+    # deliberately not silently zeroed, even though there's no GSTIN yet.
+    # The admin panel flags the mismatch; changing it is a business call.
+    _add_column(c, "company", "gst_percent", "REAL NOT NULL DEFAULT 5")
+    _add_column(c, "company", "shipping_flat", "REAL NOT NULL DEFAULT 99")
+    _add_column(c, "company", "free_shipping_over", "REAL NOT NULL DEFAULT 10000")
 
     # Everything a staff member does, to anything — append-only. Supersedes
     # order_events (backfilled below) so there's one place to answer "who
@@ -164,6 +233,7 @@ def init_db():
     c.execute("UPDATE users SET role='owner' WHERE role='admin'")
 
     _backfill_audit(c)
+    _seed_catalog(c)
     c.commit()
     c.close()
 
@@ -187,6 +257,94 @@ def _backfill_audit(conn):
         SELECT 'order', order_id, actor_id, kind,
                CAST(from_status AS TEXT), CAST(to_status AS TEXT), note, created
         FROM order_events ORDER BY id""")
+
+
+# The catalogue exactly as it was hardcoded in frontend/js/data.js,
+# frontend/js/pdp.js (FABRIC, SIZE_CHART) and the SHIRT_COLORS list. Seeded
+# once so moving to the database changes nothing a customer can see —
+# everything after this is edited in the admin panel, not here.
+SIZES = ["S", "M", "L", "XL", "2XL", "3XL"]
+COLORS = [
+    ("#FFFFFF", "White",        "WHT"),
+    ("#111111", "Black",        "BLK"),
+    ("#0D1F3C", "Navy",         "NVY"),
+    ("#B02E2E", "Maroon",       "MRN"),
+    ("#1A8A4A", "Bottle Green", "GRN"),
+    ("#C8F232", "Acid Lime",    "LIM"),
+    ("#CE0358", "Hot Pink",     "PNK"),
+    ("#D4D8DE", "Ash Grey",     "ASH"),
+]
+SEED_PRODUCTS = [
+    {"slug": "rn", "name": "Round Neck T-Shirt", "emoji": "👕", "base": 599,
+     "tiers": [(1, 599), (10, 449), (50, 349), (100, 279)],
+     "fabric": "180 GSM · 100% combed cotton, bio-washed", "fit": "Regular fit",
+     "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
+              "Warm iron, avoid the print"],
+     "chest": [46, 48, 51, 54, 56, 59], "length": [68, 71, 74, 76, 79, 81]},
+    {"slug": "po", "name": "Polo Shirt", "emoji": "🎽", "base": 899,
+     "tiers": [(1, 899), (10, 699), (50, 549), (100, 449)],
+     "fabric": "220 GSM · pique cotton with rib collar", "fit": "Regular fit",
+     "care": ["Machine wash cold", "Do not bleach", "Hang dry in shade",
+              "Iron on reverse"],
+     "chest": [47, 49, 52, 55, 57, 60], "length": [69, 71, 74, 76, 79, 81]},
+    {"slug": "hd", "name": "Hoodie", "emoji": "🧥", "base": 1299,
+     "tiers": [(1, 1299), (10, 999), (50, 799), (100, 649)],
+     "fabric": "320 GSM · brushed fleece, cotton-poly blend", "fit": "Oversized fit",
+     "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
+              "Do not iron the print"],
+     "chest": [54, 56, 59, 61, 64, 66], "length": [68, 70, 72, 74, 76, 78]},
+    {"slug": "js", "name": "Sports Jersey", "emoji": "🏏", "base": 799,
+     "tiers": [(1, 799), (10, 599), (50, 499), (100, 399)],
+     "fabric": "130 GSM · dry-fit polyester, moisture wicking", "fit": "Athletic fit",
+     "care": ["Machine wash cold", "No fabric softener", "Hang dry",
+              "Do not iron directly"],
+     "chest": [45, 47, 50, 53, 55, 58], "length": [70, 72, 74, 76, 78, 80]},
+    {"slug": "tb", "name": "Tote Bag", "emoji": "👜", "base": 399,
+     "tiers": [(1, 399), (10, 299), (50, 249), (100, 199)],
+     "fabric": "12 oz · heavy canvas cotton", "fit": "One size", "one_size": True,
+     "care": ["Spot clean or hand wash", "Do not bleach", "Air dry flat"],
+     "chest": [38], "length": [42]},
+]
+ONE_SIZE_KEY = "One size"
+
+
+def _seed_catalog(conn):
+    """Populate the catalogue on a database that has none.
+
+    Guarded on the products table being empty, not on a version flag: once
+    a shop has edited its own prices, re-running this would overwrite them
+    with the originals. Adding a product later is an admin action.
+    """
+    if conn.execute("SELECT 1 FROM products LIMIT 1").fetchone():
+        return
+    import json as _json
+    for i, p in enumerate(SEED_PRODUCTS):
+        one_size = 1 if p.get("one_size") else 0
+        cur = conn.execute(
+            """INSERT INTO products(slug,name,emoji,fabric,care_json,fit_label,
+                                    size_chart_json,base_price,one_size,sort)
+               VALUES(?,?,?,?,?,?,?,?,?,?)""",
+            (p["slug"], p["name"], p["emoji"], p["fabric"], _json.dumps(p["care"]),
+             p["fit"], _json.dumps({"chest": p["chest"], "length": p["length"]}),
+             p["base"], one_size, i),
+        )
+        pid = cur.lastrowid
+        for min_qty, price in p["tiers"]:
+            conn.execute(
+                "INSERT INTO price_tiers(product_id,min_qty,unit_price) VALUES(?,?,?)",
+                (pid, min_qty, price))
+        labels = [ONE_SIZE_KEY] if one_size else SIZES
+        for hexv, cname, code in COLORS:
+            for label in labels:
+                sku = "%s-%s-%s" % (p["slug"].upper(), code,
+                                    label.upper().replace(" ", ""))
+                conn.execute(
+                    """INSERT INTO variants(product_id,color_hex,color_name,
+                                            size_label,sku) VALUES(?,?,?,?,?)""",
+                    (pid, hexv, cname, label, sku))
+    # Stock starts at zero everywhere. That's honest — nobody has counted
+    # the blanks yet — and it's why placing an order must NOT be blocked on
+    # stock. See catalog.py's apply_stock().
 
 
 def _add_column(conn, table, column, decl):
