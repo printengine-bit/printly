@@ -166,6 +166,26 @@ function copyAddr(btn){
   navigator.clipboard.writeText(btn.dataset.addr).then(()=>toast('Address copied'));
 }
 
+/* What was actually charged, as priced when the order was placed. Apparel
+   sits in two GST slabs by piece value, so a single order can carry both —
+   which is exactly why this is stored rather than recomputed: reprinting an
+   invoice after a rate change must not restate what the customer paid. */
+function taxBlock(o){
+  const t=o.tax;
+  if(!t) return `<p class="tiny dim" style="margin-top:10px">No tax breakdown recorded —
+    placed before this was stored. Recompute at today's rates before invoicing.</p>`;
+  const rates=(t.gst_rates||[]).map(r=>r+'%').join(' + ') || '—';
+  return `<div class="ord-tax">
+    <div><span>Subtotal</span><b>${money(t.subtotal)}</b></div>
+    <div><span>GST ${esc(rates)}</span><b>${money(t.gst)}</b></div>
+    <div><span>Shipping</span><b>${t.shipping?money(t.shipping):'free'}</b></div>
+    ${(t.lines||[]).some(l=>l.gst_percent!==(t.lines[0]||{}).gst_percent)
+      ? `<p class="tiny dim">${(t.lines||[]).map(l=>
+          `${esc(l.product)} @ ${money(l.unit)} → ${l.gst_percent}%`).join(' · ')}</p>`
+      : ''}
+  </div>`;
+}
+
 /* Per-side print instructions, measured in the studio at add-to-cart time —
    only the canvas knows the px-per-cm ratio for that product's print area. */
 function specBlock(side, spec, artUrl){
@@ -256,6 +276,7 @@ function orderDrawer(o){
           ${!it.spec?`<p class="tiny dim">No print spec recorded — placed before
             artwork capture existed.</p>`:''}
         </div>`).join('')}
+      ${taxBlock(o)}
       <div class="ord-total"><span>Order total</span><b>${money(o.total)}</b></div>
     </section>
 

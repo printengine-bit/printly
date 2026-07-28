@@ -45,6 +45,13 @@ def _order_public(row, items=True):
     }
     if items:
         o["items"] = json.loads(row["items_json"])
+        # What was actually charged, as priced at the time. Orders placed
+        # before tax_json existed have none — the drawer says so rather than
+        # showing today's rates as if they were the ones billed.
+        try:
+            o["tax"] = json.loads(row["tax_json"]) if row["tax_json"] else None
+        except (ValueError, TypeError):
+            o["tax"] = None
     return o
 
 
@@ -180,10 +187,11 @@ def create_order():
     total = q["total"]
 
     cur = db.execute(
-        """INSERT INTO orders(user_id,total_inr,items_json,ship_name,ship_phone,
+        """INSERT INTO orders(user_id,total_inr,items_json,tax_json,ship_name,ship_phone,
                               ship_line1,ship_line2,ship_city,ship_state,ship_pincode)
-           VALUES(?,?,?,?,?,?,?,?,?,?)""",
-        (session["user_id"], total, json.dumps(items), ship["name"], ship["phone"],
+           VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+        (session["user_id"], total, json.dumps(items), json.dumps(q),
+         ship["name"], ship["phone"],
          ship["line1"], ship["line2"], ship["city"], ship["state"], ship["pincode"]),
     )
     _log_event(db, cur.lastrowid, "placed", None, 0)

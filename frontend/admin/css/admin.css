@@ -360,6 +360,10 @@ tr:last-child td{border-bottom:none}
   width:64px;height:64px;object-fit:cover;border-radius:var(--r-sm);
   background:var(--panel-3);flex-shrink:0;
 }
+.ord-tax{margin-top:12px;padding-top:12px;border-top:1px solid var(--outline-variant)}
+.ord-tax > div{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+.ord-tax > div span{color:var(--on-surface-variant)}
+.ord-tax p{margin-top:6px}
 .ord-total{display:flex;justify-content:space-between;padding-top:12px;font-size:15px}
 .spec{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
 .spec-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:13px}

@@ -147,6 +147,13 @@ def init_db():
     _add_column(c, "company", "gst_percent", "REAL NOT NULL DEFAULT 5")
     _add_column(c, "company", "shipping_flat", "REAL NOT NULL DEFAULT 99")
     _add_column(c, "company", "free_shipping_over", "REAL NOT NULL DEFAULT 10000")
+    # Apparel GST is two slabs, not one rate: 5% up to the threshold and 12%
+    # above it, applied PER PIECE on the sale value — so the same order can
+    # carry both. gst_percent above is the lower slab; these two complete it.
+    # The threshold is the statutory Rs 1,000 per piece and the comparison is
+    # strictly greater-than, so a piece sold at exactly Rs 1,000 stays at 5%.
+    _add_column(c, "company", "gst_percent_high", "REAL NOT NULL DEFAULT 12")
+    _add_column(c, "company", "gst_threshold", "REAL NOT NULL DEFAULT 1000")
 
     # Everything a staff member does, to anything — append-only. Supersedes
     # order_events (backfilled below) so there's one place to answer "who
@@ -222,6 +229,12 @@ def init_db():
     # Cancellation is orthogonal to the 6 pipeline stages, not a 7th one:
     # keeping `status` intact means a restored order resumes where it was.
     _add_column(c, "orders", "cancelled", "INTEGER NOT NULL DEFAULT 0")
+    # The server's own pricing of the order, frozen at the moment it was
+    # placed: per-line unit price, the GST slab each line fell into, and the
+    # totals. Without this a tax invoice reprinted after a rate change would
+    # show figures the customer was never charged. NULL on orders placed
+    # before this existed — recompute those at today's rates, and say so.
+    _add_column(c, "orders", "tax_json", "TEXT")
     # Staff accounts are created by the owner, who sets the first password
     # and hands it over — there's no email transport to send an invite with.
     _add_column(c, "users", "must_change_password", "INTEGER NOT NULL DEFAULT 0")

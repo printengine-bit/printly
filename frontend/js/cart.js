@@ -1,8 +1,23 @@
 /* ═══════════════ PRICING ═══════════════ */
-/* Mirrors company.free_shipping_over in the database. The server recomputes
-   every total from its own copy and rejects a mismatch over ₹1, so if the
-   admin changes the threshold this constant has to follow. */
-const FREE_SHIP_OVER=10000;
+/* Apparel GST is two slabs applied PER PIECE on the sale value — 5% up to
+   ₹1,000, 12% above — so one cart can carry both rates. Mirrors gst_rate()
+   in catalog.py; the server recomputes every figure and refuses a mismatch
+   over ₹1, so these two have to agree exactly.
+   The piece value that counts is the tier price, not the list price: a
+   hoodie discounted below the threshold at volume moves down a slab. */
+function gstRate(unit){
+  return unit > TAX.gst_threshold ? TAX.gst_percent_high : TAX.gst_percent;
+}
+/* GST for a set of {unit,total} lines, plus the rates actually used so the
+   label can say "GST 5%" or "GST 5% + 12%" rather than picking one. */
+function gstFor(lines){
+  let amount=0; const rates=new Set();
+  lines.forEach(l=>{ const r=gstRate(l.unit); rates.add(r); amount += l.total*r/100; });
+  return {amount:Math.round(amount), rates:[...rates].sort((a,b)=>a-b)};
+}
+function gstLabel(rates){
+  return 'GST ' + (rates.length ? rates.map(r=>r+'%').join(' + ') : TAX.gst_percent+'%');
+}
 function unitPrice(p,q){
   let u=p.tiers[0][1];
   p.tiers.forEach(([min,pr])=>{ if(q>=min)u=pr; });
@@ -170,12 +185,12 @@ function updatePrice(){
     // to read `q>=50`, so the studio quoted free delivery on fifty cheap
     // pieces the cart and the server then billed ₹99 for — and charged for
     // delivery on eight hoodies they'd waive. Same rule everywhere.
-    const sub=u*q, gst=Math.round(sub*0.05),
-          ship=sub>FREE_SHIP_OVER?0:99, tot=sub+gst+ship;
+    const sub=u*q, g=gstFor([{unit:u,total:sub}]);
+    const ship=sub>TAX.free_shipping_over?0:TAX.shipping_flat, tot=sub+g.amount+ship;
     box.innerHTML=`
       <div class="price-line"><span>Unit price</span><span>₹${u.toLocaleString('en-IN')}</span></div>
       <div class="price-line"><span>${esc(p.name)} × ${q}</span><span>₹${sub.toLocaleString('en-IN')}</span></div>
-      <div class="price-line"><span>GST 5%</span><span>₹${gst.toLocaleString('en-IN')}</span></div>
+      <div class="price-line"><span>${gstLabel(g.rates)}</span><span>₹${g.amount.toLocaleString('en-IN')}</span></div>
       <div class="price-line"><span>Shipping</span><span>${ship===0?'<span class="t-lime">FREE</span>':'₹'+ship}</span></div>
       <div class="price-line total"><span>Total</span><span>₹${tot.toLocaleString('en-IN')}</span></div>`;
   }
@@ -274,8 +289,11 @@ function renderCart(){
       <div class="cart-line-total"><b>₹${c.total.toLocaleString('en-IN')}</b></div>
     </div>`; }).join('');
 
-  const gst=Math.round(sub*.05), ship=sub>FREE_SHIP_OVER?0:99, tot=sub+gst+ship;
-  const away=FREE_SHIP_OVER-sub;
+  // Per line, not on the subtotal: a cart holding a ₹599 tee and a ₹1,299
+  // hoodie is taxed at both rates, and summing first would pick one.
+  const g=gstFor(state.cart);
+  const ship=sub>TAX.free_shipping_over?0:TAX.shipping_flat, tot=sub+g.amount+ship;
+  const away=TAX.free_shipping_over-sub;
 
   el.innerHTML=`<div class="cart-grid">
     <div>${lines}
@@ -286,7 +304,7 @@ function renderCart(){
     <div class="card card-pad summary-card">
       <h3 class="t-label" style="margin-bottom:16px">Order summary</h3>
       <div class="price-line"><span>Subtotal</span><span>₹${sub.toLocaleString('en-IN')}</span></div>
-      <div class="price-line"><span>GST 5%</span><span>₹${gst.toLocaleString('en-IN')}</span></div>
+      <div class="price-line"><span>${gstLabel(g.rates)}</span><span>₹${g.amount.toLocaleString('en-IN')}</span></div>
       <div class="price-line"><span>Shipping</span><span>${ship?'₹'+ship:'<span class="t-lime">FREE</span>'}</span></div>
       <div class="price-line total"><span>Total</span><span>₹${tot.toLocaleString('en-IN')}</span></div>
       <button class="btn btn-primary btn-block" style="margin-top:18px" onclick="checkout(${tot})">

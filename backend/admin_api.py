@@ -116,10 +116,10 @@ def dashboard():
     if not company["legal_name"]:
         alerts.append({"level": "info", "module": "settings",
                        "text": "Company profile is empty — delivery notes can't be printed"})
-    if company["gst_percent"] and not company["gstin"]:
+    if (company["gst_percent"] or company["gst_percent_high"]) and not company["gstin"]:
         alerts.append({"level": "warn", "module": "inventory",
-                       "text": "Charging %g%% GST with no GSTIN on file"
-                               % company["gst_percent"]})
+                       "text": "Charging %g%% / %g%% GST with no GSTIN on file"
+                               % (company["gst_percent"], company["gst_percent_high"])})
     recent = db.execute("""
         SELECT a.*, u.name AS actor_name FROM audit_log a
         LEFT JOIN users u ON u.id=a.actor_id

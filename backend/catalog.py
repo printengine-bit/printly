@@ -55,15 +55,35 @@ def catalog_payload(db=None):
     # Keep the display order the size chart assumes, not alphabetical.
     order = ["S", "M", "L", "XL", "2XL", "3XL"]
     sizes.sort(key=lambda s: order.index(s) if s in order else 99)
+    # Tax and shipping ride along with the catalogue so the storefront can
+    # show a total without hardcoding rates that only the admin should set.
+    # It is still only a preview: quote() recomputes every figure from these
+    # same rows at checkout and a mismatch is refused.
     return {"products": products, "colors": colors, "sizes": sizes,
-            "oneSizeKey": ONE_SIZE_KEY}
+            "oneSizeKey": ONE_SIZE_KEY, "tax": tax_settings(db)}
 
 
 def tax_settings(db):
-    r = db.execute("""SELECT gst_percent,shipping_flat,free_shipping_over
+    r = db.execute("""SELECT gst_percent,gst_percent_high,gst_threshold,
+                             shipping_flat,free_shipping_over
                       FROM company WHERE id=1""").fetchone()
-    return {"gst_percent": r["gst_percent"], "shipping_flat": r["shipping_flat"],
+    return {"gst_percent": r["gst_percent"],
+            "gst_percent_high": r["gst_percent_high"],
+            "gst_threshold": r["gst_threshold"],
+            "shipping_flat": r["shipping_flat"],
             "free_shipping_over": r["free_shipping_over"]}
+
+
+def gst_rate(tax, unit):
+    """Which slab a single piece falls into.
+
+    Apparel GST is charged per piece on its sale value, not on the order
+    total — so a cart holding a Rs 599 tee and a Rs 1,299 hoodie carries
+    both rates at once. The value that counts is what the piece actually
+    sells for, which means the tier price: a hoodie discounted under the
+    threshold at volume moves down a slab, and that is correct.
+    """
+    return tax["gst_percent_high"] if unit > tax["gst_threshold"] else tax["gst_percent"]
 
 
 # ── Pricing ──────────────────────────────────────────────────────
@@ -99,7 +119,7 @@ def quote(db, items):
     if not isinstance(items, list) or not items:
         return None, "Cart is empty or invalid."
     tax = tax_settings(db)
-    lines, subtotal = [], 0.0
+    lines, subtotal, gst = [], 0.0, 0.0
     for it in items:
         if not isinstance(it, dict):
             return None, "Cart is empty or invalid."
@@ -112,14 +132,21 @@ def quote(db, items):
             return None, "Pick at least one size before ordering."
         unit = unit_price(db, p["id"], qty)
         total = round(unit * qty, 2)
+        rate = gst_rate(tax, unit)
         subtotal += total
+        gst += total * rate / 100.0
         lines.append({"pid": p["slug"], "product": p["name"], "qty": qty,
-                      "unit": unit, "total": total})
+                      "unit": unit, "total": total, "gst_percent": rate})
     subtotal = round(subtotal, 2)
-    gst = round(subtotal * tax["gst_percent"] / 100.0)
+    # Rounded once at the end, not per line, so the figure matches what the
+    # browser shows — it sums the same way.
+    gst = round(gst)
     shipping = 0.0 if subtotal > tax["free_shipping_over"] else tax["shipping_flat"]
     return {"lines": lines, "subtotal": subtotal, "gst": gst, "shipping": shipping,
-            "total": round(subtotal + gst + shipping, 2), "tax": tax}, None
+            "total": round(subtotal + gst + shipping, 2), "tax": tax,
+            # The rates actually applied, so the cart can label the line
+            # "GST 5%" or "GST 5% + 12%" instead of guessing.
+            "gst_rates": sorted({l["gst_percent"] for l in lines})}, None
 
 
 # ── Stock ────────────────────────────────────────────────────────
@@ -185,8 +212,12 @@ def _product_public(db, p):
 def list_products():
     db = get_db()
     rows = db.execute("SELECT * FROM products ORDER BY sort,id").fetchall()
+    gstin = db.execute("SELECT gstin FROM company WHERE id=1").fetchone()["gstin"]
     return jsonify(ok=True, products=[_product_public(db, p) for p in rows],
-                   tax=tax_settings(db))
+                   tax=tax_settings(db),
+                   # Whether charging tax here is legitimate depends on this,
+                   # so the screen that sets the rates has to know it.
+                   gst_registered=bool((gstin or "").strip()))
 
 
 @catalog_bp.route("/products/<int:pid>", methods=["POST"])
@@ -358,16 +389,22 @@ def set_tax():
     from admin_api import log
     d = request.get_json(force=True, silent=True) or {}
     vals = {}
-    for k, lo, hi in (("gst_percent", 0, 50), ("shipping_flat", 0, 10000),
+    for k, lo, hi in (("gst_percent", 0, 50), ("gst_percent_high", 0, 50),
+                      ("gst_threshold", 0, 10 ** 6), ("shipping_flat", 0, 10000),
                       ("free_shipping_over", 0, 10 ** 7)):
         v = d.get(k)
         if not isinstance(v, (int, float)) or isinstance(v, bool) or not lo <= v <= hi:
             return jsonify(ok=False, error="%s is out of range." % k.replace("_", " ")), 400
         vals[k] = float(v)
+    if vals["gst_percent_high"] < vals["gst_percent"]:
+        return jsonify(ok=False,
+                       error="The above-threshold rate can't be lower than the one below it."), 400
     db = get_db()
-    db.execute("""UPDATE company SET gst_percent=?, shipping_flat=?,
-                  free_shipping_over=?, updated=CURRENT_TIMESTAMP WHERE id=1""",
-               (vals["gst_percent"], vals["shipping_flat"], vals["free_shipping_over"]))
+    db.execute("""UPDATE company SET gst_percent=?, gst_percent_high=?, gst_threshold=?,
+                  shipping_flat=?, free_shipping_over=?,
+                  updated=CURRENT_TIMESTAMP WHERE id=1""",
+               (vals["gst_percent"], vals["gst_percent_high"], vals["gst_threshold"],
+                vals["shipping_flat"], vals["free_shipping_over"]))
     log(db, "company", 1, "tax_updated", note=json.dumps(vals))
     db.commit()
     return jsonify(ok=True, tax=tax_settings(db))

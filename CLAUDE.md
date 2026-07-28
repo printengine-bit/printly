@@ -168,10 +168,23 @@ once and an edited stylesheet silently kept serving the cached copy.
   one-size product, where there's nothing to get wrong. `pickProduct()`
   carries the PDP's visibly-selected size across; that's a choice the
   customer saw, not a guess.
-- **Free shipping is a rupee threshold** (`FREE_SHIP_OVER`, mirroring
-  `company.free_shipping_over`), not a piece count, in the studio preview,
-  the cart and `catalog.quote()` alike. The studio used a `qty >= 50` rule
-  and quoted totals the cart then contradicted.
+- **Never hardcode a tax or shipping figure.** Both come from the `company`
+  row: the server reads them via `tax_settings()`, the browser via
+  `TAX` (`data.js`), which the `/` route inlines with the catalogue. The
+  studio once used `qty >= 50` for free shipping while the cart used a
+  ₹10,000 subtotal, and quoted totals the cart then contradicted.
+- **GST is two slabs applied per piece**, not one rate on the subtotal: 5%
+  up to `gst_threshold` (₹1,000/piece, statutory) and 12% above, strictly
+  greater-than so a piece at exactly ₹1,000 stays low. One order can carry
+  both. The value that decides the slab is the **tier price**, so a bulk
+  discount below the threshold legitimately moves a line down a slab.
+  `gst_rate()` in `catalog.py` and `gstRate()` in `cart.js` must agree
+  exactly or checkout 409s.
+- **`orders.tax_json` freezes the server's pricing at order time** —
+  per-line unit price, the slab each line fell into, and the totals. Rates
+  are admin-editable, so an invoice reprinted later must not restate what
+  the customer paid. NULL on pre-existing orders; the drawer says so rather
+  than showing today's rates as if they were billed.
 - **Decorative motion is progressive enhancement.** `scrollstack.js`
   only adds its `is-stacked` class once JS runs and reduced motion isn't
   requested, so the CSS in the stylesheet must stand on its own as the
@@ -239,8 +252,9 @@ p95 ≈220ms.
 
 - **Razorpay** — order totals are still client-trusted. The server MUST
   recompute from a price table the moment payment lands.
-- **GST** — flat 5%. Real Indian apparel GST is 5% under ₹1,000 and 12%
-  at or above, so higher-priced items are likely under-collecting.
+- ~~**GST**~~ — done: two slabs, per piece, admin-editable. What's left is
+  the **GSTIN itself** (Settings → Company profile, still blank) and the
+  per-product **HSN codes**, both of which a tax invoice needs.
 - **Loyalty redemption** — points accrue on a placeholder rule
   (1 per ₹100) with no way to spend them and no agreed policy.
 - Verified-email / password reset, live deployment, PWA. See README.

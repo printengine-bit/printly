@@ -8,6 +8,11 @@
    same types — so products.js, cart.js, studio.js and pdp.js all read it
    exactly as before. */
 const CATALOG = window.PRINTLY_CATALOG || {products:[],colors:[],sizes:[],oneSizeKey:'One size'};
+/* Tax and shipping come from the same place the server prices orders from.
+   Never hardcode a rate against these — the pair drifted once already, and
+   a client figure that disagrees with quote() is a 409 at checkout. */
+const TAX = CATALOG.tax || {gst_percent:5, gst_percent_high:12, gst_threshold:1000,
+                            shipping_flat:99, free_shipping_over:10000};
 const PRODUCTS = CATALOG.products;
 const SHIRT_COLORS = CATALOG.colors.map(c => c.hex);
 const COLOR_NAMES = Object.fromEntries(CATALOG.colors.map(c => [c.hex, c.name]));

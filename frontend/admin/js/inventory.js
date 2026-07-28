@@ -69,15 +69,23 @@ async function renderProducts(el){
     <div class="card">
       <h2>Tax &amp; shipping</h2>
       <p class="tiny muted">Applied to every order, server-side.</p>
-      ${d.tax.gst_percent > 0 ? `<div class="alert warn">
+      ${(d.tax.gst_percent > 0 || d.tax.gst_percent_high > 0) && !d.gst_registered ? `
+      <div class="alert warn">
         <span class="material-symbols-outlined">warning</span>
-        <span><b>Charging ${d.tax.gst_percent}% GST with no GSTIN on file.</b>
-          Tax can't be collected without registration — either set the rate to 0
+        <span><b>Charging GST with no GSTIN on file.</b>
+          Tax can't be collected without registration — either set both rates to 0
           until you're registered, or add the GSTIN under Settings.</span>
       </div>` : ''}
+      <p class="tiny dim" style="margin-bottom:12px">Apparel is taxed <b>per piece</b>
+        on what that piece sells for, so one order can carry both rates — and a
+        garment discounted below the threshold by a bulk tier moves down a slab.</p>
       <div class="form-grid">
-        <label class="field"><span>GST %</span>
+        <label class="field"><span>GST % at or below threshold</span>
           <input id="tx_gst" type="text" value="${d.tax.gst_percent}" ${owner?'':'disabled'}></label>
+        <label class="field"><span>GST % above threshold</span>
+          <input id="tx_gst_hi" type="text" value="${d.tax.gst_percent_high}" ${owner?'':'disabled'}></label>
+        <label class="field"><span>Slab threshold ₹ / piece</span>
+          <input id="tx_gst_at" type="text" value="${d.tax.gst_threshold}" ${owner?'':'disabled'}></label>
         <label class="field"><span>Flat shipping ₹</span>
           <input id="tx_ship" type="text" value="${d.tax.shipping_flat}" ${owner?'':'disabled'}></label>
         <label class="field"><span>Free shipping over ₹</span>
@@ -172,6 +180,8 @@ async function saveTax(){
   const num = id => parseFloat(document.getElementById(id).value);
   const d = await api('/api/admin/catalog/tax', {
     gst_percent: num('tx_gst'),
+    gst_percent_high: num('tx_gst_hi'),
+    gst_threshold: num('tx_gst_at'),
     shipping_flat: num('tx_ship'),
     free_shipping_over: num('tx_free'),
   });
