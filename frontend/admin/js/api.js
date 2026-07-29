@@ -59,3 +59,42 @@ function toast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>el.classList.remove('on'), 2800);
 }
+
+/* ── Reveal a password ────────────────────────────────────────────
+   Typing a handed-over temporary password blind, into a field that shows
+   only dots, is how people get locked out of an account they were just
+   given. Every password input gets a toggle.
+
+   Applied by walking the DOM rather than by adding markup at each field, so
+   a password input added anywhere later is covered without remembering to
+   wire it up — call this again after rendering one. */
+function enhancePasswordFields(root){
+  (root || document).querySelectorAll('input[type=password]').forEach(inp=>{
+    if(inp.dataset.pwWired) return;
+    inp.dataset.pwWired = '1';
+    const wrap = document.createElement('span');
+    wrap.className = 'pw-wrap';
+    inp.parentNode.insertBefore(wrap, inp);
+    wrap.appendChild(inp);
+    const btn = document.createElement('button');
+    btn.type = 'button';                 // inside a <form>: must not submit
+    btn.className = 'pw-toggle';
+    btn.setAttribute('aria-pressed', 'false');
+    btn.setAttribute('aria-label', 'Show password');
+    btn.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
+    btn.onclick = ()=>{
+      const show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+      btn.setAttribute('aria-pressed', String(show));
+      btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      btn.firstChild.textContent = show ? 'visibility_off' : 'visibility';
+      // Put the caret back where it was — retyping into a field that just
+      // jumped to the end is worse than not being able to see it.
+      const at = inp.value.length;
+      inp.focus();
+      try{ inp.setSelectionRange(at, at); }catch(e){}
+    };
+    wrap.appendChild(btn);
+  });
+}
+addEventListener('DOMContentLoaded', ()=>enhancePasswordFields());

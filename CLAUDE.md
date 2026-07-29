@@ -167,6 +167,14 @@ once and an edited stylesheet silently kept serving the cached copy.
   The stage contrasts the *garment*, not the theme.
 - **Escape interpolated strings.** Every render function builds
   `innerHTML` from server/user data; run it through `esc()` (`data.js`).
+- **Password fields get a reveal toggle automatically.**
+  `enhancePasswordFields()` (in `auth.js`, and again in `admin/js/api.js` —
+  the two apps share no files) walks the DOM and wraps every
+  `input[type=password]`. Add a password field anywhere and call it again
+  after rendering; don't hand-build a toggle. Its `.pw-wrap input`
+  padding-right is what keeps revealed text off the icon, so it must
+  outrank the base input rule — in `printly.css` that's source order, in
+  `admin.css` it's why the base rule uses `:where()`.
 - **Quantity comes from `state.sizes`, never a separate field.** The
   per-size breakdown is the input; total is `sizeTotal(state.sizes)`.
   Don't reintroduce a standalone quantity control — two inputs for one

@@ -97,7 +97,24 @@ a{color:inherit;text-decoration:none}
    background, 21px tall. Listing types means every new one (date, number,
    search) has to be remembered here; excluding the few that must keep their
    native box means none of them do. */
-input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
+/* Wraps the input only, so the toggle can be positioned against the input's
+   own box rather than the label above it. */
+.pw-wrap{position:relative;display:block}
+.pw-wrap input{padding-right:46px}
+.pw-toggle{
+  position:absolute;top:0;bottom:0;right:2px;width:42px;
+  display:grid;place-items:center;
+  background:none;border:none;cursor:pointer;color:var(--ink-mut);
+  border-radius:var(--r-sm);
+}
+.pw-toggle:hover{color:var(--ink)}
+.pw-toggle:focus-visible{outline:2px solid var(--lime);outline-offset:-2px}
+.pw-toggle .material-symbols-outlined{font-size:20px}
+
+/* :where() so the exclusion list costs no specificity. A bare :not() chain
+   scores 0-4-1, which quietly outranks any single-class override — it beat
+   `.pw-wrap input` on padding and let revealed text run under the eye icon. */
+input:where(:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file])),
 select,textarea{
   width:100%;min-height:44px;padding:11px 13px;
   background:var(--panel-2);border:1px solid var(--line);

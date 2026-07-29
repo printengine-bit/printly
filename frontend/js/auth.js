@@ -59,3 +59,40 @@ async function checkSession(){
     if(d.ok && d.user){ state.user=d.user; applyAuthUI(); }
   }catch(err){ /* backend offline — stay signed out locally */ }
 }
+
+/* ── Reveal a password ────────────────────────────────────────────
+   A password field that shows only dots is where typos go unnoticed, and
+   "at least 8 characters" is exactly the rule people fail silently.
+
+   Applied by walking the DOM rather than by hand at each field, so any
+   password input added later is covered without remembering to wire it up.
+   Call again after rendering one into the page. */
+function enhancePasswordFields(root){
+  (root || document).querySelectorAll('input[type=password]').forEach(inp=>{
+    if(inp.dataset.pwWired) return;
+    inp.dataset.pwWired='1';
+    const wrap=document.createElement('span');
+    wrap.className='pw-wrap';
+    inp.parentNode.insertBefore(wrap,inp);
+    wrap.appendChild(inp);
+    const btn=document.createElement('button');
+    btn.type='button';                    // inside a <form>: must not submit
+    btn.className='pw-toggle';
+    btn.setAttribute('aria-pressed','false');
+    btn.setAttribute('aria-label','Show password');
+    btn.innerHTML='<span class="material-symbols-outlined">visibility</span>';
+    btn.onclick=()=>{
+      const show=inp.type==='password';
+      inp.type=show?'text':'password';
+      btn.setAttribute('aria-pressed',String(show));
+      btn.setAttribute('aria-label',show?'Hide password':'Show password');
+      btn.firstChild.textContent=show?'visibility_off':'visibility';
+      // Put the caret back at the end — a field that jumps to position 0 on
+      // reveal is worse than not being able to read it.
+      const at=inp.value.length;
+      inp.focus();
+      try{ inp.setSelectionRange(at,at); }catch(err){}
+    };
+    wrap.appendChild(btn);
+  });
+}
