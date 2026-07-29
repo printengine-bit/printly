@@ -115,6 +115,9 @@ function editProduct(id){
       <label class="field"><span>Fit label</span><input id="pe_fit" type="text" value="${esc(p.fit)}"></label>
       <label class="field"><span>HSN code</span>
         <input id="pe_hsn" type="text" value="${esc(p.hsn_code)}" placeholder="e.g. 61091000"></label>
+      <label class="field"><span>Cost per blank ₹</span>
+        <input id="pe_cost" type="text" value="${p.cost_price||0}"
+          placeholder="what you pay for it"></label>
     </div>
     <p class="tiny dim" style="margin:-4px 0 16px">HSN is only needed once you're
       GST-registered — it goes on the tax invoice, not the delivery note.</p>
@@ -167,6 +170,7 @@ async function saveProduct(id){
     fabric: document.getElementById('pe_fabric').value,
     fit: document.getElementById('pe_fit').value,
     hsn_code: document.getElementById('pe_hsn').value,
+    cost_price: parseFloat(document.getElementById('pe_cost').value) || 0,
     active: document.getElementById('pe_active').value === '1',
     tiers,
   });

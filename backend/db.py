@@ -320,6 +320,33 @@ def init_db():
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")
     c.execute("CREATE INDEX IF NOT EXISTS idx_tmsg_ticket ON ticket_messages(ticket_id)")
 
+    # ── Content ─────────────────────────────────────────────────
+    # Moderation is a flag, not a delete: a review taken down for language
+    # is still evidence the purchase happened, and the customer who wrote it
+    # can be told why. Nothing here removes rows.
+    _add_column(c, "reviews", "hidden", "INTEGER NOT NULL DEFAULT 0")
+    _add_column(c, "reviews", "hidden_reason", "TEXT NOT NULL DEFAULT ''")
+    # Templates are ordered in the picker, and "whatever id it got" is not an
+    # order anyone chose.
+    _add_column(c, "saved_designs", "sort", "INTEGER NOT NULL DEFAULT 0")
+
+    # What a blank costs us. Stock valued at the sell price answers the wrong
+    # question — what's on the shelf is worth what it cost, not what we hope
+    # to get. Defaults to 0, and the report says so rather than pretending.
+    _add_column(c, "products", "cost_price", "REAL NOT NULL DEFAULT 0")
+
+    # Print zones move out of js/mockup-data.js and into here, so the shop can
+    # correct them against a real measured blank. The file stays as the
+    # fallback for a fresh install; the DB wins once seeded. Getting these
+    # wrong scales every garment size wrong at once — see sizeScale().
+    c.execute("""CREATE TABLE IF NOT EXISTS print_zones(
+        mock_key TEXT PRIMARY KEY,
+        cx REAL NOT NULL, cy REAL NOT NULL,
+        w REAL NOT NULL, h REAL NOT NULL,
+        cm_w REAL NOT NULL, cm_h REAL NOT NULL,
+        updated TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    _seed_zones(c)
+
     c.execute("""CREATE TABLE IF NOT EXISTS canned_replies(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL DEFAULT '',
@@ -411,6 +438,31 @@ SEED_PRODUCTS = [
      "chest": [38], "length": [42]},
 ]
 ONE_SIZE_KEY = "One size"
+
+
+# The zones the mockup photos were measured with. Mirrors the `print` block
+# in frontend/js/mockup-data.js — that file remains the shipped default and
+# this is the seed for a fresh database, after which the DB is authoritative.
+SEED_ZONES = {
+    "rn":      (363, 300, 230, 300, 38, 50),
+    "rn_back": (360, 300, 240, 320, 40, 53),
+    "po":      (361, 315, 190, 240, 28, 35),
+    "po_back": (363, 300, 230, 300, 38, 48),
+    "hd":      (360, 255, 220, 230, 36, 36),
+    "hd_back": (360, 300, 235, 320, 38, 53),
+    "js":      (360, 330, 230, 300, 36, 46),
+    "js_back": (342, 360, 250, 360, 38, 52),
+}
+
+
+def _seed_zones(conn):
+    """Guarded per key rather than on the table being empty, so a mockup
+    added to the file later still gets its row without disturbing zones the
+    shop has already corrected."""
+    for key, v in SEED_ZONES.items():
+        conn.execute(
+            """INSERT OR IGNORE INTO print_zones(mock_key,cx,cy,w,h,cm_w,cm_h)
+               VALUES(?,?,?,?,?,?,?)""", (key,) + v)
 
 
 def _seed_canned(conn):

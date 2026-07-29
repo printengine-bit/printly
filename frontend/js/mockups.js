@@ -1,5 +1,13 @@
 /* ── PHOTO MOCKUP ENGINE ── */
 const MOCK=window.PRINTLY_MOCKS||{mocks:{},print:{}};
+/* Print zones are admin-editable. mockup-data.js ships the measurements the
+   photos were taken with; the database wins where it has a row, so a shop
+   that measures a real blank can correct the studio without a deploy. Merged
+   here rather than at every read site — pa(), the ruler, printSpec() and the
+   export all go through MOCK.print. */
+if(window.PRINTLY_CATALOG && window.PRINTLY_CATALOG.zones){
+  Object.assign(MOCK.print, window.PRINTLY_CATALOG.zones);
+}
 const mockImgs={};        // pid -> loaded Image
 const mockCache={};       // pid+color -> recolored canvas
 let mocksReady=false;

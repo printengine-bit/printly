@@ -53,14 +53,19 @@ PRODUCT_NAMES = {
 @reviews_bp.route("/<product_id>")
 def list_reviews(product_id):
     db = get_db()
+    # hidden=0 on all three of these. Filtering only the list would leave a
+    # moderated one-star still dragging the average down, which is the exact
+    # thing hiding it was meant to undo.
     rows = db.execute(
         """SELECT reviews.*, users.name AS author
            FROM reviews JOIN users ON users.id = reviews.user_id
-           WHERE product_id=? ORDER BY reviews.created DESC LIMIT 50""",
+           WHERE product_id=? AND reviews.hidden=0
+           ORDER BY reviews.created DESC LIMIT 50""",
         (product_id,),
     ).fetchall()
     agg = db.execute(
-        "SELECT COUNT(*) n, COALESCE(AVG(rating),0) avg FROM reviews WHERE product_id=?",
+        """SELECT COUNT(*) n, COALESCE(AVG(rating),0) avg FROM reviews
+           WHERE product_id=? AND hidden=0""",
         (product_id,),
     ).fetchone()
     return jsonify(
@@ -124,7 +129,7 @@ def summary():
     one request per card."""
     rows = get_db().execute(
         """SELECT product_id, COUNT(*) n, AVG(rating) avg
-           FROM reviews GROUP BY product_id"""
+           FROM reviews WHERE hidden=0 GROUP BY product_id"""
     ).fetchall()
     return jsonify(ok=True, summary={
         r["product_id"]: {"count": r["n"], "average": round(r["avg"], 1)} for r in rows

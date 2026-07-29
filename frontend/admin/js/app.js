@@ -22,9 +22,9 @@ const SECTIONS = {
     subs:['All customers','Loyalty ledger']},
   support:   {label:'Support', icon:'support_agent',
     subs:['Ticket inbox','Unassigned','Canned replies']},
-  content:   {label:'Content', icon:'palette', phase:5,
+  content:   {label:'Content', icon:'palette',
     subs:['Design templates','Review moderation','Product photos']},
-  reports:   {label:'Reports', icon:'bar_chart', phase:5,
+  reports:   {label:'Reports', icon:'bar_chart',
     subs:['Sales','Production throughput','Stock valuation','AI usage']},
   settings:  {label:'Settings', icon:'settings',
     subs:['Company profile','Staff & roles','Audit log']},
@@ -162,6 +162,8 @@ function route(){
   if(target === 'dispatch')  return renderDispatch(el, sub || 'pending-shipments');
   if(target === 'customers') return renderCustomers(el, sub || 'all-customers');
   if(target === 'support')   return renderSupport(el, sub || 'ticket-inbox');
+  if(target === 'content')   return renderContent(el, sub || 'design-templates');
+  if(target === 'reports')   return renderReports(el, sub || 'sales');
   renderStub(el, target, s);
 }
 

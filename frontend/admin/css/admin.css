@@ -364,6 +364,44 @@ tr:last-child td{border-bottom:none}
 .size-chips{margin-top:6px}
 .lbl{text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;font-weight:700}
 
+/* ── Content ──────────────────────────────────────────────────── */
+.tpl{
+  display:flex;align-items:center;gap:14px;padding:10px 0;
+  border-bottom:1px solid var(--line);
+}
+.tpl:last-child{border-bottom:none}
+.tpl-thumb{
+  width:56px;height:56px;flex-shrink:0;border-radius:var(--r-sm);overflow:hidden;
+  background:var(--panel-2);border:1px solid var(--line);
+  display:grid;place-items:center;color:var(--ink-dim);
+}
+.tpl-thumb img{width:100%;height:100%;object-fit:contain}
+.tpl-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.tpl-meta b{font-size:13.5px}
+
+.photo-thumb{
+  width:74px;height:74px;object-fit:contain;flex-shrink:0;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-sm);
+}
+.photo-thumb.gone{border-color:var(--pink);background:var(--tint-pink)}
+/* Six numeric fields; two per row reads as pairs (centre, size, real size). */
+.zone-grid{grid-template-columns:repeat(3,1fr)}
+@media(max-width:760px){ .zone-grid{grid-template-columns:1fr 1fr} }
+
+/* ── Reports ──────────────────────────────────────────────────── */
+/* preserveAspectRatio="none" on the SVG means the viewBox stretches to the
+   card, so nothing has to be measured in JS to make a chart fit. */
+.chart{margin-top:12px}
+.chart svg{width:100%;height:150px;display:block}
+.chart rect{fill:var(--lime);opacity:.85}
+.chart rect:hover{opacity:1}
+.chart-axis{
+  display:flex;justify-content:space-between;gap:10px;
+  font-size:11px;color:var(--ink-mut);margin-top:6px;
+}
+.meter{height:8px;border-radius:var(--r-full);background:var(--panel-2);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--lime);border-radius:var(--r-full)}
+
 /* ── Support thread ───────────────────────────────────────────── */
 /* Capped and scrolled so a long conversation can't push the reply box off
    the bottom of the drawer — answering is the reason you opened it. */

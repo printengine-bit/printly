@@ -59,8 +59,13 @@ def catalog_payload(db=None):
     # show a total without hardcoding rates that only the admin should set.
     # It is still only a preview: quote() recomputes every figure from these
     # same rows at checkout and a mismatch is refused.
+    from content import zones_payload
     return {"products": products, "colors": colors, "sizes": sizes,
-            "oneSizeKey": ONE_SIZE_KEY, "tax": tax_settings(db)}
+            "oneSizeKey": ONE_SIZE_KEY, "tax": tax_settings(db),
+            # Print zones are admin-editable now. mockups.js merges these
+            # over the defaults in mockup-data.js, so a corrected measurement
+            # reaches the studio on the next load without a deploy.
+            "zones": zones_payload(db)}
 
 
 def tax_settings(db):
@@ -201,6 +206,7 @@ def _product_public(db, p):
            FROM variants WHERE product_id=?""", (p["id"],)).fetchone()
     return {"id": p["id"], "slug": p["slug"], "name": p["name"], "emoji": p["emoji"],
             "fabric": p["fabric"], "fit": p["fit_label"], "hsn_code": p["hsn_code"],
+            "cost_price": p["cost_price"],
             "base_price": p["base_price"], "one_size": bool(p["one_size"]),
             "active": bool(p["active"]), "sort": p["sort"],
             "tiers": _tiers_for(db, p["id"]),
@@ -239,6 +245,11 @@ def update_product(pid):
     if isinstance(d.get("base_price"), (int, float)) and d["base_price"] >= 0:
         fields.append("base_price=?")
         vals.append(float(d["base_price"]))
+    # What the blank costs us. Feeds the stock valuation report, which reads
+    # zero (and says so) until this is set.
+    if isinstance(d.get("cost_price"), (int, float)) and d["cost_price"] >= 0:
+        fields.append("cost_price=?")
+        vals.append(float(d["cost_price"]))
     if d.get("active") is not None:
         fields.append("active=?")
         vals.append(1 if d["active"] else 0)

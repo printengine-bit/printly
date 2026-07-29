@@ -43,7 +43,7 @@ changed is that they're now *separate* files instead of one 311KB
 
 **Admin panel** (`frontend/admin/`) — a *separate app* served at `/admin`,
 sharing no file with the storefront: `index.html`, `css/admin.css`,
-`js/{api,theme,dashboard,settings,inventory,orders,production,dispatch,customers,support,app}.js`. Staff never download studio
+`js/{api,theme,dashboard,settings,inventory,orders,production,dispatch,customers,support,content,reports,app}.js`. Staff never download studio
 code and customers never download admin code. It reuses the storefront's
 session cookie (same origin), so there is only one login. The palette
 tokens are deliberately duplicated rather than imported — same design
@@ -100,6 +100,21 @@ language, independent files, so neither app can break the other.
   filter is the single thing standing between "customer sounds annoyed,
   refund if she pushes" and the customer reading it. A customer replying to
   a closed ticket reopens it.
+- `content.py` — templates, review moderation and **print zones**. Zones
+  moved out of `js/mockup-data.js` and into the `print_zones` table so a
+  measurement can be corrected without a deploy; `catalog_payload()` ships
+  them and `mockups.js` merges them over the file defaults, which stay as the
+  fresh-install seed. They matter more than they look — `sizeScale()` derives
+  every garment size from the reference zone, so one wrong figure is wrong on
+  all six at once. Review moderation **hides, never deletes**, and `hidden=0`
+  must be on all three review queries (list, per-product average, and the grid
+  rollup in `summary()`) or a hidden one-star still drags the rating down.
+- `reports.py` — sales, throughput, stock valuation, AI usage, all computed
+  from the same rows the rest of the panel reads. No summary tables: one that
+  drifts from the orders it describes is worse than no report. Money excludes
+  cancelled orders, counts include them, and every screen says which. Stage
+  dwell is measured only across stages an order has actually **left** —
+  assuming "until now" would make a stalled queue look fast.
 - `catalog.py` — products, price tiers, colour x size variants, stock and
   the movement ledger. `quote()` is the **only** authority on what an order
   costs; `catalog_payload()` is the JSON the storefront is built from.
@@ -251,7 +266,9 @@ once and an edited stylesheet silently kept serving the cached copy.
   A *product* change remaps artwork with shrinking, a *size* change without
   — the print is a fixed physical thing, the garment moves around it.
   ⚠️ The base zone figures (`rn` front claims 38×50cm on an M) look
-  generous; scaling can't fix wrong reference data.
+  generous; scaling can't fix wrong reference data. They are editable now —
+  Content → Product photos — so this is a measurement to take, not a code
+  change to make.
 - **`drawRuler()` measures the print zone**, is positioned over it from the
   canvas's *rendered* width, and relabels on every draw. Any change to the
   canvas's CSS width needs a `draw()` — that's what the resize listener in
