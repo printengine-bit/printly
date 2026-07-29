@@ -91,7 +91,14 @@ a{color:inherit;text-decoration:none}
   display:block;font-size:11px;font-weight:700;letter-spacing:.06em;
   text-transform:uppercase;color:var(--ink-mut);margin-bottom:6px;
 }
-input[type=text],input[type=email],input[type=password],input[type=tel],select,textarea{
+/* Matched by exclusion, not by listing types. An <input> with no type at all
+   is a text input, and `input[type=text]` does not match it — so a field
+   written without the attribute came out completely unstyled: no border, no
+   background, 21px tall. Listing types means every new one (date, number,
+   search) has to be remembered here; excluding the few that must keep their
+   native box means none of them do. */
+input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
+select,textarea{
   width:100%;min-height:44px;padding:11px 13px;
   background:var(--panel-2);border:1px solid var(--line);
   border-radius:var(--r-sm);color:var(--ink);
@@ -360,6 +367,18 @@ tr:last-child td{border-bottom:none}
   width:64px;height:64px;object-fit:cover;border-radius:var(--r-sm);
   background:var(--panel-3);flex-shrink:0;
 }
+/* ── Dispatch ─────────────────────────────────────────────────── */
+.ship-to{
+  background:var(--panel-2,var(--panel));border:1px solid var(--line);
+  border-left:3px solid var(--lime);border-radius:var(--r);padding:10px 14px;
+}
+.ship-to .tiny{color:var(--dim)}
+/* Four fields, but courier and AWB are the ones that get typed every time —
+   give them the room and let boxes/weight share the second row. */
+.dispatch-form{display:grid;grid-template-columns:1.4fr 1.6fr .6fr .8fr;gap:0 14px;margin-top:14px}
+@media(max-width:900px){ .dispatch-form{grid-template-columns:1fr 1fr} }
+@media(max-width:520px){ .dispatch-form{grid-template-columns:1fr} }
+
 .ord-tax{margin-top:12px;padding-top:12px;border-top:1px solid var(--outline-variant)}
 .ord-tax > div{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
 .ord-tax > div span{color:var(--on-surface-variant)}

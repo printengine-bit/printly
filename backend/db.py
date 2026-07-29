@@ -235,6 +235,37 @@ def init_db():
     # show figures the customer was never charged. NULL on orders placed
     # before this existed — recompute those at today's rates, and say so.
     _add_column(c, "orders", "tax_json", "TEXT")
+    # A tax invoice, once issued, is frozen: its number, the seller and buyer
+    # details, the tax split and the line values are all whatever they were
+    # on the day it was raised. Reprinting must reproduce that exactly, so
+    # none of it is recomputed — invoice_json holds the whole document.
+    _add_column(c, "orders", "invoice_no", "TEXT")
+    _add_column(c, "orders", "invoice_json", "TEXT")
+    _add_column(c, "orders", "invoice_at", "TEXT")
+
+    # Invoice numbering. GST wants a consecutive series unique within a
+    # financial year, so the year is stored alongside the counter and the
+    # counter restarts when the year rolls over — see next_invoice_no().
+    _add_column(c, "company", "invoice_prefix", "TEXT NOT NULL DEFAULT 'INV'")
+    _add_column(c, "company", "invoice_next", "INTEGER NOT NULL DEFAULT 1")
+    _add_column(c, "company", "invoice_fy", "TEXT NOT NULL DEFAULT ''")
+
+    # One row per parcel handed to a courier. Kept separate from the order so
+    # a reship after a return-to-origin is a second row, not an overwrite of
+    # the first AWB — the first one still happened and the courier will bill
+    # for it.
+    c.execute("""CREATE TABLE IF NOT EXISTS shipments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id INTEGER NOT NULL,
+        courier TEXT NOT NULL DEFAULT '',
+        awb TEXT NOT NULL DEFAULT '',
+        boxes INTEGER NOT NULL DEFAULT 1,
+        weight_g INTEGER NOT NULL DEFAULT 0,
+        note TEXT NOT NULL DEFAULT '',
+        actor_id INTEGER,
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_shipments_order ON shipments(order_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_shipments_created ON shipments(created)")
     # Staff accounts are created by the owner, who sets the first password
     # and hands it over — there's no email transport to send an invite with.
     _add_column(c, "users", "must_change_password", "INTEGER NOT NULL DEFAULT 0")

@@ -16,8 +16,8 @@ const SECTIONS = {
     subs:['All orders','Production queue','Awaiting proof','Ready to dispatch','Cancelled']},
   production:{label:'Production', icon:'print',
     subs:['Print jobs','Artwork files','Proof log']},
-  dispatch:  {label:'Dispatch', icon:'local_shipping', phase:3,
-    subs:['Pending shipments','Delivery notes','Shipping labels','Courier & AWB','Manifest']},
+  dispatch:  {label:'Dispatch', icon:'local_shipping',
+    subs:['Pending shipments','Tax invoices','Shipping labels','Manifest']},
   customers: {label:'Customers', icon:'group', phase:4,
     subs:['All customers','Loyalty adjustments']},
   support:   {label:'Support', icon:'support_agent', phase:4,
@@ -159,6 +159,7 @@ function route(){
   if(target === 'inventory') return renderInventory(el, sub || 'products');
   if(target === 'orders')    return renderOrders(el, sub || 'all-orders');
   if(target === 'production')return renderProduction(el, sub || 'print-jobs');
+  if(target === 'dispatch')  return renderDispatch(el, sub || 'pending-shipments');
   renderStub(el, target, s);
 }
 

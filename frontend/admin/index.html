@@ -94,6 +94,14 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Suggestions only — the field stays free text, because the courier a
+     parcel actually went with is a fact, not a menu we get to constrain. -->
+<datalist id="courierList">
+  <option value="Delhivery"><option value="Blue Dart"><option value="DTDC">
+  <option value="Ekart"><option value="XpressBees"><option value="Shadowfax">
+  <option value="India Post"><option value="Amazon Shipping"><option value="Professional Couriers">
+</datalist>
+
 <script src="/admin/js/api.js?v={{V}}"></script>
 <script src="/admin/js/theme.js?v={{V}}"></script>
 <script src="/admin/js/dashboard.js?v={{V}}"></script>
@@ -101,6 +109,7 @@
 <script src="/admin/js/inventory.js?v={{V}}"></script>
 <script src="/admin/js/orders.js?v={{V}}"></script>
 <script src="/admin/js/production.js?v={{V}}"></script>
+<script src="/admin/js/dispatch.js?v={{V}}"></script>
 <script src="/admin/js/app.js?v={{V}}"></script>
 </body>
 </html>

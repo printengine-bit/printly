@@ -43,7 +43,7 @@ changed is that they're now *separate* files instead of one 311KB
 
 **Admin panel** (`frontend/admin/`) — a *separate app* served at `/admin`,
 sharing no file with the storefront: `index.html`, `css/admin.css`,
-`js/{api,theme,dashboard,settings,inventory,orders,production,app}.js`. Staff never download studio
+`js/{api,theme,dashboard,settings,inventory,orders,production,dispatch,app}.js`. Staff never download studio
 code and customers never download admin code. It reuses the storefront's
 session cookie (same origin), so there is only one login. The palette
 tokens are deliberately duplicated rather than imported — same design
@@ -75,6 +75,19 @@ language, independent files, so neither app can break the other.
   once rather than per order; the artwork file list matched back to orders,
   with orphan detection; and proof-SLA tracking against the storefront's
   2-hour promise.
+- `dispatch.py` + `documents.py` — parcels and the paperwork on them.
+  Three things here are not free to be approximate. **The invoice number** is
+  a consecutive series unique within a financial year (April–March),
+  allocated inside the issuing transaction. **The tax split** is CGST+SGST
+  when the parcel stays in the seller's state and IGST when it crosses one —
+  decided by comparing GST state codes, and flagged on the document when
+  either state is missing rather than guessed. **The frozen copy**:
+  `orders.invoice_json` is what gets reprinted, never a recomputation, and
+  issuing is idempotent because a second number would leave the first
+  unaccounted for. Documents are standalone server-rendered HTML that set
+  their own `@page` size (A4 invoice, 4×6in label) — no PDF library, because
+  the browser already has one and the host has 1GB. Labels are addressed by
+  **shipment id**, not order id: an order that went out twice has two AWBs.
 - `catalog.py` — products, price tiers, colour x size variants, stock and
   the movement ledger. `quote()` is the **only** authority on what an order
   costs; `catalog_payload()` is the JSON the storefront is built from.
@@ -252,9 +265,15 @@ p95 ≈220ms.
 
 - **Razorpay** — order totals are still client-trusted. The server MUST
   recompute from a price table the moment payment lands.
-- ~~**GST**~~ — done: two slabs, per piece, admin-editable. What's left is
-  the **GSTIN itself** (Settings → Company profile, still blank) and the
-  per-product **HSN codes**, both of which a tax invoice needs.
+- ~~**GST**~~ — done: two slabs, per piece, admin-editable, with invoices.
+  What's left is data, not code: the **GSTIN** (Settings → Company profile,
+  still blank) and the per-product **HSN codes**. Dispatch and the invoice
+  both warn while either is missing.
+- **Courier integration** — none. Couriers are typed in with their AWB by
+  hand; nothing calls Delhivery or Shiprocket, and the label's stripe is a
+  visual check for humans, not a scannable barcode.
+- **Parcel weight** is entered by hand because no product carries a weight.
+  A `grams` column on `products` would let dispatch prefill it.
 - **Loyalty redemption** — points accrue on a placeholder rule
   (1 per ₹100) with no way to spend them and no agreed policy.
 - Verified-email / password reset, live deployment, PWA. See README.
