@@ -97,6 +97,18 @@ a{color:inherit;text-decoration:none}
    background, 21px tall. Listing types means every new one (date, number,
    search) has to be remembered here; excluding the few that must keep their
    native box means none of them do. */
+/* Chrome paints autofilled fields with its own near-white background and
+   ignores background-color outright. The inset shadow is the only way to
+   cover it, and text-fill-color the only way to recolour the text — without
+   both, an autofilled field on a dark panel comes out pale blue. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus{
+  -webkit-box-shadow:0 0 0 1000px var(--panel-2) inset;
+  -webkit-text-fill-color:var(--ink);
+  caret-color:var(--ink);
+}
+
 /* Wraps the input only, so the toggle can be positioned against the input's
    own box rather than the label above it. */
 .pw-wrap{position:relative;display:block}

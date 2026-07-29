@@ -300,6 +300,19 @@ input[type=range]{width:100%;min-height:auto;padding:0;background:transparent;bo
 input[type=color]{padding:2px;min-height:44px;cursor:pointer}
 input[type=file]{font-size:12px;padding:10px}
 
+/* Chrome paints autofilled fields with its own near-white background and
+   ignores background-color outright. The inset shadow is the only way to
+   cover it, and text-fill-color the only way to recolour the text — without
+   both, an autofilled field comes out pale blue on the dark theme. Uses the
+   surface token, so it follows the theme switch. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus{
+  -webkit-box-shadow:0 0 0 1000px var(--surface-container-high) inset;
+  -webkit-text-fill-color:var(--on-surface);
+  caret-color:var(--on-surface);
+}
+
 /* Password reveal. Wraps the input only, so the toggle sits against the
    input's own box rather than the label above it.
    Must come AFTER the input rules above: `.pw-wrap input` and
