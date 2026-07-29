@@ -266,6 +266,67 @@ def init_db():
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")
     c.execute("CREATE INDEX IF NOT EXISTS idx_shipments_order ON shipments(order_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_shipments_created ON shipments(created)")
+
+    # ── Loyalty ledger ──────────────────────────────────────────
+    # users.loyalty_points was a bare integer that orders incremented, which
+    # made "why does this customer have 340 points" unanswerable. Every
+    # movement is now a row and the column is the running total: staff can
+    # adjust a balance, and the reason survives them.
+    c.execute("""CREATE TABLE IF NOT EXISTS loyalty_moves(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        delta INTEGER NOT NULL,
+        reason TEXT NOT NULL DEFAULT '',
+        order_id INTEGER,
+        actor_id INTEGER,
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_loyalty_user ON loyalty_moves(user_id)")
+    # Balances that predate the ledger get one opening row each, so every
+    # account reconciles to the sum of its movements. Self-guarding: once a
+    # user has any row they're skipped, so this can't double-post.
+    c.execute("""INSERT INTO loyalty_moves(user_id,delta,reason)
+                 SELECT id, loyalty_points, 'Opening balance — earned before the ledger existed'
+                 FROM users u WHERE u.loyalty_points > 0
+                   AND NOT EXISTS (SELECT 1 FROM loyalty_moves m WHERE m.user_id=u.id)""")
+
+    # ── Support ─────────────────────────────────────────────────
+    # A ticket is one conversation. It can hang off an order or stand alone
+    # (a pre-sales question), which is why order_id is nullable rather than
+    # tickets being a child of orders.
+    c.execute("""CREATE TABLE IF NOT EXISTS tickets(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        order_id INTEGER,
+        subject TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'open',
+        priority TEXT NOT NULL DEFAULT 'normal',
+        assignee_id INTEGER,
+        opened_by TEXT NOT NULL DEFAULT 'customer',
+        created TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_tickets_user ON tickets(user_id)")
+
+    # Every message on a ticket, from either side. `internal` marks a staff
+    # note the customer never sees — without it people write those into the
+    # reply box by accident.
+    c.execute("""CREATE TABLE IF NOT EXISTS ticket_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticket_id INTEGER NOT NULL,
+        author_id INTEGER,
+        from_staff INTEGER NOT NULL DEFAULT 0,
+        internal INTEGER NOT NULL DEFAULT 0,
+        body TEXT NOT NULL DEFAULT '',
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_tmsg_ticket ON ticket_messages(ticket_id)")
+
+    c.execute("""CREATE TABLE IF NOT EXISTS canned_replies(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL DEFAULT '',
+        body TEXT NOT NULL DEFAULT '',
+        sort INTEGER NOT NULL DEFAULT 0,
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    _seed_canned(c)
     # Staff accounts are created by the owner, who sets the first password
     # and hands it over — there's no email transport to send an invite with.
     _add_column(c, "users", "must_change_password", "INTEGER NOT NULL DEFAULT 0")
@@ -350,6 +411,35 @@ SEED_PRODUCTS = [
      "chest": [38], "length": [42]},
 ]
 ONE_SIZE_KEY = "One size"
+
+
+def _seed_canned(conn):
+    """Starter canned replies. Guarded on the table being empty, like the
+    catalogue seed — once the shop has written its own, re-adding these on
+    every boot would be an unwelcome surprise."""
+    if conn.execute("SELECT 1 FROM canned_replies LIMIT 1").fetchone():
+        return
+    for i, (title, body) in enumerate((
+        ("Proof on the way",
+         "Thanks for your order! Our team is preparing your digital proof and "
+         "you'll have it within 2 hours. Nothing goes to print until you approve it."),
+        ("Asking for artwork",
+         "To get this printed at the best possible quality, could you send us the "
+         "original artwork file? A PNG or PDF at the size you want it printed is ideal."),
+        ("Size guidance",
+         "Our tees run true to size with a regular fit. The size guide on the product "
+         "page lists chest and length for every size — measure a shirt you already own "
+         "flat across the chest and match it to the chart."),
+        ("Dispatched",
+         "Good news — your order has been dispatched. The courier and tracking number "
+         "are on your order page, and delivery usually takes 3–5 days from Pune."),
+        ("Reprint for a print defect",
+         "Sorry about that — that's not the standard we print to. We'll reprint and "
+         "dispatch a replacement at no cost. Could you send a photo of the print so "
+         "we can check it against the press settings?"),
+    )):
+        conn.execute("INSERT INTO canned_replies(title,body,sort) VALUES(?,?,?)",
+                     (title, body, i))
 
 
 def _seed_catalog(conn):

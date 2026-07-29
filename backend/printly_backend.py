@@ -206,12 +206,16 @@ from admin_api import admin_bp
 from catalog import catalog_bp, catalog_payload
 from production import production_bp
 from dispatch import dispatch_bp
+from customers import customers_bp
+from support import support_bp
 app.register_blueprint(auth_bp)
 app.register_blueprint(artwork_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(catalog_bp)
 app.register_blueprint(production_bp)
 app.register_blueprint(dispatch_bp)
+app.register_blueprint(customers_bp)
+app.register_blueprint(support_bp)
 app.register_blueprint(orders_bp)
 app.register_blueprint(designs_bp)
 app.register_blueprint(reviews_bp)

@@ -206,10 +206,13 @@ def create_order():
     # redemption path yet. The real earn/burn policy is a business decision
     # that hasn't been made; this exists so the dashboard has something
     # truthful to show. Decide the policy before advertising it to customers.
+    # Goes through award_points() so it lands in the ledger with everything
+    # else — a balance nobody can explain is worse than no balance.
     points = int(total // 100)
     if points:
-        db.execute("UPDATE users SET loyalty_points = loyalty_points + ? WHERE id=?",
-                   (points, session["user_id"]))
+        from customers import award_points
+        award_points(db, session["user_id"], points,
+                     "Earned on order", order_id=cur.lastrowid)
     db.commit()
 
     row = db.execute("SELECT * FROM orders WHERE id=?", (cur.lastrowid,)).fetchone()

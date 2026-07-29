@@ -447,6 +447,18 @@ function fmtDate(s){
   const d=parseUTC(s);
   return isNaN(d) ? String(s) : d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
 }
+/* Relative for anything recent, absolute after a day. A support thread is
+   read as a conversation — "2h ago" is what tells you whether the shop has
+   actually gone quiet on you. */
+function fmtWhen(s){
+  const d=parseUTC(s);
+  if(isNaN(d)) return String(s);
+  const mins=Math.round((Date.now()-d)/60000);
+  if(mins<1) return 'just now';
+  if(mins<60) return mins+'m ago';
+  if(mins<1440) return Math.round(mins/60)+'h ago';
+  return fmtDate(s);
+}
 function isToday(s){
   const d=parseUTC(s);
   if(isNaN(d)) return false;
@@ -480,6 +492,12 @@ async function renderOrders(){
       <div class="stat-pill"><span>In production</span><b>${String(active).padStart(2,'0')}</b></div>
       <div class="stat-pill"><span>Loyalty points</span><b>${(state.user.loyalty_points||0).toLocaleString('en-IN')}</b></div>`;
   }
+
+  // The help panel offers to raise a request against one of these, so it
+  // needs the list — and it renders even with no orders, since "I haven't
+  // received something I ordered" is exactly when the list can be empty.
+  state.myOrders = orders;
+  renderHelp();
 
   if(!orders.length){
     el.innerHTML=`<div class="empty">

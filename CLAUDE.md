@@ -24,7 +24,7 @@ changed is that they're now *separate* files instead of one 311KB
 - `js/` loads in order and shares global scope (classic scripts, not
   modules): `mockup-data.js` → `data.js` → `mockups.js` → `nav.js` →
   `auth.js` → `products.js` → `studio.js` → `ai.js` → `cart.js` →
-  `designs.js` → `pdp.js` → `scrollstack.js` →
+  `designs.js` → `pdp.js` → `support.js` → `scrollstack.js` →
   `cursorgrid.js` → `theme.js` → `init.js`. Order matters for top-level
   side effects; `esc()` lives in `data.js` because it loads first. The
   initial `data-theme` is set by an inline script in `<head>`, before the
@@ -43,7 +43,7 @@ changed is that they're now *separate* files instead of one 311KB
 
 **Admin panel** (`frontend/admin/`) — a *separate app* served at `/admin`,
 sharing no file with the storefront: `index.html`, `css/admin.css`,
-`js/{api,theme,dashboard,settings,inventory,orders,production,dispatch,app}.js`. Staff never download studio
+`js/{api,theme,dashboard,settings,inventory,orders,production,dispatch,customers,support,app}.js`. Staff never download studio
 code and customers never download admin code. It reuses the storefront's
 session cookie (same origin), so there is only one login. The palette
 tokens are deliberately duplicated rather than imported — same design
@@ -88,6 +88,18 @@ language, independent files, so neither app can break the other.
   their own `@page` size (A4 invoice, 4×6in label) — no PDF library, because
   the browser already has one and the host has 1GB. Labels are addressed by
   **shipment id**, not order id: an order that went out twice has two AWBs.
+- `customers.py` — there is no customers *table*: a customer is a `users`
+  row with the default role, and lifetime value, order count and addresses
+  are all derived from their orders. `award_points()` is the **only** way
+  loyalty points move; it writes the ledger row and the running total
+  together so the two can't drift, and every adjustment demands a reason.
+- `support.py` — tickets, both sides of the conversation. A ticket can hang
+  off an order or stand alone, which is why `order_id` is nullable rather
+  than tickets being a child of orders. `internal` marks a staff-only note
+  on the same thread — the customer endpoints filter those out, and that
+  filter is the single thing standing between "customer sounds annoyed,
+  refund if she pushes" and the customer reading it. A customer replying to
+  a closed ticket reopens it.
 - `catalog.py` — products, price tiers, colour x size variants, stock and
   the movement ledger. `quote()` is the **only** authority on what an order
   costs; `catalog_payload()` is the JSON the storefront is built from.
@@ -282,6 +294,8 @@ p95 ≈220ms.
   visual check for humans, not a scannable barcode.
 - **Parcel weight** is entered by hand because no product carries a weight.
   A `grams` column on `products` would let dispatch prefill it.
-- **Loyalty redemption** — points accrue on a placeholder rule
-  (1 per ₹100) with no way to spend them and no agreed policy.
+- **Loyalty redemption** — points accrue on a placeholder rule (1 per
+  ₹100) with no way to spend them and no agreed policy. The *ledger* is
+  real now (every movement recorded, balances reconcile); the **policy**
+  still isn't. Don't advertise points to customers until it is.
 - Verified-email / password reset, live deployment, PWA. See README.

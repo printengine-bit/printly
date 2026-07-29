@@ -18,9 +18,9 @@ const SECTIONS = {
     subs:['Print jobs','Artwork files','Proof log']},
   dispatch:  {label:'Dispatch', icon:'local_shipping',
     subs:['Pending shipments','Tax invoices','Shipping labels','Manifest']},
-  customers: {label:'Customers', icon:'group', phase:4,
-    subs:['All customers','Loyalty adjustments']},
-  support:   {label:'Support', icon:'support_agent', phase:4,
+  customers: {label:'Customers', icon:'group',
+    subs:['All customers','Loyalty ledger']},
+  support:   {label:'Support', icon:'support_agent',
     subs:['Ticket inbox','Unassigned','Canned replies']},
   content:   {label:'Content', icon:'palette', phase:5,
     subs:['Design templates','Review moderation','Product photos']},
@@ -160,6 +160,8 @@ function route(){
   if(target === 'orders')    return renderOrders(el, sub || 'all-orders');
   if(target === 'production')return renderProduction(el, sub || 'print-jobs');
   if(target === 'dispatch')  return renderDispatch(el, sub || 'pending-shipments');
+  if(target === 'customers') return renderCustomers(el, sub || 'all-customers');
+  if(target === 'support')   return renderSupport(el, sub || 'ticket-inbox');
   renderStub(el, target, s);
 }
 

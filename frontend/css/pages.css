@@ -162,6 +162,21 @@ details.acc[open] summary::after{transform:rotate(180deg)}
 details.acc p,details.acc ul{margin-top:12px;font-size:14px;color:var(--on-surface-variant);line-height:1.7}
 details.acc ul{padding-left:18px}
 
+/* ── Support thread on My orders ──────────────────────────────── */
+details.acc.tk{border-top:1px solid var(--outline-variant);padding:14px 0}
+details.acc.tk summary{text-transform:none;letter-spacing:0;font-size:14px;gap:12px}
+.tk-thread{
+  margin-top:12px;max-height:340px;overflow-y:auto;
+  border:1px solid var(--outline-variant);border-radius:var(--r-sm);padding:12px;
+  background:var(--surface-container-low);
+}
+.tk-msg{padding:9px 11px;border-radius:var(--r-sm);margin-bottom:8px;background:var(--surface-container-high)}
+.tk-msg:last-child{margin-bottom:0}
+/* Their replies tinted and indented, so a thread reads as a conversation
+   rather than a log. */
+.tk-msg.them{background:var(--tint-lime);margin-left:22px}
+.tk-msg p{font-size:13.5px;line-height:1.55;white-space:pre-wrap}
+
 .deliv{background:var(--surface-container-low);border:1px solid var(--outline-variant);border-radius:var(--r);padding:16px;margin:20px 0}
 .review{padding:20px;border-radius:var(--r-md);background:var(--surface-container-low);border:1px solid var(--outline-variant)}
 .review-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}

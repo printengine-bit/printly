@@ -25,6 +25,7 @@
   --warn-ink:#ffc775;
   --warn-bg:rgba(255,199,117,.15);
   --tint-lime:rgba(200,242,50,.12);
+  --tint-pink:rgba(206,3,88,.16);
   --scrim:rgba(0,0,0,.6);
   --shadow:0 18px 40px rgba(0,0,0,.5);
   --ff-display:'Archivo Narrow','Arial Narrow',system-ui,sans-serif;
@@ -46,6 +47,7 @@
   --warn-ink:#7a4b00;
   --warn-bg:rgba(255,199,117,.35);
   --tint-lime:rgba(139,176,0,.16);
+  --tint-pink:rgba(161,2,68,.12);
   --scrim:rgba(23,26,16,.45);
   --shadow:0 18px 40px rgba(23,23,20,.16);
 }
@@ -361,6 +363,31 @@ tr:last-child td{border-bottom:none}
 .size-chip b{color:var(--lime-ink)}
 .size-chips{margin-top:6px}
 .lbl{text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;font-weight:700}
+
+/* ── Support thread ───────────────────────────────────────────── */
+/* Capped and scrolled so a long conversation can't push the reply box off
+   the bottom of the drawer — answering is the reason you opened it. */
+.thread{
+  max-height:46vh;overflow-y:auto;margin-bottom:20px;
+  border:1px solid var(--line);border-radius:var(--r);padding:12px;
+  background:var(--panel-2);
+}
+.msg{padding:10px 12px;border-radius:var(--r-sm);margin-bottom:10px;background:var(--panel)}
+.msg:last-child{margin-bottom:0}
+/* Staff replies sit right and tinted; internal notes are visually a
+   different thing entirely, because sending one by mistake is the failure
+   mode worth designing against. */
+.msg.staff{background:var(--tint-lime);margin-left:26px}
+.msg.note{background:var(--tint-pink);margin-left:26px;border:1px dashed var(--pink)}
+.msg-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:5px}
+.msg-head b{font-size:12.5px}
+.msg p{font-size:13.5px;line-height:1.55;white-space:pre-wrap}
+
+.canned{
+  border:1px solid var(--line);border-radius:var(--r);
+  padding:12px 14px;margin-bottom:10px;background:var(--panel-2);
+}
+.canned p{margin-top:6px;color:var(--ink-mut);line-height:1.5}
 
 /* ── Order drawer ─────────────────────────────────────────────── */
 .drawer-scrim{
