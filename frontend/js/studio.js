@@ -19,6 +19,7 @@ function initStudio(){
   // the empty state (and the getting-started guide inside it) never showed
   // on the one screen that most needs it.
   renderLayers();
+  renderPlacementRow();
 }
 /* Left-panel tab switcher (Base / Assets / AI) */
 function studioTab(name){
@@ -93,6 +94,7 @@ function applyPreviewSize(){
   state._drawnStamp=stamp;
   state._drawnPA={x:P.x,y:P.y,w:P.w,h:P.h};
   if(old && sizeOnly) remapLayers(old,P,false);
+  zoomOut();   // P just moved; a stale zoom transform would frame the wrong spot
   draw();
 }
 
@@ -101,6 +103,7 @@ function studioProductChange(){
   state.product=PRODUCTS.find(p=>p.id===document.getElementById('stProduct').value);
   const P=pa();
   remapLayers(old,P,true);   // keep existing artwork inside the new zone
+  zoomOut();                 // the box a zoom was framing belonged to the old product's zone
   toggleJerseyKit();
   updateProductSub();
   resetSizesForProduct();   // size keys differ (a tote is one-size)
@@ -109,9 +112,11 @@ function studioProductChange(){
 }
 function setSide(s){
   state.side=s; state.sel=-1;
+  zoomOut();   // the other side's layers were never in this zoomed box
   document.getElementById('tabF').classList.toggle('on',s==='front');
   document.getElementById('tabB').classList.toggle('on',s==='back');
   document.getElementById('sideLabel').textContent=s;
+  renderPlacementRow();   // front/back offer different presets
   renderLayers(); applyPreviewSize(); draw();
 }
 
@@ -396,6 +401,147 @@ function bumpRaw(L,f){
   if(L.type==='text') L.size=Math.max(8,Math.min(110,L.size*f));
   else { L.w*=f; L.h*=f; }
 }
+
+/* ═══════════════ STUDIO: placement presets ═══════════════
+   Prefilled positions a company logo actually goes — Left/Center/Right
+   Chest, Full Front/Back — matching what print catalogues like Printful
+   and CustomInk show, so a click replaces a drag-and-eyeball guess.
+   "Left chest" follows the on-screen convention every one of those uses
+   (their icon sits at the visual top-left of the front view), not the
+   wearer's true anatomical left — the two disagree, and screen-left is
+   what a customer clicking a picture expects. */
+const PLACEMENTS = {
+  front: [
+    ['full-front',   'Full Front',   'crop_free'],
+    ['center-chest', 'Center Chest', 'crop_5_4'],
+    ['left-chest',   'Left Chest',   'align_horizontal_left'],
+    ['right-chest',  'Right Chest',  'align_horizontal_right'],
+  ],
+  back: [
+    ['full-back',   'Full Back',   'crop_free'],
+    ['center-back', 'Center Back', 'crop_5_4'],
+  ],
+};
+
+/* Box for a preset, in canvas-internal coordinates, derived from the live
+   print area P — so it tracks garment size and product changes for free
+   instead of needing its own per-product table. Fractions are off real
+   placement charts: a chest hit is small (~9-10cm on an actual garment),
+   sitting high and to one side; a full print fills the zone with a small
+   margin so it doesn't visually bleed to the edge. */
+function placementBox(key, P){
+  if(key==='full-front' || key==='full-back') return {x:P.x, y:P.y, w:P.w, h:P.h};
+  if(key==='center-chest'){
+    const w=P.w*0.42; return {x:P.x+(P.w-w)/2, y:P.y+P.h*0.07, w, h:P.h*0.28};
+  }
+  if(key==='center-back'){
+    const w=P.w*0.5; return {x:P.x+(P.w-w)/2, y:P.y+P.h*0.06, w, h:P.h*0.32};
+  }
+  const w=P.w*0.26, h=P.h*0.20, y=P.y+P.h*0.08;
+  return key==='left-chest' ? {x:P.x+P.w*0.08, y, w, h} : {x:P.x+P.w*0.92-w, y, w, h};
+}
+
+/* Move + resize a layer to fill a box, centred, with breathing room.
+
+   Solved directly rather than by shrinking in a loop: layerBounds() adds a
+   FIXED padding (16px text, 12px image) for the on-canvas hit-box, and a
+   chest placement is only ~35px wide in canvas-internal units — that
+   padding alone is a third of the box. A loop chasing the padded size
+   chases a moving target and can walk a long company name straight to the
+   size floor without ever converging, leaving unreadable text that still
+   overflows. Subtracting the same constant up front and solving for the
+   exact font size gets it right in one step.
+
+   Canvas text metrics scale linearly with font size for a given font, so
+   measuring at 1px gives a per-pixel width to divide the available space
+   by. Returns true when the result had to hit the readable-size floor —
+   the caller uses that to tell the difference between "fits" and "just
+   barely, consider a bigger placement or shorter text". */
+const FIT_FLOOR = 10, FIT_CEIL = 110;
+function fitLayerToBox(L, box){
+  // No extra shrink factor on top of the padding subtraction — the fixed
+  // padding IS the margin around the ink. Stacking a proportional margin on
+  // top of it double-shrinks a chest box, which is already tight: a third
+  // of a ~35px box is that padding alone.
+  L.x = box.x+box.w/2; L.y = box.y+box.h/2;
+  if(L.type==='text'){
+    const padText = 16;   // must match layerBounds()'s text padding
+    const contentW = Math.max(4, box.w - padText);
+    const contentH = Math.max(4, box.h - padText);
+    ctx.font = `${L.bold?'700':'400'} 1px "${L.font}"`;
+    const perPx = Math.max(0.01, ctx.measureText(L.text).width);
+    const size = Math.min(contentW/perPx, contentH);
+    L.size = Math.max(FIT_FLOOR, Math.min(FIT_CEIL, size));
+    return size < FIT_FLOOR;
+  }
+  const padImg = 12;      // must match layerBounds()'s image padding
+  const contentW = Math.max(4, box.w - padImg);
+  const contentH = Math.max(4, box.h - padImg);
+  const ratio = L.w/(L.h||1);
+  let w=contentW, h=w/ratio;
+  if(h>contentH){ h=contentH; w=h*ratio; }
+  L.w=w; L.h=h;
+  return false;
+}
+
+function applyPlacement(key){
+  const Ls=state.layers[state.side];
+  if(!Ls.length){ toast('Add text or a logo first'); return; }
+  if(state.sel<0){ toast('Select which layer to place — tap it in the layers list'); return; }
+  const P=pa(), box=placementBox(key,P);
+  const tight=fitLayerToBox(Ls[state.sel], box);
+  draw();
+  const full=key==='full-front'||key==='full-back';
+  if(full) zoomOut(); else zoomToBox(box);
+  const all=PLACEMENTS.front.concat(PLACEMENTS.back), hit=all.find(p=>p[0]===key);
+  const label=hit?hit[1]:'Placement';
+  toast(tight ? `${label} applied — that text is a tight fit here; try Center Chest or shorten it`
+              : label+' applied');
+}
+
+function renderPlacementRow(){
+  const el=document.getElementById('placementRow'); if(!el) return;
+  const list=PLACEMENTS[state.side]||PLACEMENTS.front;
+  el.innerHTML=`<span class="placement-label">Placement</span>`
+    +list.map(([k,label,icon])=>`<button class="placement-btn" onclick="applyPlacement('${k}')">
+        <span class="material-symbols-outlined">${icon}</span>${label}</button>`).join('')
+    +(state._zoomed?`<button class="placement-btn zoom-out" onclick="zoomOut()">
+        <span class="material-symbols-outlined">zoom_out</span>Full view</button>`:'');
+}
+
+/* Purely a CSS transform on the canvas element — the internal 520×560
+   drawing space never changes, so nothing downstream (pos(), layer maths,
+   export) needs to know the view is zoomed. pos() already reads the
+   canvas's live getBoundingClientRect(), which reflects the transform, so
+   drag/resize/click hit-testing keep working exactly as before while
+   zoomed in — see the .canvas-frame comment in index.html. */
+function zoomToBox(box){
+  const frame=document.getElementById('canvasFrame'); if(!frame) return;
+  cv.style.transform='none';
+  void cv.offsetWidth;                              // flush before measuring
+  const r=cv.getBoundingClientRect();
+  const cx=r.left+r.width/2, cy=r.top+r.height/2;
+  const bx=r.left+(box.x+box.w/2)/520*r.width;
+  const by=r.top+(box.y+box.h/2)/560*r.height;
+  const pad=1.35;                                    // margin so the box doesn't touch the frame edge
+  const k=Math.min(6, Math.max(1.2, Math.min(520/(box.w*pad), 560/(box.h*pad))));
+  // Scaling from the canvas's own centre keeps the maths in one step: the
+  // box's centre lands at C + k*(offset from C), then a plain-pixel
+  // translate (applied as the OUTER transform, so it's untouched by the
+  // scale) walks that point onto the frame's centre.
+  const postBx=cx+k*(bx-cx), postBy=cy+k*(by-cy);
+  const fr=frame.getBoundingClientRect();
+  const dx=(fr.left+fr.width/2)-postBx, dy=(fr.top+fr.height/2)-postBy;
+  cv.style.transformOrigin='center center';
+  cv.style.transform=`translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${k.toFixed(3)})`;
+  state._zoomed=true;
+  renderPlacementRow();
+}
+function zoomOut(){
+  cv.style.transform='none';
+  if(state._zoomed){ state._zoomed=false; renderPlacementRow(); }
+}
+
 function layerBounds(L){
   if(L.type==='text'){
     ctx.font=`${L.bold?'700':'400'} ${L.size}px "${L.font}"`;

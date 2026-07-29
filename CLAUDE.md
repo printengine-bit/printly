@@ -253,6 +253,17 @@ once and an edited stylesheet silently kept serving the cached copy.
 - **Print areas** live in `MOCK.print[key]` as `{cx,cy,w,h,cmW,cmH}`
   in 720px-wide mockup-space; `mockLayout()` converts these into
   canvas coordinates. Don't hardcode pixel positions elsewhere.
+- **Placement presets** (`PLACEMENTS`, `placementBox()`, `fitLayerToBox()` in
+  `studio.js`) put the selected layer at an industry-standard spot — Left/
+  Center/Right Chest, Center Back, Full Front/Back — sized and positioned as
+  a fraction of `pa()`, so they track garment size and product changes for
+  free. `fitLayerToBox()` solves the font size directly (canvas text metrics
+  scale linearly with size) rather than shrinking in a loop against
+  `layerBounds()`'s *padded* box — that padding (16px text / 12px image) is
+  a third of a ~35px chest box, and chasing it in a loop can walk long text
+  to the size floor without ever converging. Returns `true` when the floor
+  had to bind, so the caller can say "tight fit, try Center Chest" instead
+  of silently shipping illegible text.
 - **The canvas is drawn to the garment size.** `MOCK.print` describes
   `REF_SIZE` (M); every other size is that photo scaled by the chest ratio
   out of the product's own size chart (`sizeScale()` in `mockups.js`).
@@ -269,6 +280,17 @@ once and an edited stylesheet silently kept serving the cached copy.
   generous; scaling can't fix wrong reference data. They are editable now —
   Content → Product photos — so this is a measurement to take, not a code
   change to make.
+- **Zoom is a CSS transform on `#teeCanvas` alone** (`zoomToBox()`/
+  `zoomOut()`) — the internal 520×560 drawing space never changes, so
+  nothing downstream (`pos()`, layer math, `capturePrintArt()`) needs to
+  know the view is zoomed. `pos()` already reads the canvas's *live*
+  `getBoundingClientRect()`, which reflects the transform, so drag/resize/
+  click hit-testing keep working through a zoom with no changes needed.
+  `.canvas-frame` (`overflow:hidden`) is what clips it — sizing lives there
+  now, not on `#teeCanvas`. A zoom has to be exited (`zoomOut()`) on side
+  switch, product change and size change, since the box it was framing
+  belonged to the print area *before* that change moved it — do this at
+  each site that recomputes `pa()`, not just once centrally.
 - **`drawRuler()` measures the print zone**, is positioned over it from the
   canvas's *rendered* width, and relabels on every draw. Any change to the
   canvas's CSS width needs a `draw()` — that's what the resize listener in
