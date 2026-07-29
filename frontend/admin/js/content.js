@@ -24,21 +24,26 @@ async function renderTemplates(el){
   el.innerHTML = '<div class="empty">Loading…</div>';
   const d = await api('/api/admin/content/templates');
   if(!d.ok){ el.innerHTML = `<div class="empty">${esc(d.error)}</div>`; return; }
+  /* The thumbnail is a button, not decoration — it's the obvious thing to
+     click when you want a better look, and it was doing nothing. */
   const card = (t, isTemplate) => `<div class="tpl">
-    <div class="tpl-thumb">${t.thumb?`<img src="${esc(t.thumb)}" alt="">`
-      :'<span class="material-symbols-outlined">image</span>'}</div>
+    <button class="tpl-thumb" onclick="viewDesign(${t.id})"
+      title="Preview ${esc(t.name)}">${t.thumb?`<img src="${esc(t.thumb)}" alt="">`
+      :'<span class="material-symbols-outlined">image</span>'}</button>
     <div class="tpl-meta">
       <b>${esc(t.name)}</b>
       <span class="tiny dim">${esc(t.product)} · ${esc(t.author||'unknown')} · ${esc(fmtDate(t.created))}</span>
     </div>
-    ${isTemplate ? `<div class="row" style="gap:6px">
+    <div class="row" style="gap:6px">
+      <button class="btn btn-quiet btn-sm" onclick="viewDesign(${t.id})">View</button>
+      ${isTemplate ? `
         <input type="text" value="${t.sort}" style="width:64px"
           onchange="setTemplate(${t.id},{sort:this.value})" aria-label="Sort order">
         <button class="btn btn-quiet btn-sm" onclick="setTemplate(${t.id},{is_template:false})">
-          Unpublish</button>
-      </div>`
-      : `<button class="btn btn-primary btn-sm" onclick="setTemplate(${t.id},{is_template:true})">
+          Unpublish</button>`
+        : `<button class="btn btn-primary btn-sm" onclick="setTemplate(${t.id},{is_template:true})">
           Publish</button>`}
+    </div>
   </div>`;
   el.innerHTML = `
     <div class="card">
@@ -61,7 +66,85 @@ async function setTemplate(id, patch){
   if(!d.ok){ toast(d.error); return; }
   toast('Updated');
   renderTemplates(document.getElementById('contBody'));
+  if(document.getElementById('dlgDesign')) viewDesign(id);   // keep it in step
 }
+
+/* ── Design preview ──────────────────────────────────────────── */
+/* The thumbnail is what the studio actually rendered, so it is the design.
+   What it can't tell you is what the text says at readable size, or whether
+   any layer is a customer's uploaded logo — publishing one of those hands
+   it to every visitor. Both are spelled out here. */
+async function viewDesign(id){
+  let box = document.getElementById('dlgDesign');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'dlgDesign';
+    box.className = 'dlg';
+    box.onclick = e => { if(e.target === box) closeDesign(); };
+    document.body.appendChild(box);
+    addEventListener('keydown', escDesign);
+  }
+  box.innerHTML = '<div class="dlg-card"><div class="empty">Loading…</div></div>';
+  const d = await api('/api/admin/content/templates/'+id);
+  if(!d.ok){ box.innerHTML = `<div class="dlg-card"><div class="empty">${esc(d.error)}</div></div>`; return; }
+  const g = d.design;
+  const layerList = side => (g.layers[side]||[]).map(l => l.kind==='text'
+    ? `<li><b>“${esc(l.text)}”</b><span class="tiny dim"> ${esc(l.font)}
+         · ${Math.round(l.size||0)}px <span class="swatch-dot"
+         style="background:${esc(l.color||'#000')}"></span>${esc(l.color||'')}</span></li>`
+    : `<li><b>Uploaded image</b><span class="tiny dim"> ${l.w}×${l.h} px on canvas</span></li>`
+  ).join('') || '<li class="tiny dim">Nothing on this side.</li>';
+
+  box.innerHTML = `<div class="dlg-card" role="dialog" aria-modal="true" aria-label="Design preview">
+    <div class="drawer-head">
+      <div><h2>${esc(g.name)}</h2>
+        <p class="tiny muted">${esc(g.product)} · ${esc(g.author||'unknown')}
+          ${g.author_email?'· '+esc(g.author_email):''} · ${esc(fmtDate(g.created))}</p></div>
+      <button class="icon-btn" onclick="closeDesign()" aria-label="Close">
+        <span class="material-symbols-outlined">close</span></button>
+    </div>
+    <div class="dlg-body">
+      ${g.uploaded_images ? `<div class="alert warn">
+        <span class="material-symbols-outlined">warning</span>
+        <span><b>Contains ${g.uploaded_images} uploaded image(s).</b> If that's the
+          customer's own logo or artwork, publishing it as a template hands it to
+          every visitor. Check before you do.</span>
+      </div>` : ''}
+      <div class="dlg-preview" style="--swatch:${esc(g.shirt_color)}">
+        ${g.thumb ? `<img src="${esc(g.thumb)}" alt="Preview of ${esc(g.name)}">`
+          : '<div class="empty">No preview was saved with this design.</div>'}
+      </div>
+      <p class="tiny dim" style="text-align:center">Garment colour
+        <span class="swatch-dot" style="background:${esc(g.shirt_color)}"></span>
+        ${esc(g.shirt_color)} · rendered by the studio when it was saved</p>
+
+      <div class="grid g2" style="margin-top:16px">
+        <div><h3 class="tiny muted lbl">Front</h3><ul class="layer-list">${layerList('front')}</ul></div>
+        <div><h3 class="tiny muted lbl">Back</h3><ul class="layer-list">${layerList('back')}</ul></div>
+      </div>
+
+      <div class="row" style="margin-top:18px">
+        ${g.is_template
+          ? `<a class="btn btn-quiet" href="/#/studio" target="_blank" rel="noopener"
+               onclick="toast('Open it from the studio\\'s template picker')">Open the storefront</a>
+             <button class="btn btn-quiet" onclick="setTemplate(${g.id},{is_template:false})">
+               Unpublish</button>`
+          : `<button class="btn btn-primary" onclick="setTemplate(${g.id},{is_template:true})">
+               Publish as template</button>`}
+      </div>
+      ${!g.is_template ? `<p class="tiny dim" style="margin-top:8px">
+        Unpublished designs stay private to their owner — this preview is the
+        only way to see one, and opening it in the studio would mean loading
+        someone else's saved work.</p>` : ''}
+    </div>
+  </div>`;
+}
+function closeDesign(){
+  const box = document.getElementById('dlgDesign');
+  if(box) box.remove();
+  removeEventListener('keydown', escDesign);
+}
+function escDesign(e){ if(e.key === 'Escape') closeDesign(); }
 
 /* ── Review moderation ───────────────────────────────────────── */
 async function renderModeration(el){

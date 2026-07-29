@@ -374,8 +374,39 @@ tr:last-child td{border-bottom:none}
   width:56px;height:56px;flex-shrink:0;border-radius:var(--r-sm);overflow:hidden;
   background:var(--panel-2);border:1px solid var(--line);
   display:grid;place-items:center;color:var(--ink-dim);
+  padding:0;cursor:pointer;transition:border-color .18s;
 }
+.tpl-thumb:hover{border-color:var(--lime)}
 .tpl-thumb img{width:100%;height:100%;object-fit:contain}
+
+/* Centred dialog rather than the side drawer used elsewhere: this is one
+   image to look at, and a 580px drawer would letterbox it. */
+.dlg{
+  position:fixed;inset:0;z-index:150;background:var(--scrim);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.dlg-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
+  width:min(720px,100%);max-height:92vh;display:flex;flex-direction:column;
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.dlg-body{padding:20px 22px;overflow-y:auto}
+.dlg-preview{
+  border-radius:var(--r);padding:14px;margin-bottom:10px;
+  display:grid;place-items:center;
+  /* The garment colour behind the artwork — a white print on a dark tee is
+     invisible on a dark panel, and that's exactly the design you'd be
+     publishing blind. */
+  background:var(--swatch,var(--panel-2));
+  border:1px solid var(--line);
+}
+.dlg-preview img{max-width:100%;max-height:48vh;object-fit:contain;display:block}
+.layer-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.layer-list li{
+  background:var(--panel-2);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:8px 10px;font-size:13px;
+}
+@media(max-width:700px){ .dlg{padding:0} .dlg-card{max-height:100vh;border-radius:0;border:none} }
 .tpl-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .tpl-meta b{font-size:13.5px}
 

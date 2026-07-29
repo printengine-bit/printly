@@ -55,6 +55,56 @@ def list_templates():
                    candidates=[pub(r) for r in cand])
 
 
+@content_bp.route("/templates/<int:did>")
+@require("content")
+def template_detail(did):
+    """Enough to decide whether to publish it. A 56px thumbnail isn't —
+    publishing puts someone's design in front of every visitor, and the two
+    things that decide it are what the artwork actually says and whether any
+    of it is a customer's own uploaded logo."""
+    db = get_db()
+    r = db.execute(
+        """SELECT d.*, u.name AS author, u.email AS author_email
+           FROM saved_designs d LEFT JOIN users u ON u.id=d.user_id
+           WHERE d.id=?""", (did,)).fetchone()
+    if not r:
+        return jsonify(ok=False, error="No such design."), 404
+    try:
+        layers = json.loads(r["layers_json"]) or {}
+    except (ValueError, TypeError):
+        layers = {}
+
+    sides, uploaded = {}, 0
+    for side in ("front", "back"):
+        out = []
+        for l in layers.get(side) or []:
+            if not isinstance(l, dict):
+                continue
+            if l.get("type") == "text":
+                out.append({"kind": "text", "text": l.get("text") or "",
+                            "font": l.get("font") or "", "color": l.get("color") or "",
+                            "size": l.get("size")})
+            else:
+                uploaded += 1
+                out.append({"kind": "image",
+                            "w": round(l.get("w") or 0), "h": round(l.get("h") or 0)})
+        sides[side] = out
+
+    prod = db.execute("SELECT name FROM products WHERE slug=?", (r["product_id"],)).fetchone()
+    return jsonify(ok=True, design={
+        "id": r["id"], "name": r["name"], "product_id": r["product_id"],
+        "product": prod["name"] if prod else r["product_id"],
+        "shirt_color": r["shirt_color"], "thumb": r["thumb"],
+        "is_template": bool(r["is_template"]), "created": r["created"],
+        "author": r["author"], "author_email": r["author_email"],
+        "layers": sides,
+        # Publishing a design built on a customer's uploaded logo hands that
+        # logo to everyone. The panel can't tell whose it is — it can only
+        # make sure nobody publishes one without noticing.
+        "uploaded_images": uploaded,
+    })
+
+
 @content_bp.route("/templates/<int:did>", methods=["POST"])
 @require("content")
 def set_template(did):
