@@ -249,10 +249,16 @@ function draw(clean){
   } else {
     drawGarment(ctx,state.product.id,state.shirtColor);
   }
-  // print area guide
+  // print area guide — line weight and dash length are UI chrome, so they're
+  // divided by `u` to hold a constant ON-SCREEN size regardless of zoom.
+  // Without this, canvasZoom draws the whole bitmap bigger — chrome included
+  // — and a zoomed-in placement view turns a thin dashed border into a thick
+  // one and a small delete badge into something that eclipses the artwork
+  // it's meant to sit beside. See canvasZoom near zoomToBox().
   const P=pa();
+  const u = 1/canvasZoom;
   if(!clean){
-    ctx.setLineDash([8,8]); ctx.strokeStyle='rgba(200,242,50,.55)'; ctx.lineWidth=2;
+    ctx.setLineDash([8*u,8*u]); ctx.strokeStyle='rgba(200,242,50,.55)'; ctx.lineWidth=2*u;
     ctx.strokeRect(P.x,P.y,P.w,P.h); ctx.setLineDash([]);
   }
   // layers
@@ -270,34 +276,39 @@ function draw(clean){
     ctx.restore();
     if(i===state.sel && !clean){
       const b=layerBounds(L);
-      ctx.strokeStyle='#c8f232'; ctx.lineWidth=2;
+      ctx.strokeStyle='#c8f232'; ctx.lineWidth=2*u;
       ctx.strokeRect(b.x,b.y,b.w,b.h);
       // live size readout in cm
       const k=pxcm();
-      ctx.fillStyle='#c8f232'; ctx.font='700 11px Inter,sans-serif'; ctx.textAlign='center';
-      ctx.fillText(`${(b.w/k).toFixed(1)} × ${(b.h/k).toFixed(1)} cm`, b.x+b.w/2, b.y-8);
+      ctx.fillStyle='#c8f232'; ctx.font=`700 ${11*u}px Inter,sans-serif`; ctx.textAlign='center';
+      ctx.fillText(`${(b.w/k).toFixed(1)} × ${(b.h/k).toFixed(1)} cm`, b.x+b.w/2, b.y-8*u);
       // scale handle (bottom-right) — visual affordance for the wheel resize
       ctx.fillStyle='#c8f232';
-      ctx.fillRect(b.x+b.w-5,b.y+b.h-5,10,10);
-      // on-canvas delete badge (top-right corner)
-      const bx=b.x+b.w, by=b.y, r=11;
-      state._delHit={x:bx,y:by,r:r+3};
+      ctx.fillRect(b.x+b.w-5*u,b.y+b.h-5*u,10*u,10*u);
+      // on-canvas delete badge (top-right corner). `r` is sized in screen
+      // pixels via `u`, not canvas pixels — a "fixed 11px" badge at 6x zoom
+      // rendered 66px across, big enough to hide the artwork it sits beside.
+      // state._delHit shrinks by the same factor, so the tap target stays a
+      // constant comfortable on-screen size at any zoom instead of growing
+      // into the artwork or shrinking to unhittable.
+      const bx=b.x+b.w, by=b.y, r=11*u;
+      state._delHit={x:bx,y:by,r:r+3*u};
       ctx.beginPath(); ctx.arc(bx,by,r,0,Math.PI*2);
       ctx.fillStyle='#ce0358'; ctx.fill();
-      ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2*u; ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(bx-4,by-4); ctx.lineTo(bx+4,by+4);
-      ctx.moveTo(bx+4,by-4); ctx.lineTo(bx-4,by+4); ctx.stroke();
+      ctx.moveTo(bx-4*u,by-4*u); ctx.lineTo(bx+4*u,by+4*u);
+      ctx.moveTo(bx+4*u,by-4*u); ctx.lineTo(bx-4*u,by+4*u); ctx.stroke();
     }
   });
   // centre snap guides
   const cx=P.x+P.w/2, cy=P.y+P.h/2;
   if(state.guides.v){
-    ctx.strokeStyle='rgba(255,177,192,.9)'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+    ctx.strokeStyle='rgba(255,177,192,.9)'; ctx.lineWidth=1*u; ctx.setLineDash([5*u,4*u]);
     ctx.beginPath(); ctx.moveTo(cx,P.y-24); ctx.lineTo(cx,P.y+P.h+24); ctx.stroke(); ctx.setLineDash([]);
   }
   if(state.guides.h){
-    ctx.strokeStyle='rgba(255,177,192,.9)'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+    ctx.strokeStyle='rgba(255,177,192,.9)'; ctx.lineWidth=1*u; ctx.setLineDash([5*u,4*u]);
     ctx.beginPath(); ctx.moveTo(P.x-24,cy); ctx.lineTo(P.x+P.w+24,cy); ctx.stroke(); ctx.setLineDash([]);
   }
   updateMeasure();
@@ -490,9 +501,14 @@ function applyPlacement(key){
   if(state.sel<0){ toast('Select which layer to place — tap it in the layers list'); return; }
   const P=pa(), box=placementBox(key,P);
   const tight=fitLayerToBox(Ls[state.sel], box);
-  draw();
+  // zoomToBox()/zoomOut() set canvasZoom, which draw() reads to size the
+  // selection chrome — they have to run BEFORE draw(), or the chrome bakes
+  // into the bitmap at the previous zoom level and then gets re-scaled by
+  // the newly-applied CSS transform on top of that. Drawing first was
+  // exactly how a "fixed 11px" delete badge ended up 66px across.
   const full=key==='full-front'||key==='full-back';
   if(full) zoomOut(); else zoomToBox(box);
+  draw();
   const all=PLACEMENTS.front.concat(PLACEMENTS.back), hit=all.find(p=>p[0]===key);
   const label=hit?hit[1]:'Placement';
   toast(tight ? `${label} applied — that text is a tight fit here; try Center Chest or shorten it`
@@ -514,7 +530,16 @@ function renderPlacementRow(){
    export) needs to know the view is zoomed. pos() already reads the
    canvas's live getBoundingClientRect(), which reflects the transform, so
    drag/resize/click hit-testing keep working exactly as before while
-   zoomed in — see the .canvas-frame comment in index.html. */
+   zoomed in — see the .canvas-frame comment in index.html.
+
+   `canvasZoom` is the one thing that DOES need to know: draw() divides its
+   selection-chrome sizes (the delete badge, size label, resize handle,
+   print-area dashes) by it, so that chrome stays a constant on-screen size
+   instead of being scaled up right along with the artwork — at 6x zoom, a
+   badge sized for the normal view would render 66px across and eclipse
+   whatever it's sitting next to. Callers must draw() AFTER this runs, not
+   before, or the chrome bakes into the bitmap at the wrong scale. */
+let canvasZoom = 1;
 function zoomToBox(box){
   const frame=document.getElementById('canvasFrame'); if(!frame) return;
   cv.style.transform='none';
@@ -534,12 +559,18 @@ function zoomToBox(box){
   const dx=(fr.left+fr.width/2)-postBx, dy=(fr.top+fr.height/2)-postBy;
   cv.style.transformOrigin='center center';
   cv.style.transform=`translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${k.toFixed(3)})`;
+  canvasZoom=k;
   state._zoomed=true;
   renderPlacementRow();
 }
 function zoomOut(){
   cv.style.transform='none';
-  if(state._zoomed){ state._zoomed=false; renderPlacementRow(); }
+  if(state._zoomed){
+    canvasZoom=1;
+    state._zoomed=false;
+    renderPlacementRow();
+    draw();   // chrome was drawn small to counteract the zoom — undo that now the transform is gone
+  }
 }
 
 function layerBounds(L){
