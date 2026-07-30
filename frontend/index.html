@@ -409,17 +409,6 @@
              bounding rect, so drag/resize keep working correctly while
              zoomed; nothing downstream needs to know the view is zoomed. -->
         <div class="canvas-frame" id="canvasFrame">
-          <div class="canvas-zoom-rail" aria-label="Product zoom controls">
-            <button onclick="changeEditorZoom(.25)" title="Zoom in" aria-label="Zoom in">
-              <span class="material-symbols-outlined">add</span>
-            </button>
-            <input id="editorZoom" type="range" min="1" max="4" step=".25" value="1"
-                   aria-label="Product zoom" oninput="setEditorZoom(this.value)">
-            <button onclick="changeEditorZoom(-.25)" title="Zoom out" aria-label="Zoom out">
-              <span class="material-symbols-outlined">remove</span>
-            </button>
-            <output id="editorZoomValue">100%</output>
-          </div>
           <canvas id="teeCanvas" width="520" height="560"></canvas>
         </div>
         <!-- Rebuilt by renderContextToolbar() for the selected text/image. -->

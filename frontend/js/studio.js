@@ -513,7 +513,6 @@ function syncToolbar(){
     state.cropMode=false;document.querySelector('.studio')?.classList.remove('crop-mode');
   }
   renderContextToolbar();
-  syncUtilityRail();
   const u=document.getElementById('btnUndo'), r=document.getElementById('btnRedo');
   if(u) u.disabled=!undoStack.length;
   if(r) r.disabled=!redoStack.length;
@@ -1022,7 +1021,6 @@ function zoomToBox(box){
   camTy = cv.height/2 - k*(box.y+box.h/2);
   const base=Math.max(.01,Math.min(cv.width/520,cv.height/560));
   state.editorZoom=Math.max(1,Math.min(4,k/base));
-  syncUtilityRail();
 }
 function setEditorZoom(value){
   const z=Math.max(1,Math.min(4,+value||1));
@@ -1038,23 +1036,13 @@ function setEditorZoom(value){
   const L=state.layers[state.side][state.sel],P=pa();
   const cx=L?L.x:P.x+P.w/2,cy=L?L.y:P.y+P.h/2;
   camTx=cv.width/2-canvasZoom*cx; camTy=cv.height/2-canvasZoom*cy;
-  syncUtilityRail(); draw();
-}
-function changeEditorZoom(delta){
-  setEditorZoom((+state.editorZoom||1)+delta);
-}
-function syncUtilityRail(){
-  const z=Math.max(1,Math.min(4,+state.editorZoom||1));
-  const input=document.getElementById('editorZoom'),out=document.getElementById('editorZoomValue');
-  if(input && document.activeElement!==input) input.value=z;
-  if(out) out.value=Math.round(z*100)+'%';
+  draw();
 }
 function zoomOut(){
   const was=state._zoomed;
   resetCamera();
   state._zoomed=false;
   state.editorZoom=1;
-  syncUtilityRail();
   if(was) renderPlacementRow();
 }
 
@@ -1698,6 +1686,23 @@ cv.addEventListener('pointerdown',down);
 cv.addEventListener('pointermove',move);
 cv.addEventListener('pointerup',up);
 cv.addEventListener('pointercancel',up);
+// The wheel controls the complete product camera, never the selected layer.
+// Trackpad deltas remain smooth; a standard mouse-wheel notch is about 25%.
+// At the 100%/400% limits the event falls through so the page can scroll.
+let wheelZoomTarget=1,wheelZoomFrame=0;
+cv.addEventListener('wheel',e=>{
+  const current=wheelZoomFrame?wheelZoomTarget:(+state.editorZoom||1);
+  const unit=e.deltaMode===1?.04:.0025;
+  const next=Math.max(1,Math.min(4,current-e.deltaY*unit));
+  if(Math.abs(next-current)<.001)return;
+  e.preventDefault();
+  wheelZoomTarget=next;
+  if(!wheelZoomFrame){
+    wheelZoomFrame=requestAnimationFrame(()=>{
+      wheelZoomFrame=0;setEditorZoom(wheelZoomTarget);
+    });
+  }
+},{passive:false});
 // The ruler is measured against the canvas's RENDERED width, which the
 // stylesheet ties to the viewport — so it has to be redrawn when that
 // changes or it stops lining up with the print zone.
