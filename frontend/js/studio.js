@@ -363,7 +363,7 @@ function draw(clean){
   const u = 1/canvasZoom;
   const isPdp=document.querySelector('.studio.pdp-mode');
   if(!clean && (!isPdp || state.sel>=0)){
-    ctx.setLineDash([8*u,8*u]); ctx.strokeStyle='rgba(200,242,50,.55)'; ctx.lineWidth=2*u;
+    ctx.setLineDash([8*u,8*u]); ctx.strokeStyle=safeZoneColor(); ctx.lineWidth=2*u;
     ctx.strokeRect(P.x,P.y,P.w,P.h); ctx.setLineDash([]);
   }
   // layers
@@ -415,6 +415,15 @@ function draw(clean){
     ctx.beginPath(); ctx.moveTo(P.x-24,gy); ctx.lineTo(P.x+P.w+24,gy); ctx.stroke(); ctx.setLineDash([]);
   }
   updateMeasure();
+}
+function safeZoneColor(){
+  const [r,g,b]=hexToRgb(state.shirtColor||'#FFFFFF');
+  const linear=v=>{
+    v/=255;
+    return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4);
+  };
+  const luminance=.2126*linear(r)+.7152*linear(g)+.0722*linear(b);
+  return luminance<.36?'rgba(255,255,255,.86)':'rgba(0,0,0,.72)';
 }
 
 /* ── measurement + alignment assistant ── */
@@ -1410,9 +1419,7 @@ function selLayer(i){
   }
   state.sel=i;renderLayers();draw();
 }
-/* Locked layers ignore both the wheel-resize and the layer list's +/−
-   buttons — one guard here covers both paths instead of repeating the
-   check at each call site. */
+/* Locked layers ignore the layer list's +/− controls. */
 function bump(i,f){
   const L=state.layers[state.side][i];
   if(!L || L.locked) return;
@@ -1420,9 +1427,7 @@ function bump(i,f){
   else { L.w*=f; L.h*=f; }
   draw();
 }
-/* Wraps bump() with an undo snapshot for the layer list's own +/− buttons —
-   each click is a natural, discrete undo step. The wheel handler below
-   snapshots differently: once per resize *gesture*, not per tick. */
+/* Each layer-list size click is a natural, discrete undo step. */
 function bumpFromList(i,f){ pushUndo(); bump(i,f); }
 function delLayer(i){
   const L=state.layers[state.side][i];
@@ -1674,23 +1679,6 @@ cv.addEventListener('pointerdown',down);
 cv.addEventListener('pointermove',move);
 cv.addEventListener('pointerup',up);
 cv.addEventListener('pointercancel',up);
-// One undo snapshot per resize *gesture*, not per tick — a scroll fires
-// dozens of wheel events, and pushUndo()-ing every one of them would make
-// a single zoom-in/out take dozens of Ctrl+Z presses to undo. A gesture
-// ends after 500ms of no wheel activity on the same layer.
-let wheelGestureOpen=false, wheelGestureTimer=0;
-cv.addEventListener('wheel',e=>{
-  if(state.sel<0)return;
-  const L=state.layers[state.side][state.sel];if(!L||L.locked)return;
-  e.preventDefault();
-  if(!wheelGestureOpen){ pushUndo(); wheelGestureOpen=true; }
-  clearTimeout(wheelGestureTimer);
-  wheelGestureTimer=setTimeout(()=>{ wheelGestureOpen=false; },500);
-  if(state.cropMode&&L.type==='img'){
-    L.cropZoom=Math.max(1,Math.min(3,(+L.cropZoom||1)+(e.deltaY<0?.08:-.08)));
-    draw();syncContextValues();
-  }else bump(state.sel, e.deltaY<0?1.06:0.94);
-},{passive:false});
 // The ruler is measured against the canvas's RENDERED width, which the
 // stylesheet ties to the viewport — so it has to be redrawn when that
 // changes or it stops lining up with the print zone.

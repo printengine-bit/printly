@@ -611,8 +611,18 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
   display:grid;grid-template-columns:minmax(0,1fr) 142px;align-items:end;gap:0 12px;
 }
 .studio.pdp-mode #priceBox{grid-column:1}
+.studio.pdp-mode #priceBox,
+.studio.pdp-mode #pdpQtyMount{grid-row:1}
 .studio.pdp-mode #pdpQtyMount{grid-column:2}
 .studio.pdp-mode #pdpQtyMount:empty{display:none}
+.studio.pdp-mode #pdpDetails{
+  grid-column:1 / -1;grid-row:2;margin-top:12px;
+  border-bottom:1px solid var(--outline-variant);
+}
+.studio.pdp-mode #pdpDetails details.acc{padding:13px 0}
+.studio.pdp-mode #pdpDetails details.acc summary{font-size:11px}
+.studio.pdp-mode #pdpDetails details.acc p,
+.studio.pdp-mode #pdpDetails details.acc ul{font-size:12px}
 .studio.pdp-mode #pdpQtyMount .qty-row{gap:4px}
 .studio.pdp-mode #pdpQtyMount .size-key{width:auto;margin-right:2px;font-size:10px}
 .studio.pdp-mode #pdpQtyMount .size-step{width:32px;height:32px}
