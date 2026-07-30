@@ -40,7 +40,7 @@ async function doLogin(){
     const d=await res.json();
     if(!d.ok){ toast(d.error||'Something went wrong'); return; }
     state.user=d.user;
-    applyAuthUI();
+    applyAuthUI(); loadWishlist();
     closeLogin(); toast('Welcome, '+d.user.name.split(' ')[0]+'! You are signed in.');
   }catch(err){
     toast('Could not reach the server — try again.');
@@ -49,14 +49,14 @@ async function doLogin(){
 }
 async function doLogout(){
   try{ await fetch(BACKEND+'/api/auth/logout',{method:'POST',credentials:'include'}); }catch(e){}
-  state.user=null; applyAuthUI(); toast('Signed out');
-  if(state.view==='orders') go('home');
+  state.user=null; state.wishlist=new Set(); applyAuthUI(); refreshWishlistUI(); toast('Signed out');
+  if(state.view==='orders'||state.view==='wishlist') go('home');
 }
 async function checkSession(){
   try{
     const res=await fetch(BACKEND+'/api/auth/me',{credentials:'include'});
     const d=await res.json();
-    if(d.ok && d.user){ state.user=d.user; applyAuthUI(); }
+    if(d.ok && d.user){ state.user=d.user; applyAuthUI(); loadWishlist(); }
   }catch(err){ /* backend offline — stay signed out locally */ }
 }
 

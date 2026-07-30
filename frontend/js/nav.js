@@ -8,6 +8,7 @@ function go(v){
   if(v==='cart') renderCart();
   if(v==='orders') renderOrders();
   if(v==='designs') renderDesigns();
+  if(v==='wishlist') renderWishlistPage();
   if(v==='pdp') renderPdp();
   if(v==='studio') draw();
   document.getElementById('navLinks').classList.remove('open');

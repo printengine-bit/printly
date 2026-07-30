@@ -56,7 +56,10 @@ function renderPdp(){
       </div>
 
       <div>
-        <h1 class="t-h1">${esc(p.name)}</h1>
+        <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
+          <h1 class="t-h1">${esc(p.name)}</h1>
+          ${wishHeart(p.id,'lg')}
+        </div>
         <div style="margin:12px 0 24px" id="pdpRating">${starsFor(p.id)}</div>
 
         <div class="t-label t-mut" style="margin-bottom:8px">Bulk pricing</div>

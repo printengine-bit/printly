@@ -217,6 +217,16 @@ def init_db():
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_review_user_product ON reviews(user_id, product_id)")
     c.execute("CREATE INDEX IF NOT EXISTS ix_reviews_product ON reviews(product_id)")
+    # Wishlist. product_id is the catalogue slug, same convention as
+    # reviews.product_id above — no FK to products.id, so it survives a
+    # product rename and the frontend never needs a join to render it.
+    c.execute("""CREATE TABLE IF NOT EXISTS wishlist(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        product_id TEXT NOT NULL,
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_wishlist_user_product ON wishlist(user_id, product_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_wishlist_user ON wishlist(user_id)")
     c.execute("""CREATE TABLE IF NOT EXISTS ai_inflight(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")

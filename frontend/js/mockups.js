@@ -178,4 +178,7 @@ let state = {
      breakdown. Both write into `sizes` above — this is a view mode, not a
      second place quantity is stored. */
   orderMode:'single',
+  // Product ids the signed-in user has saved. Empty for guests — wishlist.js
+  // loads the real set after login/session-restore, same as My Designs.
+  wishlist:new Set(),
 };

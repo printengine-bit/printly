@@ -44,6 +44,7 @@
       <button class="nav-btn" data-v="cart" onclick="go('cart')">Cart</button>
       <button class="nav-btn" data-v="orders" onclick="go('orders')">My Orders</button>
       <button class="nav-btn" data-v="designs" onclick="go('designs')">My Designs</button>
+      <button class="nav-btn" data-v="wishlist" onclick="go('wishlist')">Wishlist</button>
     </nav>
     <div class="hdr-right">
       <button class="cart-btn" id="searchBtn" onclick="toggleHeaderSearch()" aria-label="Search">
@@ -459,6 +460,20 @@
   </div>
 </section>
 
+<!-- ══════════════ WISHLIST ══════════════ -->
+<section class="view" id="v-wishlist">
+  <div class="wrap section">
+    <h1 class="t-h1">My <span class="t-lime">wishlist</span></h1>
+    <p class="t-mut" style="margin:8px 0 32px">Saved for later — nothing here is reserved until it's in your cart.</p>
+    <div class="empty" id="wishlistEmpty">
+      <span class="material-symbols-outlined">favorite</span><br>
+      Nothing saved yet.<br>
+      <button class="btn btn-quiet btn-sm" style="margin-top:16px" onclick="go('products')">Browse products</button>
+    </div>
+    <div class="grid grid-4" id="wishlistGrid"></div>
+  </div>
+</section>
+
 <!-- ══════════════ ORDERS ══════════════ -->
 <section class="view" id="v-orders">
   <div class="wrap section">
@@ -683,6 +698,7 @@
 <script src="js/nav.js?v={{V}}"></script>
 <script src="js/auth.js?v={{V}}"></script>
 <script src="js/products.js?v={{V}}"></script>
+<script src="js/wishlist.js?v={{V}}"></script>
 <script src="js/studio.js?v={{V}}"></script>
 <script src="js/ai.js?v={{V}}"></script>
 <script src="js/cart.js?v={{V}}"></script>

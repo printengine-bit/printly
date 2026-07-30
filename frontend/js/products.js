@@ -162,6 +162,7 @@ function renderProducts(){
     <div class="card card-hover card-lift pcard">
       <div class="pcard-img" style="cursor:pointer" onclick="openProduct('${p.id}')">
         <canvas class="pthumb" data-p="${p.id}" width="300" height="320"></canvas>
+        ${wishHeart(p.id)}
       </div>
       <div class="pcard-body">
         <h3 class="pcard-name" style="cursor:pointer" onclick="openProduct('${p.id}')">${esc(p.name)}</h3>
@@ -214,6 +215,7 @@ function renderHomeProducts(){
     <div class="card card-hover card-lift pcard">
       <div class="pcard-img" style="cursor:pointer" onclick="openProduct('${p.id}')">
         <canvas class="pthumb" data-p="${p.id}" width="300" height="320"></canvas>
+        ${wishHeart(p.id)}
       </div>
       <div class="pcard-body">
         <h3 class="pcard-name" style="cursor:pointer" onclick="openProduct('${p.id}')">${esc(p.name)}</h3>
