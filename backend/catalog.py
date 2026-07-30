@@ -8,7 +8,7 @@ import json
 
 from flask import Blueprint, request, jsonify, session
 
-from db import get_db, ONE_SIZE_KEY
+from db import get_db, ONE_SIZE_KEY, COLORS
 from permissions import require, owner_required
 
 catalog_bp = Blueprint("catalog", __name__, url_prefix="/api/admin/catalog")
@@ -60,9 +60,17 @@ def catalog_payload(db=None):
             "category": p["category"],
             "print_views": _print_views_for(db, p["id"]),
         })
-    colors = [{"hex": r["color_hex"], "name": r["color_name"]} for r in db.execute(
-        "SELECT DISTINCT color_hex,color_name FROM variants WHERE active=1 "
-        "ORDER BY color_name")]
+    rows = db.execute(
+        "SELECT DISTINCT color_hex,color_name FROM variants WHERE active=1"
+    ).fetchall()
+    by_hex = {r["color_hex"].upper(): {
+        "hex": r["color_hex"], "name": r["color_name"]} for r in rows}
+    colors = [by_hex[h.upper()] for h, _, _ in COLORS if h.upper() in by_hex]
+    known = {h.upper() for h, _, _ in COLORS}
+    colors.extend(sorted(
+        ({"hex": r["color_hex"], "name": r["color_name"]} for r in rows
+         if r["color_hex"].upper() not in known),
+        key=lambda c: c["name"]))
     sizes = [r["size_label"] for r in db.execute(
         "SELECT DISTINCT size_label FROM variants WHERE size_label<>? ", (ONE_SIZE_KEY,))]
     # Keep the display order the size chart assumes, not alphabetical.

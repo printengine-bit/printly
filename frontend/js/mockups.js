@@ -62,18 +62,8 @@ function getRecoloredMock(pid,color){
 }
 function clearMockCache(){ for(const k in mockCache) delete mockCache[k]; }
 
-/* Relative luminance, 0–255. */
-function colorLum(hex){
-  const [r,g,b]=hexToRgb(hex);
-  return 0.2126*r + 0.7152*g + 0.0722*b;
-}
-
-/* The panel drawn behind a garment. It contrasts the *garment*, not the
-   page: a black tee needs a light backdrop whichever theme you're in, and a
-   white tee needs a dark one — otherwise the product disappears. */
-function stageFill(garmentColor){
-  return colorLum(garmentColor) < 128 ? '#f2f2ec' : '#141414';
-}
+/* One clean catalogue background for every garment colour. */
+function stageFill(){ return '#FFFFFF'; }
 
 /* Fill a rounded stage panel over the area a mockup is about to be drawn
    into. Callers pass the same box they hand drawImage(). */

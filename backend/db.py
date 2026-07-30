@@ -122,6 +122,12 @@ def init_db():
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_variant ON variants(product_id,color_hex,size_label)")
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_sku ON variants(sku)")
 
+    # One-time data changes that must also reach an existing production
+    # volume. Catalogue seeds intentionally do not overwrite a live shop.
+    c.execute("""CREATE TABLE IF NOT EXISTS app_migrations(
+        name TEXT PRIMARY KEY,
+        applied TEXT DEFAULT CURRENT_TIMESTAMP)""")
+
     # Append-only ledger. stock_qty is a running total you could rebuild
     # from these rows — keep it that way, so a wrong count is always
     # explainable rather than just wrong.
@@ -447,6 +453,7 @@ def init_db():
             ("unisex", "bags", "Tote Bag", "tb"),
         ])
     _seed_women_lines(c)
+    _replace_legacy_palette(c)
     _seed_print_views(c)
 
     c.commit()
@@ -480,14 +487,19 @@ def _backfill_audit(conn):
 # everything after this is edited in the admin panel, not here.
 SIZES = ["S", "M", "L", "XL", "2XL", "3XL"]
 COLORS = [
-    ("#FFFFFF", "White",        "WHT"),
     ("#111111", "Black",        "BLK"),
-    ("#0D1F3C", "Navy",         "NVY"),
-    ("#B02E2E", "Maroon",       "MRN"),
-    ("#1A8A4A", "Bottle Green", "GRN"),
-    ("#C8F232", "Acid Lime",    "LIM"),
-    ("#CE0358", "Hot Pink",     "PNK"),
-    ("#D4D8DE", "Ash Grey",     "ASH"),
+    ("#FFFFFF", "White",        "WHT"),
+    ("#101C36", "Navy",         "NVY"),
+    ("#8B8E91", "Grey",         "GRY"),
+    ("#930600", "Maroon",       "MRN"),
+    ("#C2BE72", "Olive",        "OLV"),
+    ("#F51B18", "Red",          "RED"),
+    ("#FFF200", "Yellow",       "YLW"),
+    ("#987252", "Brown",        "BRN"),
+    ("#314E63", "Steel Blue",   "SBL"),
+    ("#E7C9EE", "Light Purple", "LPR"),
+    ("#85008E", "Purple",       "PUR"),
+    ("#56605B", "Charcoal",     "CHR"),
 ]
 SEED_PRODUCTS = [
     {"slug": "rn", "name": "Round Neck T-Shirt", "emoji": "👕", "base": 599,
@@ -748,6 +760,65 @@ def _seed_women_lines(conn):
                     (pid, hexv, cname, label, sku))
     # Same honesty as the original seed: stock starts at zero, nobody has
     # counted these blanks either.
+
+
+def _replace_legacy_palette(conn):
+    """Replace the original eight-colour launch palette once.
+
+    Fresh databases are seeded with COLORS directly. Existing Railway
+    volumes already contain variants, so they need an idempotent data
+    migration: retire the old swatches and create the new catalogue colours
+    for every product/size without touching historical rows or stock moves.
+    """
+    migration = "2026-07-30-storefront-colour-palette"
+    if conn.execute("SELECT 1 FROM app_migrations WHERE name=?",
+                    (migration,)).fetchone():
+        return
+
+    wanted = [hexv.upper() for hexv, _, _ in COLORS]
+    marks = ",".join("?" for _ in wanted)
+    conn.execute(
+        f"UPDATE variants SET active=0 WHERE UPPER(color_hex) NOT IN ({marks})",
+        wanted)
+
+    for pid, slug, one_size in conn.execute(
+            "SELECT id,slug,one_size FROM products").fetchall():
+        labels = [r[0] for r in conn.execute(
+            "SELECT DISTINCT size_label FROM variants WHERE product_id=?",
+            (pid,)).fetchall()]
+        if not labels:
+            labels = [ONE_SIZE_KEY] if one_size else SIZES
+        for hexv, cname, code in COLORS:
+            for label in labels:
+                row = conn.execute(
+                    """SELECT id FROM variants
+                       WHERE product_id=? AND UPPER(color_hex)=? AND size_label=?""",
+                    (pid, hexv.upper(), label)).fetchone()
+                if row:
+                    conn.execute(
+                        "UPDATE variants SET color_name=?,active=1 WHERE id=?",
+                        (cname, row[0]))
+                    continue
+                sku = "%s-%s-%s" % (
+                    slug.upper(), code, label.upper().replace(" ", ""))
+                sku_row = conn.execute(
+                    "SELECT id FROM variants WHERE sku=?", (sku,)).fetchone()
+                if sku_row:
+                    # Navy/Maroon keep their established SKU codes while the
+                    # storefront shade is refreshed. Updating in place keeps
+                    # the counted stock and stock-move history attached.
+                    conn.execute(
+                        """UPDATE variants
+                           SET color_hex=?,color_name=?,active=1 WHERE id=?""",
+                        (hexv, cname, sku_row[0]))
+                    continue
+                conn.execute(
+                    """INSERT INTO variants(product_id,color_hex,color_name,
+                                            size_label,sku)
+                       VALUES(?,?,?,?,?)""",
+                    (pid, hexv, cname, label, sku))
+
+    conn.execute("INSERT INTO app_migrations(name) VALUES(?)", (migration,))
 
 
 def _add_column(conn, table, column, decl):

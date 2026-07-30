@@ -7,7 +7,7 @@ window.PRINTLY_MOCKS={
     "hd": "mockups/hd.jpg",
     "hd_back": "mockups/hd_back.jpg",
     "hd_left_sleeve": "mockups/hd_left_sleeve.png",
-    "hd_right_sleeve": "mockups/hd_right_sleeve.png",
+    "hd_right_sleeve": "mockups/hd_right_sleeve_v2.png",
     "js": "mockups/js.jpg",
     "js_back": "mockups/js_back.jpg"
   },
