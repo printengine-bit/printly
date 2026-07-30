@@ -41,7 +41,6 @@ function repaintForTheme(){
   // backdrop, so the cache has to go when the palette changes.
   if(typeof clearMockCache === 'function') clearMockCache();
   if(typeof draw === 'function' && document.getElementById('teeCanvas')) draw();
-  if(typeof heroLoop === 'function' && document.getElementById('heroTee')) heroLoop();
   if(typeof drawAiPreview === 'function') drawAiPreview();
   if(typeof paintCursorGrid === 'function') paintCursorGrid();
 }

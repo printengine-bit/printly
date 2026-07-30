@@ -88,16 +88,16 @@
   <div class="hero-band" id="heroBand">
   <div class="wrap">
     <div class="hero">
-      <div>
+      <div class="hero-copy">
         <span class="badge badge-outline">Custom printing · Pune → All India</span>
-        <h1 class="t-hero" style="margin:20px 0 18px">
+        <h1 class="t-hero">
           Design it in minutes.<br><span class="t-lime">Wear it in 48 hours.</span>
         </h1>
-        <p class="t-body-lg t-mut" style="max-width:52ch;margin-bottom:28px">
+        <p class="t-body-lg t-mut hero-lede">
           Your brand. Your story. Printed. The high-velocity drop culture for
           creators and crews — premium quality at lightning speed.
         </p>
-        <div class="row" style="flex-wrap:wrap">
+        <div class="hero-actions">
           <button class="btn btn-primary" onclick="go('studio')">
             Open Design Studio <span class="material-symbols-outlined">arrow_forward</span>
           </button>
@@ -109,22 +109,17 @@
           <div><b>1 pc</b><span>No minimums</span></div>
         </div>
       </div>
-      <div class="hero-stage">
-        <span class="badge badge-quiet" style="align-self:flex-start">Live preview</span>
-        <canvas id="heroTee" width="360" height="380"></canvas>
-        <span class="t-label t-dim" style="text-align:center">Same engine as the Design Studio</span>
-      </div>
     </div>
   </div>
   </div>
 
   <div class="proof wrap" id="homeProof"></div>
 
-  <div class="wrap section">
+  <div class="wrap section home-category-section">
     <h2 class="t-h2">Shop by <span class="t-lime">category</span></h2>
     <p class="t-mut" style="margin:8px 0 24px">Who it's for, and what it is — pick either to start browsing.</p>
-    <div class="grid grid-3" id="homeAudienceTiles"></div>
-    <div class="grid grid-5" id="homeCategoryTiles" style="margin-top:16px"></div>
+    <div class="grid audience-grid" id="homeAudienceTiles"></div>
+    <div class="grid category-grid" id="homeCategoryTiles"></div>
   </div>
 
   <div class="wrap section">

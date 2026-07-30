@@ -4,4 +4,4 @@ renderHomeCategories(); renderHomeProducts();
 enhancePasswordFields();
 initScrollStack('#stepsStack'); applyTheme();
 loadReviewSummary();
-loadMocks(()=>{ draw(); renderProducts(); renderHomeProducts(); heroLoop(); drawAiPreview(); });
+loadMocks(()=>{ draw(); renderProducts(); renderHomeProducts(); drawAiPreview(); });

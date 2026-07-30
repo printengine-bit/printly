@@ -1085,59 +1085,6 @@ function pointInLayer(p,L){
   return Math.abs(q.x-L.x)<=s.w/2 && Math.abs(q.y-L.y)<=s.h/2;
 }
 
-/* hero mini tee animation */
-const hc=document.getElementById('heroTee'), hctx=hc.getContext('2d');
-const heroSlogans=[
-  ['TEAM','ROCKET','#0D1F3C','#FFFFFF','rn'],
-  ['BATCH','OF 2026','#B02E2E','#FFFFFF','hd'],
-  ['ACME','CORP','#1A8A4A','#FFFFFF','po'],
-  ['PUNE','MARATHON','#0D1F3C','#FFFFFF','rn'],
-];
-let hi=0;
-function drawHeroText(l1,l2,txt,pid){
-  // place text on the chest print area of the mockup, mapped to 360x380
-  const P=(window.PRINTLY_MOCKS&&window.PRINTLY_MOCKS.print[pid])||null;
-  const img=mockImgs[pid];
-  if(!img||!P){ // fallback centre
-    hctx.fillStyle=txt; hctx.textAlign='center';
-    hctx.font='700 40px "Archivo Narrow"'; hctx.fillText(l1,180,190);
-    hctx.font='700 26px "Archivo Narrow"'; hctx.fillText(l2,180,225);
-    return;
-  }
-  const iw=img.naturalWidth, ih=img.naturalHeight;
-  const sc=Math.min(360/iw,380/ih), dw=iw*sc, dh=ih*sc;
-  const ox=(360-dw)/2, oy=(380-dh)/2;
-  const cx=ox+P.cx*sc, cy=oy+P.cy*sc;
-  hctx.fillStyle=txt; hctx.textAlign='center'; hctx.textBaseline='middle';
-  hctx.font='700 34px "Archivo Narrow"'; hctx.fillText(l1,cx,cy-14);
-  hctx.font='700 22px "Archivo Narrow"'; hctx.fillText(l2,cx,cy+18);
-}
-function heroLoop(){
-  const [l1,l2,shirt,txt,type]=heroSlogans[hi%heroSlogans.length];
-  hctx.clearRect(0,0,360,380);
-  const img=mockImgs[type];
-  if(img){
-    const mock=getRecoloredMock(type,shirt);
-    const iw=img.naturalWidth, ih=img.naturalHeight;
-    const sc=Math.min(360/iw,380/ih), dw=iw*sc, dh=ih*sc;
-    const ox=(360-dw)/2, oy=(380-dh)/2;
-    // The knockout used to happen here, on the *recolored* pixels, which
-    // also ate any garment dark enough to look like the backdrop. It now
-    // lives in getRecoloredMock() where it can key off the original photo.
-    drawStage(hctx,shirt,ox,oy,dw,dh,14);
-    drawMockup(hctx,mock||img,ox,oy,dw,dh);
-    drawHeroText(l1,l2,txt,type);
-  } else {
-    hctx.save(); hctx.scale(360/520,380/560);
-    drawGarment(hctx,type,shirt);
-    hctx.font='700 44px "Archivo Narrow"'; hctx.fillStyle=txt; hctx.textAlign='center';
-    hctx.fillText(l1,260,280); hctx.font='700 30px "Archivo Narrow"'; hctx.fillText(l2,260,325);
-    hctx.restore();
-  }
-  hi++;
-}
-heroLoop(); setInterval(heroLoop,2600);
-
 /* Home's "AI designer" callout — a static hoodie still, drawn with the same
    engine rather than shipped as a separate marketing image. */
 function drawAiPreview(){

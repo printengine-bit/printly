@@ -186,6 +186,7 @@ function renderProducts(){
    list of categories, not two that can drift. */
 const CATEGORY_ICON={tees:'checkroom',polos:'checkroom',hoodies:'dry_cleaning',
   jerseys:'sports_score',bags:'shopping_bag'};
+const AUDIENCE_ICON={men:'man',women:'woman'};
 
 function browseCategory(audience,category){
   prodAudience=audience; prodCategory=category;
@@ -194,19 +195,31 @@ function browseCategory(audience,category){
 
 function renderHomeCategories(){
   const aBar=document.getElementById('homeAudienceTiles');
-  if(aBar) aBar.innerHTML=AUDIENCES.filter(a=>a.key!=='all').map(a=>`
-    <button class="card card-hover card-lift aud" onclick="browseCategory('${a.key}','all')" style="text-align:left">
-      <span class="badge badge-lime" style="align-self:flex-start;margin-bottom:14px">${esc(a.label)}</span>
-      <h3>Shop ${esc(a.label)}</h3>
-      <p>Every product cut for ${esc(a.label.toLowerCase())}, one tap away.</p>
-    </button>`).join('');
+  if(aBar) aBar.innerHTML=AUDIENCES.filter(a=>a.key!=='all').map(a=>{
+    const count=PRODUCTS.filter(p=>p.audience===a.key||p.audience==='unisex').length;
+    return `
+    <button class="card aud" onclick="browseCategory('${a.key}','all')" aria-label="Shop ${esc(a.label)}">
+      <span class="aud-top">
+        <span class="aud-symbol material-symbols-outlined">${AUDIENCE_ICON[a.key]||'person'}</span>
+        <span class="aud-arrow material-symbols-outlined">arrow_outward</span>
+      </span>
+      <span class="aud-copy">
+        <span class="badge badge-lime">${esc(a.label)}</span>
+        <h3>Shop ${esc(a.label)}</h3>
+        <p>${count} styles ready to customise, from one piece to bulk orders.</p>
+      </span>
+    </button>`}).join('');
 
   const cBar=document.getElementById('homeCategoryTiles');
-  if(cBar) cBar.innerHTML=CATEGORIES.filter(c=>c.key!=='all').map(c=>`
-    <button class="card card-hover card-lift cat-tile" onclick="browseCategory('all','${c.key}')">
-      <span class="material-symbols-outlined">${CATEGORY_ICON[c.key]||'checkroom'}</span>
-      <h3>${esc(c.label)}</h3>
-    </button>`).join('');
+  if(cBar) cBar.innerHTML=CATEGORIES.filter(c=>c.key!=='all').map(c=>{
+    const count=PRODUCTS.filter(p=>p.category===c.key).length;
+    return `
+    <button class="card cat-tile" onclick="browseCategory('all','${c.key}')"
+      aria-label="Browse ${esc(c.label)}">
+      <span class="cat-icon material-symbols-outlined">${CATEGORY_ICON[c.key]||'checkroom'}</span>
+      <span class="cat-copy"><b>${esc(c.label)}</b><small>${count} ${count===1?'style':'styles'}</small></span>
+      <span class="cat-arrow material-symbols-outlined">arrow_forward</span>
+    </button>`}).join('');
 }
 
 function renderHomeProducts(){
