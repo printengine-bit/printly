@@ -202,6 +202,7 @@ from designs import designs_bp
 from reviews import reviews_bp
 from shipping import shipping_bp
 from wishlist import wishlist_bp
+from promo import promo_bp
 from artwork import artwork_bp
 from admin_api import admin_bp
 from catalog import catalog_bp, catalog_payload
@@ -226,6 +227,7 @@ app.register_blueprint(designs_bp)
 app.register_blueprint(reviews_bp)
 app.register_blueprint(shipping_bp)
 app.register_blueprint(wishlist_bp)
+app.register_blueprint(promo_bp)
 
 # ── Content moderation: block misuse before spending money ─────
 BLOCKED = ["nude", "nsfw", "gore", "blood", "weapon", "gun", "drug",

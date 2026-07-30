@@ -170,12 +170,13 @@ def create_order():
 
     db = get_db()
     # The server prices the order. `total` from the request is only ever
-    # compared against this, never stored — prices, GST and shipping are all
-    # admin-editable now, so a stale tab or a crafted request would
-    # otherwise set its own price. A mismatch means the customer was shown
-    # something different from what we'd charge, so refuse rather than
-    # quietly billing a number they never saw.
-    q, err = quote(db, items)
+    # compared against this, never stored — prices, GST, shipping and any
+    # promo code are all admin-editable or code-gated, so a stale tab or a
+    # crafted request would otherwise set its own price. A mismatch means
+    # the customer was shown something different from what we'd charge, so
+    # refuse rather than quietly billing a number they never saw.
+    promo_code = (d.get("promo_code") or "").strip() or None
+    q, err = quote(db, items, promo_code=promo_code, user_id=session["user_id"])
     if err:
         return jsonify(ok=False, error=err), 400
     if abs(q["total"] - float(total)) > 1.0:
@@ -188,12 +189,17 @@ def create_order():
 
     cur = db.execute(
         """INSERT INTO orders(user_id,total_inr,items_json,tax_json,ship_name,ship_phone,
-                              ship_line1,ship_line2,ship_city,ship_state,ship_pincode)
-           VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                              ship_line1,ship_line2,ship_city,ship_state,ship_pincode,
+                              promo_code,discount_inr)
+           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (session["user_id"], total, json.dumps(items), json.dumps(q),
          ship["name"], ship["phone"],
-         ship["line1"], ship["line2"], ship["city"], ship["state"], ship["pincode"]),
+         ship["line1"], ship["line2"], ship["city"], ship["state"], ship["pincode"],
+         q["promo_code"], q["discount"]),
     )
+    if q["promo_code"]:
+        from promo import redeem_promo
+        redeem_promo(db, q["promo_code"], session["user_id"], cur.lastrowid, q["discount"])
     _log_event(db, cur.lastrowid, "placed", None, 0)
     # Blanks leave the shelf when the order is placed, not when it ships —
     # they're committed to this order either way. Never blocks the sale; see

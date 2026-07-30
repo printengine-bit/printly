@@ -11,7 +11,7 @@ let SESSION = null;
 const SECTIONS = {
   dashboard: {label:'Dashboard', icon:'dashboard', subs:[]},
   inventory: {label:'Inventory', icon:'inventory_2',
-    subs:['Products','Variants & stock','Stock movements','Low stock','Suppliers']},
+    subs:['Products','Variants & stock','Stock movements','Low stock','Promo codes','Suppliers']},
   orders:    {label:'Orders', icon:'receipt_long',
     subs:['All orders','Production queue','Awaiting proof','Ready to dispatch','Cancelled']},
   production:{label:'Production', icon:'print',

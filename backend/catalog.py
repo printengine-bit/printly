@@ -115,13 +115,15 @@ def line_qty(item):
     return qty if isinstance(qty, int) and qty > 0 else 0
 
 
-def quote(db, items):
+def quote(db, items, promo_code=None, user_id=None):
     """Recompute an order from the database. Returns (quote, error).
 
     This is the authority on what an order costs. The browser's figure is
     only ever compared against it — never trusted — because the price
     tiers, GST rate and shipping rule are all admin-editable now, and a
-    stale or hostile client would otherwise set its own price.
+    stale or hostile client would otherwise set its own price. A promo code
+    is checked here too, for the same reason: the discount the customer sees
+    has to be the discount that gets charged.
     """
     if not isinstance(items, list) or not items:
         return None, "Cart is empty or invalid."
@@ -149,8 +151,32 @@ def quote(db, items):
     # browser shows — it sums the same way.
     gst = round(gst)
     shipping = 0.0 if subtotal > tax["free_shipping_over"] else tax["shipping_flat"]
-    return {"lines": lines, "subtotal": subtotal, "gst": gst, "shipping": shipping,
-            "total": round(subtotal + gst + shipping, 2), "tax": tax,
+
+    discount = 0.0
+    applied_code = None
+    if promo_code:
+        # A code submitted with the order has to actually work — if it's
+        # expired, exhausted or invalid by the time checkout happens, that's
+        # a hard error the same way a stale total is, not a silent full-price
+        # charge the customer never agreed to.
+        from promo import find_promo, apply_promo
+        promo_row = find_promo(db, promo_code)
+        if not promo_row:
+            return None, "That code doesn't exist."
+        discount, promo_error = apply_promo(db, promo_row, subtotal, user_id)
+        if promo_error:
+            return None, promo_error
+        applied_code = promo_row["code"]
+
+    # GST is charged on what each piece actually sells for, so a coupon
+    # doesn't reopen which slab a line falls into — only the tax *amount* is
+    # prorated down by the same fraction the discount takes off the
+    # subtotal. Shipping's free-delivery threshold reads the undiscounted
+    # subtotal (order size), so a coupon can't be used to dodge shipping.
+    gst_after_discount = round(gst * (subtotal - discount) / subtotal, 2) if subtotal else 0.0
+    return {"lines": lines, "subtotal": subtotal, "gst": gst_after_discount,
+            "shipping": shipping, "discount": discount, "promo_code": applied_code,
+            "total": round(subtotal - discount + gst_after_discount + shipping, 2), "tax": tax,
             # The rates actually applied, so the cart can label the line
             # "GST 5%" or "GST 5% + 12%" instead of guessing.
             "gst_rates": sorted({l["gst_percent"] for l in lines})}, None

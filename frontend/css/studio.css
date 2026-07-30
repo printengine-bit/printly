@@ -340,6 +340,12 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
 .price-line.total span:first-child{color:var(--primary);font-weight:800}
 .price-line.total span:last-child{color:var(--lime-ink);font-weight:800;font-size:20px}
 .ships{text-align:center;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--on-surface-variant);margin-top:14px}
+.promo-box{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--outline-variant)}
+.promo-applied{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font-size:13px;color:var(--on-surface-variant);
+}
+.promo-applied .material-symbols-outlined{color:var(--lime-ink);vertical-align:-3px}
 
 /* ── Mobile: canvas first, tools below, sticky CTA ───────────── */
 @media(max-width:900px){

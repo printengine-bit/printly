@@ -292,7 +292,14 @@ function renderCart(){
   // Per line, not on the subtotal: a cart holding a ₹599 tee and a ₹1,299
   // hoodie is taxed at both rates, and summing first would pick one.
   const g=gstFor(state.cart);
-  const ship=sub>TAX.free_shipping_over?0:TAX.shipping_flat, tot=sub+g.amount+ship;
+  const ship=sub>TAX.free_shipping_over?0:TAX.shipping_flat;
+  // A coupon doesn't reopen which GST slab a line falls into — that's
+  // decided by the per-piece tier price — so only the tax *amount* scales
+  // down by the same fraction the discount takes off the subtotal. Mirrors
+  // quote() in catalog.py, which is the actual authority at checkout.
+  const discount=Math.min(state.promo.discount||0, sub);
+  const gAmount=sub?Math.round(g.amount*(sub-discount)/sub):0;
+  const tot=sub-discount+gAmount+ship;
   const away=TAX.free_shipping_over-sub;
 
   el.innerHTML=`<div class="cart-grid">
@@ -303,8 +310,10 @@ function renderCart(){
     </div>
     <div class="card card-pad summary-card">
       <h3 class="t-label" style="margin-bottom:16px">Order summary</h3>
+      ${promoBox()}
       <div class="price-line"><span>Subtotal</span><span>₹${sub.toLocaleString('en-IN')}</span></div>
-      <div class="price-line"><span>${gstLabel(g.rates)}</span><span>₹${g.amount.toLocaleString('en-IN')}</span></div>
+      ${discount>0?`<div class="price-line"><span>Discount</span><span class="t-lime">−₹${discount.toLocaleString('en-IN')}</span></div>`:''}
+      <div class="price-line"><span>${gstLabel(g.rates)}</span><span>₹${gAmount.toLocaleString('en-IN')}</span></div>
       <div class="price-line"><span>Shipping</span><span>${ship?'₹'+ship:'<span class="t-lime">FREE</span>'}</span></div>
       <div class="price-line total"><span>Total</span><span>₹${tot.toLocaleString('en-IN')}</span></div>
       <button class="btn btn-primary btn-block" style="margin-top:18px" onclick="checkout(${tot})">
@@ -322,6 +331,55 @@ function renderCart(){
   </div>`;
 }
 function rmCart(i){ state.cart.splice(i,1); setCartCount(); renderCart(); }
+
+/* ── Promo codes ──────────────────────────────────────────────────
+   The discount shown here is a preview only — quote() in catalog.py
+   recomputes it from scratch at checkout from the same {code, items}
+   shape, and refuses the order if the code stopped being valid in
+   between (cart changed under the minimum spend, code got used up by
+   someone else, etc). This mirrors the discount math only for display;
+   it is never the number that gets charged. */
+state.promo = state.promo || {code:null, discount:0};
+
+async function applyPromo(){
+  const input=document.getElementById('promoInput');
+  const code=(input.value||'').trim();
+  const msg=document.getElementById('promoMsg');
+  if(!code){ if(msg) msg.textContent='Enter a code.'; return; }
+  if(msg) msg.textContent='Checking…';
+  try{
+    const res=await fetch(BACKEND+'/api/promo/check',{method:'POST',
+      headers:{'Content-Type':'application/json'},credentials:'include',
+      body:JSON.stringify({code, items:state.cart})});
+    const d=await res.json();
+    if(!d.ok){
+      state.promo={code:null,discount:0};
+      if(msg) msg.textContent=d.error||'That code is not valid.';
+      return;
+    }
+    state.promo={code:d.code, discount:d.discount};
+    toast('Promo applied — you saved ₹'+d.discount.toLocaleString('en-IN'));
+    renderCart();
+  }catch(err){ if(msg) msg.textContent='Could not reach the server.'; }
+}
+function removePromo(){ state.promo={code:null,discount:0}; renderCart(); }
+
+function promoBox(){
+  if(state.promo.code) return `
+    <div class="promo-box promo-applied">
+      <span><span class="material-symbols-outlined" style="font-size:16px">local_offer</span>
+        <b>${esc(state.promo.code)}</b> applied</span>
+      <button class="btn btn-quiet btn-sm" onclick="removePromo()">Remove</button>
+    </div>`;
+  return `
+    <div class="promo-box">
+      <div class="row" style="gap:8px">
+        <input class="inp" id="promoInput" placeholder="Promo code" style="flex:1">
+        <button class="btn btn-quiet btn-sm" onclick="applyPromo()">Apply</button>
+      </div>
+      <div id="promoMsg" class="t-dim" style="font-size:12px;margin-top:6px"></div>
+    </div>`;
+}
 
 /* ── Delivery address ────────────────────────────────────────────
    Kept in state (not localStorage) and re-filled from the last order, so a
@@ -397,10 +455,10 @@ async function checkout(tot){
   try{
     const items=await uploadArt();
     const res=await fetch(BACKEND+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},
-      credentials:'include', body:JSON.stringify({items,total:tot,shipping:state.ship})});
+      credentials:'include', body:JSON.stringify({items,total:tot,shipping:state.ship,promo_code:state.promo.code})});
     const d=await res.json();
     if(!d.ok){ toast(d.error||'Could not place order'); renderCart(); return; }
-    state.cart=[]; setCartCount();
+    state.cart=[]; state.promo={code:null,discount:0}; setCartCount();
     // Loyalty points are awarded server-side, so the cached user is now
     // stale — refresh it before the orders page reads the balance.
     if(d.points_earned) await checkSession();

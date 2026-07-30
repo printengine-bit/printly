@@ -227,6 +227,36 @@ def init_db():
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_wishlist_user_product ON wishlist(user_id, product_id)")
     c.execute("CREATE INDEX IF NOT EXISTS ix_wishlist_user ON wishlist(user_id)")
+    # Promo codes. `code` is always stored upper-cased (promo.py normalises
+    # on both write and read) so lookups never need a case-insensitive
+    # comparison. Redemptions are a ledger, not a counter on promo_codes
+    # itself — max_uses and per_user_limit are both just COUNT(*) against it,
+    # so there's one source of truth instead of a cached count that can drift.
+    c.execute("""CREATE TABLE IF NOT EXISTS promo_codes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,
+        kind TEXT NOT NULL DEFAULT 'percent',
+        value REAL NOT NULL,
+        min_subtotal REAL NOT NULL DEFAULT 0,
+        max_discount REAL,
+        max_uses INTEGER,
+        per_user_limit INTEGER NOT NULL DEFAULT 1,
+        active INTEGER NOT NULL DEFAULT 1,
+        expires TEXT,
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS promo_redemptions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        promo_id INTEGER NOT NULL REFERENCES promo_codes(id),
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        order_id INTEGER REFERENCES orders(id),
+        discount_amount REAL NOT NULL,
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_promo_redemptions_promo ON promo_redemptions(promo_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_promo_redemptions_user ON promo_redemptions(user_id)")
+    # Frozen on the order alongside tax_json, same reasoning as total_inr:
+    # a real column so admin lists/reports can filter without parsing JSON.
+    _add_column(c, "orders", "promo_code", "TEXT")
+    _add_column(c, "orders", "discount_inr", "REAL NOT NULL DEFAULT 0")
     c.execute("""CREATE TABLE IF NOT EXISTS ai_inflight(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")

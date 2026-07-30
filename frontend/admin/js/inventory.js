@@ -14,6 +14,7 @@ async function renderInventory(el, sub){
     ['variants-stock','Variants & stock'],
     ['stock-movements','Stock movements'],
     ['low-stock','Low stock'],
+    ['promo-codes','Promo codes'],
   ];
   el.innerHTML = `<div class="row" style="margin-bottom:18px">
     ${tabs.map(([k,label])=>`<button class="btn btn-sm ${(sub||'products')===k?'btn-primary':'btn-quiet'}"
@@ -24,6 +25,7 @@ async function renderInventory(el, sub){
   if(sub === 'variants-stock')   return renderStockGrid(body);
   if(sub === 'stock-movements')  return renderMoves(body);
   if(sub === 'low-stock')        return renderLowStock(body);
+  if(sub === 'promo-codes')      return renderPromoCodes(body);
   if(sub === 'suppliers')        return body.innerHTML = stubCard('Suppliers & purchase orders',
     'Planned once stock counts are being kept reliably.');
   return renderProducts(body);
@@ -327,4 +329,86 @@ async function renderLowStock(el){
         </tr>`).join('')}</tbody></table>`
         : '<div class="empty">Nothing below its reorder point.</div>'}
     </div>`;
+}
+
+/* ── Promo codes ─────────────────────────────────────────────── */
+async function renderPromoCodes(el){
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  const d = await api('/api/admin/promo');
+  if(!d.ok){ el.innerHTML = `<div class="empty">${esc(d.error)}</div>`; return; }
+
+  el.innerHTML = `
+    <div class="card">
+      <h2>Promo codes</h2>
+      <p class="tiny muted">Validated and applied server-side at checkout — a code
+        here is the only thing that can ever discount an order.</p>
+      ${d.promos.length ? `<table>
+        <thead><tr><th>Code</th><th>Discount</th><th>Limits</th><th>Redeemed</th><th>Status</th><th></th></tr></thead>
+        <tbody>${d.promos.map(p=>`<tr>
+          <td data-label="Code"><b>${esc(p.code)}</b>
+            ${p.expires?`<br><span class="tiny dim">Expires ${esc(fmtDate(p.expires))}</span>`:''}</td>
+          <td data-label="Discount">${p.kind==='percent'?p.value+'%':money(p.value)}
+            ${p.max_discount?`<br><span class="tiny dim">capped at ${money(p.max_discount)}</span>`:''}</td>
+          <td data-label="Limits" class="tiny dim">
+            ${p.min_subtotal?`Min ${money(p.min_subtotal)}<br>`:''}
+            ${p.max_uses?`${p.max_uses} uses total<br>`:'Unlimited uses<br>'}
+            ${p.per_user_limit} per customer</td>
+          <td data-label="Redeemed">${p.redeemed}</td>
+          <td data-label="Status">${p.active
+            ? '<span class="badge badge-lime">Active</span>'
+            : '<span class="badge badge-quiet">Disabled</span>'}</td>
+          <td data-label=""><button class="btn btn-quiet btn-sm"
+            onclick="togglePromo(${p.id},${p.active?0:1})">${p.active?'Disable':'Enable'}</button></td>
+        </tr>`).join('')}</tbody></table>`
+        : '<div class="empty">No promo codes yet.</div>'}
+    </div>
+
+    <div class="card">
+      <h2>New promo code</h2>
+      <div class="form-grid">
+        <label class="field"><span>Code</span>
+          <input id="pc_code" type="text" placeholder="e.g. WELCOME10" style="text-transform:uppercase"></label>
+        <label class="field"><span>Type</span>
+          <select id="pc_kind">
+            <option value="percent">Percent off</option>
+            <option value="flat">Flat ₹ off</option>
+          </select></label>
+        <label class="field"><span>Value</span>
+          <input id="pc_value" type="text" placeholder="e.g. 10"></label>
+        <label class="field"><span>Max discount ₹ (percent only, optional)</span>
+          <input id="pc_max_discount" type="text" placeholder="uncapped if blank"></label>
+        <label class="field"><span>Minimum order ₹ (optional)</span>
+          <input id="pc_min_subtotal" type="text" placeholder="0"></label>
+        <label class="field"><span>Total uses allowed (optional)</span>
+          <input id="pc_max_uses" type="text" placeholder="unlimited if blank"></label>
+        <label class="field"><span>Uses per customer</span>
+          <input id="pc_per_user" type="text" value="1"></label>
+        <label class="field"><span>Expires (optional)</span>
+          <input id="pc_expires" type="date"></label>
+      </div>
+      <button class="btn btn-primary" onclick="createPromo()">Create code</button>
+    </div>`;
+}
+
+async function createPromo(){
+  const num = id => { const v=document.getElementById(id).value.trim(); return v?parseFloat(v):null; };
+  const d = await api('/api/admin/promo', {
+    code: document.getElementById('pc_code').value,
+    kind: document.getElementById('pc_kind').value,
+    value: num('pc_value'),
+    max_discount: num('pc_max_discount'),
+    min_subtotal: num('pc_min_subtotal') || 0,
+    max_uses: num('pc_max_uses'),
+    per_user_limit: num('pc_per_user') || 1,
+    expires: document.getElementById('pc_expires').value || null,
+  });
+  if(!d.ok){ toast(d.error); return; }
+  toast(d.promo.code + ' created');
+  renderPromoCodes(document.getElementById('invBody'));
+}
+async function togglePromo(id, active){
+  const d = await api('/api/admin/promo/' + id, {active: !!active});
+  if(!d.ok){ toast(d.error); return; }
+  toast(active ? 'Code enabled' : 'Code disabled');
+  renderPromoCodes(document.getElementById('invBody'));
 }
