@@ -280,6 +280,9 @@ a{color:inherit;text-decoration:none}
   font-size:12.5px;font-weight:600;color:var(--on-surface-variant);
 }
 .trust-strip-inner .material-symbols-outlined{font-size:16px;color:var(--lime-ink)}
+body.pdp-active .trust-strip{display:none}
+body.pdp-active #pdpBody{padding-top:10px;padding-bottom:32px}
+body.pdp-active #pdpBody .crumb{margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:560px){
   .trust-strip-inner{gap:22px}
 }

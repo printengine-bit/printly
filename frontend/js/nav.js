@@ -5,6 +5,7 @@ function go(v){
     return;
   }
   state.view=v;
+  document.body.classList.toggle('pdp-active',v==='pdp');
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('v-'+v).classList.add('on');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('on',b.dataset.v===v));

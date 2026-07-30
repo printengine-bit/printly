@@ -87,6 +87,16 @@ function renderPrintControls(){
       <span>${esc(g.label)}</span>${g.fee?`<small>+₹${g.fee}</small>`:''}
     </label>`;
   }).join('');
+  const mirror=document.getElementById('canvasPrintGroups');
+  if(mirror) mirror.innerHTML=printGroups().map(g=>{
+    const on=g.views.every(v=>state.enabledViews.includes(v.key));
+    const required=g.views.some(v=>v.required);
+    return `<button class="${on?'on':''}${required?' required':''}"
+       ${required||state.plainItem?'disabled':''}
+       onclick="togglePrintGroup('${g.key}',${!on})">
+       <span class="material-symbols-outlined">${on?'check_box':'check_box_outline_blank'}</span>${esc(g.label)}
+     </button>`;
+  }).join('');
   const tabs=document.getElementById('printViewTabs');
   if(tabs) tabs.innerHTML=enabledPrintViews().map(v=>
     `<button class="${state.side===v.key?'on':''}" onclick="setSide('${v.key}')">${esc(v.label)}</button>`
@@ -348,7 +358,8 @@ function draw(clean){
   // it's meant to sit beside. See canvasZoom near zoomToBox().
   const P=pa();
   const u = 1/canvasZoom;
-  if(!clean){
+  const isPdp=document.querySelector('.studio.pdp-mode');
+  if(!clean && (!isPdp || state.sel>=0)){
     ctx.setLineDash([8*u,8*u]); ctx.strokeStyle='rgba(200,242,50,.55)'; ctx.lineWidth=2*u;
     ctx.strokeRect(P.x,P.y,P.w,P.h); ctx.setLineDash([]);
   }
@@ -495,6 +506,8 @@ function drawRuler(P,k){
    Dim them instead, so the two that always work stand out. */
 function syncToolbar(){
   const live=state.sel>=0;
+  document.querySelector('.studio')?.classList.toggle('has-selection',live);
+  renderPlacementRow();
   document.querySelectorAll('.st-toolbar button[data-needsel]')
     .forEach(b=>b.disabled=!live);
   const L=live?state.layers[state.side][state.sel]:null;
@@ -569,12 +582,35 @@ function scaleSelected(f){
 }
 function openImagePicker(){ document.getElementById('imgInput')?.click(); }
 function openTextTool(){
+  const modal=document.getElementById('quickTextModal');
+  if(modal){
+    modal.classList.add('on');
+    setTimeout(()=>document.getElementById('quickTextInput')?.focus(),20);
+    return;
+  }
   studioTab('assets'); document.getElementById('txtInput')?.focus();
-  document.querySelector('.st-left')?.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function openAiTool(){
   studioTab('ai');
+  document.querySelector('.st-left')?.classList.add('tool-open');
   document.querySelector('.st-left')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeCreativeTools(){
+  document.querySelector('.st-left')?.classList.remove('tool-open');
+}
+function closeQuickText(){
+  document.getElementById('quickTextModal')?.classList.remove('on');
+}
+function quickAddText(){
+  const input=document.getElementById('quickTextInput');
+  const t=(input?.value||'').trim();
+  if(!t){ toast('Type some text first'); input?.focus(); return; }
+  document.getElementById('txtInput').value=t;
+  document.getElementById('txtFont').value=document.getElementById('quickTextFont').value;
+  document.getElementById('txtColor').value=document.getElementById('quickTextColor').value;
+  addText();
+  input.value='';
+  closeQuickText();
 }
 function togglePreview(){
   state.previewMode=!state.previewMode;
@@ -697,6 +733,8 @@ function applyPlacement(key){
 
 function renderPlacementRow(){
   const el=document.getElementById('placementRow'); if(!el) return;
+  if(state.sel<0){ el.hidden=true; el.innerHTML=''; return; }
+  el.hidden=false;
   const list=PLACEMENTS[state.side]||PLACEMENTS.front;
   el.innerHTML=`<span class="placement-label">Placement</span>`
     +list.map(([k,label,icon])=>`<button class="placement-btn" onclick="applyPlacement('${k}')">
@@ -880,9 +918,15 @@ function addText(){
   markCustomized();
   pushUndo();
   const P=pa();
-  state.layers[state.side].push({type:'text',text:t,x:P.x+P.w/2,y:P.y+P.h/2,size:34,
+  const layer={type:'text',text:t,x:P.x+P.w/2,y:P.y+P.h/2,size:34,
     font:document.getElementById('txtFont').value,
-    color:document.getElementById('txtColor').value,bold:true});
+    color:document.getElementById('txtColor').value,bold:true};
+  // Start inside a useful centre area instead of making long text overflow
+  // the printable boundary the moment it is added.
+  fitLayerToBox(layer,{
+    x:P.x+P.w*.1,y:P.y+P.h*.18,w:P.w*.8,h:P.h*.28
+  });
+  state.layers[state.side].push(layer);
   state.sel=state.layers[state.side].length-1;
   document.getElementById('txtInput').value='';
   renderLayers(); draw();
@@ -929,8 +973,10 @@ function coachHTML(){
 function renderLayers(){
   const el=document.getElementById('layerList'); const Ls=state.layers[state.side];
   const head=document.getElementById('layerHead');
+  const section=document.getElementById('pdpLayerSection');
   const other=enabledPrintViews().find(v=>v.key!==state.side&&(state.layers[v.key]||[]).length);
   const empty=!Ls.length && !other;
+  if(section) section.hidden=empty;
   // "Active layers" over a getting-started guide reads as a broken list.
   if(head) head.hidden=empty;
   if(!Ls.length){

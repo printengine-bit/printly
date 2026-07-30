@@ -240,6 +240,9 @@
     <!-- ── LEFT: tools ── -->
     <aside class="st-side st-left scroll-thin">
       <div class="st-pad">
+        <button class="pdp-tool-close" onclick="closeCreativeTools()" aria-label="Close design tools">
+          <span class="material-symbols-outlined">close</span> Close
+        </button>
         <div class="st-tabs">
           <button class="st-tab on" data-tab="base" onclick="studioTab('base')">
             <span class="material-symbols-outlined">apparel</span>Garment</button>
@@ -363,6 +366,10 @@
 
     <!-- ── CENTER: canvas ── -->
     <section class="st-stage">
+      <div class="canvas-print-bar">
+        <span>Print sides:</span>
+        <div id="canvasPrintGroups"></div>
+      </div>
       <!-- data-needsel: syncToolbar() disables these until a layer is
            selected, so the eight tools that can't do anything yet look
            unavailable instead of answering with a toast. -->
@@ -454,6 +461,15 @@
           <span class="st-lbl">Print sides</span>
           <div class="print-side-groups" id="printSideGroups"></div>
         </div>
+        <div class="pdp-option pdp-size-option">
+          <div class="spread pdp-size-head">
+            <span class="st-lbl" id="qtyTitle">Size</span>
+            <span class="t-label t-mut"><b id="qtyLabel">0</b> pcs</span>
+          </div>
+          <div id="sizeGrid" class="size-pick"></div>
+          <button class="bulk-toggle" id="bulkToggle" onclick="toggleOrderMode()"></button>
+          <div class="tier-hint" id="tierHint" hidden></div>
+        </div>
         <div class="pdp-option">
           <span class="st-lbl">Colour</span>
           <div class="swatches" id="pdpSwatches"></div>
@@ -464,7 +480,7 @@
         </label>
         <div class="pdp-fabric" id="pdpFabric"></div>
       </div>
-      <div class="st-layers">
+      <div class="st-layers" id="pdpLayerSection" hidden>
         <div class="spread" id="layerHead" style="margin-bottom:14px">
           <span class="st-lbl" style="margin:0">Active layers</span>
           <span class="t-label t-dim" id="sideLabel">front</span>
@@ -472,20 +488,19 @@
         <div id="layerList"></div>
       </div>
       <div class="st-summary scroll-thin">
-        <div class="spread" style="margin-bottom:10px">
-          <span class="st-lbl" style="margin:0" id="qtyTitle">Size</span>
-          <span class="t-label t-mut"><b id="qtyLabel">0</b> pcs</span>
-        </div>
-        <div id="sizeGrid" class="size-pick"></div>
-        <button class="bulk-toggle" id="bulkToggle" onclick="toggleOrderMode()"></button>
-        <div class="tier-hint" id="tierHint" hidden></div>
         <div id="priceBox"></div>
+        <div id="pdpQtyMount"></div>
         <button class="btn btn-primary btn-block" id="addBtn" style="margin-top:14px" onclick="addToCart()">
           Add to cart <span class="material-symbols-outlined">arrow_forward</span>
         </button>
         <button class="btn btn-quiet btn-block btn-sm" style="margin-top:8px" onclick="saveDesign()">
           <span class="material-symbols-outlined" style="font-size:18px">bookmark</span> Save design
         </button>
+        <div class="pdp-service-row">
+          <span><span class="material-symbols-outlined">local_shipping</span>48-hour dispatch</span>
+          <span><span class="material-symbols-outlined">verified</span>Digital proof</span>
+          <span><span class="material-symbols-outlined">published_with_changes</span>7-day replacement</span>
+        </div>
         <p class="ships">Ships within 48 hours from Pune</p>
       </div>
     </aside>
@@ -695,6 +710,38 @@
     <h3 class="t-h3">Start from a <span class="t-lime">template</span></h3>
     <p class="t-mut" style="font-size:14px;margin:6px 0 22px">Load a curated drop, then make it yours.</p>
     <div id="templateBody"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="quickTextModal">
+  <div class="modal quick-text-modal">
+    <button class="modal-x" onclick="closeQuickText()" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
+    <h3 class="t-h3">Add text</h3>
+    <p class="t-mut" style="font-size:14px;margin:6px 0 22px">Type it now. You can resize and position it directly on the product.</p>
+    <div class="field">
+      <label>Your text</label>
+      <input type="text" id="quickTextInput" placeholder="Type your slogan" onkeydown="if(event.key==='Enter') quickAddText()">
+    </div>
+    <div class="quick-text-options">
+      <div class="field">
+        <label>Font</label>
+        <select id="quickTextFont">
+          <option value="Archivo Narrow">Archivo</option>
+          <option value="Inter">Inter</option>
+          <option value="Georgia">Serif</option>
+          <option value="Impact">Impact</option>
+          <option value="Courier New">Mono</option>
+          <option value="Brush Script MT">Script</option>
+        </select>
+      </div>
+      <div class="field quick-text-colour">
+        <label>Colour</label>
+        <input type="color" id="quickTextColor" value="#c8f232">
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="quickAddText()">
+      Add to product <span class="material-symbols-outlined">arrow_forward</span>
+    </button>
   </div>
 </div>
 

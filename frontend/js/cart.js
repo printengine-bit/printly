@@ -40,6 +40,14 @@ function renderSizeGrid(){
   const bulk=state.orderMode==='bulk';
   el.className=bulk?'size-grid':'size-pick';
   el.innerHTML=bulk?bulkRows(keys):singleRows(keys);
+  const pdpQty=document.getElementById('pdpQtyMount');
+  if(pdpQty){
+    pdpQty.innerHTML='';
+    if(!bulk && document.querySelector('.studio.pdp-mode')){
+      const row=el.querySelector('.qty-row');
+      if(row) pdpQty.appendChild(row);
+    }
+  }
   const title=document.getElementById('qtyTitle');
   if(title) title.textContent=bulk?'Size breakdown':'Size';
   renderBulkToggle(keys);
@@ -177,8 +185,19 @@ function updatePrice(){
   const p=state.product, base=baseUnitPrice(p,Math.max(1,q));
   const extra=state.plainItem?0:printExtra(p,state.enabledViews), u=base+extra;
   const box=document.getElementById('priceBox');
+  const isPdp=!!document.querySelector('.studio.pdp-mode');
 
-  if(q<1){
+  if(isPdp){
+    const sub=u*Math.max(1,q);
+    box.innerHTML=`
+      <div class="pdp-price-main">
+        <b>₹${u.toLocaleString('en-IN')}</b>
+        <span>per item</span>
+      </div>
+      ${extra?`<div class="pdp-price-detail">Includes ₹${extra.toLocaleString('en-IN')} for selected print locations</div>`:''}
+      ${q>1?`<div class="pdp-line-total">${q} items · ₹${sub.toLocaleString('en-IN')} before GST</div>`:''}
+      <div class="price-note">${q<1?'Choose a size to continue.':'GST and shipping calculated in cart.'}</div>`;
+  } else if(q<1){
     // A total of ₹99 with nothing in the order is just the shipping line
     // showing through, and it reads as a broken price.
     box.innerHTML=`
@@ -229,7 +248,7 @@ function syncCta(){
   const btn=document.getElementById('addBtn'); if(!btn) return;
   const hasDesign=state.plainItem||enabledPrintViews().some(v=>(state.layers[v.key]||[]).length);
   let label='Add to cart', icon='arrow_forward', off=false;
-  if(!hasDesign){ label='Add a design first'; icon='draw'; off=true; }
+  if(!hasDesign){ label='Add text or image'; icon='draw'; off=true; }
   else if(sizeTotal(state.sizes)<1){ label='Choose a size'; icon='straighten'; off=true; }
   btn.disabled=off;
   btn.innerHTML=`${label} <span class="material-symbols-outlined">${icon}</span>`;

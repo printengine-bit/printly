@@ -57,6 +57,7 @@ function mountPdpCustomizer(p){
   if(!studio||!mount) return;
   studio.classList.add('pdp-mode');
   mount.appendChild(studio);
+  document.querySelector('.st-left')?.classList.remove('tool-open');
   studioTab('assets');
   document.getElementById('pdpEditorTitle').textContent=p.name;
   document.getElementById('pdpEditorRating').innerHTML=starsFor(p.id);
