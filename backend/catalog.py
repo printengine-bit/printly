@@ -340,6 +340,18 @@ def update_product(pid):
     if isinstance(d.get("sort"), int):
         fields.append("sort=?")
         vals.append(d["sort"])
+    if "audience" in d:
+        audience = str(d.get("audience") or "").strip().lower()
+        if audience not in {"men", "women", "kids", "unisex"}:
+            return jsonify(ok=False, error="Choose a valid storefront audience."), 400
+        fields.append("audience=?")
+        vals.append(audience)
+    if "category" in d:
+        category = str(d.get("category") or "").strip().lower()
+        if category not in {"tees", "polos", "hoodies", "sweatshirts", "jerseys", "bags"}:
+            return jsonify(ok=False, error="Choose a valid product category."), 400
+        fields.append("category=?")
+        vals.append(category)
     if fields:
         vals.append(pid)
         db.execute("UPDATE products SET %s, updated=CURRENT_TIMESTAMP WHERE id=?"

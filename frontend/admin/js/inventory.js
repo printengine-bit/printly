@@ -6,7 +6,33 @@
    so refusing orders on a zero count would take the storefront offline.
    Negative stock is shown loudly instead; see apply_stock() in catalog.py. */
 
-const invState = { products:[], tax:null, openProduct:null };
+const invState = {
+  products:[], tax:null, openProduct:null,
+  audience:'all', category:'all',
+};
+const ADMIN_AUDIENCES = [
+  ['unisex','Everyone / unisex'], ['men','Men'], ['women','Women'], ['kids','Kids'],
+];
+const ADMIN_CATEGORIES = [
+  ['tees','Tees'], ['polos','Polos'], ['hoodies','Hoodies'],
+  ['sweatshirts','Sweatshirts'], ['jerseys','Jerseys'], ['bags','Bags'],
+];
+const ADMIN_MOCKS = [
+  ['rn','Round neck · front'], ['rn_back','Round neck · back'],
+  ['po','Polo · front'], ['po_back','Polo · back'],
+  ['hd','Hoodie · front'], ['hd_back','Hoodie · back'],
+  ['hd_left_sleeve','Hoodie · left sleeve'],
+  ['hd_right_sleeve','Hoodie · right sleeve'],
+  ['js','Jersey · front'], ['js_back','Jersey · back'],
+];
+function adminOptionRows(rows, selected){
+  return rows.map(([value,label])=>
+    `<option value="${esc(value)}" ${value===selected?'selected':''}>${esc(label)}</option>`).join('');
+}
+function setCatalogFilter(kind, value){
+  invState[kind] = value;
+  renderProducts(document.getElementById('invBody'));
+}
 
 async function renderInventory(el, sub){
   const tabs = [
@@ -43,17 +69,37 @@ async function renderProducts(el){
   invState.products = d.products;
   invState.tax = d.tax;
   const owner = SESSION.user.role === 'owner';
+  const shown = d.products.filter(p=>
+    (invState.audience==='all' || p.audience===invState.audience) &&
+    (invState.category==='all' || p.category===invState.category));
 
   el.innerHTML = `
     <div class="card">
-      <h2>Products</h2>
+      <div class="spread">
+        <div><h2>Products</h2>
+          <p class="tiny muted">Audience, category, photo mapping and pricing are live on the storefront.</p></div>
+        <span class="badge badge-lime">${shown.length} shown</span>
+      </div>
       <p class="tiny muted">Prices here are what the storefront charges and what the
         server bills — the browser no longer decides.</p>
+      <div class="form-grid catalog-filters">
+        <label class="field"><span>Audience</span><select onchange="setCatalogFilter('audience',this.value)">
+          <option value="all">All audiences</option>
+          ${adminOptionRows(ADMIN_AUDIENCES,invState.audience)}
+        </select></label>
+        <label class="field"><span>Category</span><select onchange="setCatalogFilter('category',this.value)">
+          <option value="all">All categories</option>
+          ${adminOptionRows(ADMIN_CATEGORIES,invState.category)}
+        </select></label>
+      </div>
       <table>
-        <thead><tr><th>Product</th><th>Tiers</th><th>Stock</th><th>Status</th><th></th></tr></thead>
-        <tbody>${d.products.map(p=>`<tr>
+        <thead><tr><th>Product</th><th>Storefront</th><th>Photo</th><th>Tiers</th><th>Stock</th><th>Status</th><th></th></tr></thead>
+        <tbody>${shown.map(p=>`<tr>
           <td data-label="Product"><b>${esc(p.emoji)} ${esc(p.name)}</b><br>
             <span class="tiny dim">${esc(p.slug)} · ${esc(p.fabric||'no fabric text')}</span></td>
+          <td data-label="Storefront"><b>${esc((ADMIN_AUDIENCES.find(x=>x[0]===p.audience)||[])[1]||p.audience)}</b><br>
+            <span class="tiny dim">${esc((ADMIN_CATEGORIES.find(x=>x[0]===p.category)||[])[1]||p.category)}</span></td>
+          <td data-label="Photo" class="tiny">${esc((p.print_views.find(v=>v.key==='front')||p.print_views[0]||{}).mock||'none')}</td>
           <td data-label="Tiers" class="tiny">${p.tiers.map(t=>
             `${t[0]}+ → ₹${t[1].toLocaleString('en-IN')}`).join('<br>')}</td>
           <td data-label="Stock">
@@ -64,7 +110,7 @@ async function renderProducts(el){
             ? '<span class="badge badge-lime">Live</span>'
             : '<span class="badge badge-quiet">Hidden</span>'}</td>
           <td data-label=""><button class="btn btn-quiet btn-sm" onclick="editProduct(${p.id})">Edit</button></td>
-        </tr>`).join('')}</tbody>
+        </tr>`).join('') || `<tr><td colspan="7"><div class="empty">No products match these filters.</div></td></tr>`}</tbody>
       </table>
     </div>
 
@@ -115,6 +161,14 @@ function editProduct(id){
       <label class="field"><span>Emoji</span><input id="pe_emoji" type="text" value="${esc(p.emoji)}"></label>
       <label class="field span2"><span>Fabric</span><input id="pe_fabric" type="text" value="${esc(p.fabric)}"></label>
       <label class="field"><span>Fit label</span><input id="pe_fit" type="text" value="${esc(p.fit)}"></label>
+      <label class="field"><span>Audience</span><select id="pe_audience">
+        ${adminOptionRows(ADMIN_AUDIENCES,p.audience)}
+      </select></label>
+      <label class="field"><span>Category</span><select id="pe_category">
+        ${adminOptionRows(ADMIN_CATEGORIES,p.category)}
+      </select></label>
+      <label class="field"><span>Storefront order</span>
+        <input id="pe_sort" type="number" min="0" step="1" value="${p.sort||0}"></label>
       <label class="field"><span>HSN code</span>
         <input id="pe_hsn" type="text" value="${esc(p.hsn_code)}" placeholder="e.g. 61091000"></label>
       <label class="field"><span>Cost per blank ₹</span>
@@ -173,7 +227,11 @@ function printViewRow(v={}){
       <label class="field"><span>Key</span><input class="pv-key" value="${esc(v.key||'')}"></label>
       <label class="field"><span>Customer label</span><input class="pv-label" value="${esc(v.label||'')}"></label>
       <label class="field"><span>Price group</span><input class="pv-group" value="${esc(v.group||'')}"></label>
-      <label class="field"><span>Mockup key</span><input class="pv-mock" value="${esc(v.mock||'')}"></label>
+      <label class="field"><span>Photographed mockup</span><select class="pv-mock">
+        ${v.mock && !ADMIN_MOCKS.some(x=>x[0]===v.mock)
+          ? `<option value="${esc(v.mock)}" selected>${esc(v.mock)} · custom</option>` : ''}
+        ${adminOptionRows(ADMIN_MOCKS,v.mock||'rn')}
+      </select></label>
       <label class="field"><span>Surcharge ₹</span><input class="pv-fee" value="${+v.surcharge||0}"></label>
       <label class="field"><span>Behaviour</span><span class="row" style="gap:12px;min-height:40px">
         <label><input class="pv-required" type="checkbox" ${v.required?'checked':''}> Required</label>
@@ -199,6 +257,9 @@ async function saveProduct(id){
     fit: document.getElementById('pe_fit').value,
     hsn_code: document.getElementById('pe_hsn').value,
     cost_price: parseFloat(document.getElementById('pe_cost').value) || 0,
+    audience: document.getElementById('pe_audience').value,
+    category: document.getElementById('pe_category').value,
+    sort: parseInt(document.getElementById('pe_sort').value, 10) || 0,
     active: document.getElementById('pe_active').value === '1',
     tiers,
     print_views:[...document.querySelectorAll('#pe_views .print-view-row')].map(r=>({

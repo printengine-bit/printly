@@ -64,7 +64,12 @@ def _counters(db):
           (SELECT COUNT(*) FROM orders WHERE {live} AND status=5) AS delivered,
           (SELECT COUNT(*) FROM orders WHERE cancelled=1) AS cancelled,
           (SELECT COALESCE(SUM(total_inr),0) FROM orders WHERE {live}) AS live_value,
-          (SELECT COUNT(*) FROM users WHERE role='customer') AS customers
+          (SELECT COUNT(*) FROM users WHERE role='customer') AS customers,
+          (SELECT COUNT(*) FROM products WHERE active=1) AS live_products,
+          (SELECT COUNT(*) FROM products WHERE active=1 AND audience='men') AS men_products,
+          (SELECT COUNT(*) FROM products WHERE active=1 AND audience='women') AS women_products,
+          (SELECT COUNT(*) FROM products WHERE active=1 AND audience='kids') AS kids_products,
+          (SELECT COUNT(*) FROM products WHERE active=1 AND audience='unisex') AS unisex_products
     """).fetchone()
     return dict(row)
 

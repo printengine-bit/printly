@@ -222,6 +222,7 @@ input:focus,select:focus,textarea:focus{
 .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.catalog-stats{grid-template-columns:repeat(auto-fit,minmax(135px,1fr));margin-top:16px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
 .stat span{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;
   text-transform:uppercase;color:var(--ink-mut);margin-bottom:6px}
@@ -415,6 +416,8 @@ tr:last-child td{border-bottom:none}
   background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-sm);
 }
 .photo-thumb.gone{border-color:var(--pink);background:var(--tint-pink)}
+.photo-usage{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-2px 0 16px}
+.catalog-filters{margin-top:14px;max-width:620px}
 /* Six numeric fields; two per row reads as pairs (centre, size, real size). */
 .zone-grid{grid-template-columns:repeat(3,1fr)}
 @media(max-width:760px){ .zone-grid{grid-template-columns:1fr 1fr} }

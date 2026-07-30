@@ -42,6 +42,21 @@ async function renderDashboard(el){
         <div class="stat"><span>Delivered</span><b>${c.delivered}</b></div>
         <div class="stat"><span>Cancelled</span><b>${c.cancelled}</b></div>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="spread">
+        <div><h2>Storefront catalog</h2>
+          <p class="tiny muted">Live products by the audience customers see.</p></div>
+        <button class="btn btn-quiet btn-sm" onclick="goTo('inventory','products')">Manage products</button>
+      </div>
+      <div class="grid catalog-stats">
+        <div class="stat"><span>All live</span><b>${c.live_products}</b></div>
+        <div class="stat"><span>Men</span><b>${c.men_products}</b></div>
+        <div class="stat"><span>Women</span><b>${c.women_products}</b></div>
+        <div class="stat"><span>Kids</span><b>${c.kids_products}</b></div>
+        <div class="stat"><span>Unisex</span><b>${c.unisex_products}</b></div>
+      </div>
     </div>`;
 }
 

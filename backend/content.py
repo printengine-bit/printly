@@ -200,8 +200,17 @@ def photos():
     import os
     db = get_db()
     zones = zones_payload(db)
-    names = {p["slug"]: p["name"]
-             for p in db.execute("SELECT slug,name FROM products").fetchall()}
+    products = db.execute("SELECT id,slug,name,active FROM products ORDER BY sort,id").fetchall()
+    names = {p["slug"]: p["name"] for p in products}
+    assignments = {}
+    for row in db.execute(
+            """SELECT p.id,p.name,v.view_key,v.label,v.mock_key
+               FROM product_print_views v JOIN products p ON p.id=v.product_id
+               WHERE v.active=1 ORDER BY p.sort,v.sort""").fetchall():
+        assignments.setdefault(row["mock_key"], []).append({
+            "id": row["id"], "name": row["name"],
+            "view": row["label"] or row["view_key"],
+        })
 
     # Built from the files that are actually on disk, not from the product
     # list. A product with no mockup (the tote) draws a vector silhouette
@@ -217,6 +226,10 @@ def photos():
     out = []
     for f in files:
         key = os.path.splitext(f)[0]
+        # The shipped right-sleeve file was revised without changing the
+        # public mock key stored in product_print_views and print_zones.
+        if key == "hd_right_sleeve_v2":
+            key = "hd_right_sleeve"
         suffixes = ("_left_sleeve", "_right_sleeve", "_back")
         suffix = next((s for s in suffixes if key.endswith(s)), "")
         slug = key[:-len(suffix)] if suffix else key
@@ -229,6 +242,7 @@ def photos():
             "side": suffix[1:].replace("_", " ") if suffix else "front",
             "key": key, "file": "mockups/%s" % f, "bytes": size,
             "zone": zones.get(key),
+            "used_by": assignments.get(key, []),
             # A photo with no zone row is the real fault: mockLayout() would
             # fall through to the round-neck tee's measurements.
             "missing": key not in zones,
@@ -236,9 +250,15 @@ def photos():
 
     # Products drawn without a photo, so the screen accounts for everything
     # rather than silently omitting them.
-    no_photo = [names[s] for s in names
-                if not any(p["product_id"] == s for p in out)]
-    return jsonify(ok=True, photos=out, no_photo=sorted(no_photo),
+    available = {p["key"] for p in out}
+    assigned_products = {
+        item["id"] for key, rows in assignments.items() if key in available
+        for item in rows
+    }
+    no_photo = [{"id": p["id"], "name": p["name"]}
+                for p in products if p["active"] and p["id"] not in assigned_products]
+    return jsonify(ok=True, photos=out,
+                   no_photo=sorted(no_photo, key=lambda item: item["name"].lower()),
                    orphan_zones=sorted(k for k in zones
                                        if not any(p["key"] == k for p in out)))
 

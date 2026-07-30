@@ -1,7 +1,6 @@
 /* ═══════════════ CONTENT ═══════════════
-   The three things a shop edits that aren't products or orders: which
-   designs are offered as templates, which reviews are shown, and the print
-   zones the studio measures against. */
+   Storefront content outside orders: templates, reviews, photographed
+   product assignments and the print zones the studio measures against. */
 
 const contState = {scope:'all'};
 
@@ -210,6 +209,12 @@ async function renderPhotos(el){
         <img class="photo-thumb" src="/${esc(p.file)}" alt=""
           onerror="this.classList.add('gone');this.alt='missing'">
       </div>
+      <div class="photo-usage">
+        <span class="tiny dim">Used by</span>
+        ${(p.used_by||[]).map(u=>`<button class="chip" onclick="managePhotoProduct(${u.id})"
+          title="Edit ${esc(u.name)}">${esc(u.name)} · ${esc(u.view)}</button>`).join('')
+          || '<span class="badge badge-warn">Not assigned</span>'}
+      </div>
       ${p.zone ? `
         <div class="form-grid zone-grid">
           ${[['cx','Centre X (px)'],['cy','Centre Y (px)'],
@@ -228,10 +233,12 @@ async function renderPhotos(el){
              measurements, so this mockup prints at the wrong dimensions.</span></div>`}
     </div>`).join('')}
     ${d.no_photo.length?`<div class="card">
-      <h2>Drawn without a photo</h2>
-      <p class="tiny muted">${d.no_photo.map(esc).join(', ')} — no mockup file, so
-        the studio draws a vector silhouette and uses the fallback print area in
-        studio.js. That's by design, not a fault; add a photo to change it.</p>
+      <h2>Products without a photographed mockup</h2>
+      <p class="tiny muted">These live products currently fall back to a vector garment.
+        Assign one of the photographed mockups from the product editor.</p>
+      <div class="row">${d.no_photo.map(p=>`<button class="chip" onclick="managePhotoProduct(${p.id})">
+        ${esc(p.name)} <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span>
+      </button>`).join('')}</div>
     </div>`:''}
     ${d.orphan_zones.length?`<div class="card">
       <h2>Zones with no photo</h2>
@@ -242,6 +249,10 @@ async function renderPhotos(el){
       everything outside the data volume is replaced on each deploy, so an
       uploaded file would disappear at the next push with nothing to connect
       the two. Replacing a mockup is a commit.</p>`;
+}
+function managePhotoProduct(id){
+  invState.openProduct = id;
+  goTo('inventory','products');
 }
 async function saveZone(key){
   const num = f => document.getElementById('z_'+key+'_'+f).value;
