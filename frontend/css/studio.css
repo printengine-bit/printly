@@ -137,6 +137,26 @@
      if the column doesn't fit, it scrolls, it doesn't squash the canvas. */
   flex-shrink:0;
 }
+.canvas-zoom-rail{
+  position:absolute;left:10px;top:50%;z-index:4;transform:translateY(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:7px;padding:7px 6px;
+  border:1px solid var(--outline-variant);border-radius:var(--r-full);
+  background:color-mix(in srgb,var(--surface-container-lowest) 88%,transparent);
+  box-shadow:var(--shadow-2);backdrop-filter:blur(8px);
+}
+.canvas-zoom-rail button{
+  width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;background:var(--surface-container-high);color:var(--primary);
+}
+.canvas-zoom-rail button:hover{background:var(--primary);color:var(--surface-bright)}
+.canvas-zoom-rail .material-symbols-outlined{font-size:17px}
+.canvas-zoom-rail input{
+  width:6px;height:104px;writing-mode:vertical-lr;direction:rtl;
+  accent-color:var(--primary);cursor:pointer;
+}
+.canvas-zoom-rail output{
+  min-width:32px;text-align:center;font-size:9px;font-weight:800;color:var(--primary);
+}
 #teeCanvas{
   width:100%;height:100%;display:block;touch-action:none;
 }
@@ -147,25 +167,23 @@
    Chest, Full Front/Back — matching what print catalogues show, so a click
    replaces a drag-and-eyeball guess. */
 .placement-row{
-  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  display:grid;grid-template-columns:82px minmax(0,1fr);align-items:start;gap:8px;
   width:100%;max-width:min(520px,60vh);
 }
 .placement-label{
   font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--outline);margin-right:2px;
+  color:var(--outline);padding-top:10px;
 }
+.placement-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .placement-btn{
-  display:inline-flex;align-items:center;gap:6px;padding:7px 12px;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:7px 8px;
   border-radius:var(--r-full);border:1px solid var(--outline-variant);
   background:var(--surface-container-high);color:var(--on-surface);
-  font-size:12px;font-weight:700;white-space:nowrap;transition:.15s;
+  font-size:11px;font-weight:700;white-space:nowrap;transition:.15s;
 }
 .placement-btn .material-symbols-outlined{font-size:16px}
 .placement-btn:hover{border-color:var(--lime);color:var(--lime-ink)}
-/* The exit from a zoomed view is the one placement action that isn't
-   optional once you're in it, so it reads as the "on" state everything
-   else in this row leads to. */
-.placement-btn.zoom-out{background:var(--lime);border-color:var(--lime);color:var(--on-lime)}
+.placement-btn.on{background:var(--primary);border-color:var(--primary);color:var(--surface-bright)}
 
 /* In normal flow under the measure chips — absolutely positioning this
    collided with the measure bar and the template FAB. */
@@ -515,12 +533,7 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
 }
 .utility-rail button:hover{background:var(--surface-container-highest);color:var(--lime-ink)}
 .utility-rail .material-symbols-outlined{font-size:16px}
-.utility-zoom{
-  display:flex;align-items:center;gap:5px;padding:0 7px;color:var(--on-surface-variant);
-  border-right:1px solid var(--outline-variant);
-}
-.utility-zoom input{width:88px;accent-color:var(--lime-ink)}
-.utility-zoom output{min-width:37px;font-size:10px;font-weight:800;color:var(--primary)}
+.pdp-stage-details{display:none}
 .studio.crop-mode #teeCanvas{cursor:move}
 .studio.transforming #teeCanvas{cursor:grabbing}
 .object-actions button,.print-view-tabs button{
@@ -611,18 +624,17 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
   display:grid;grid-template-columns:minmax(0,1fr) 142px;align-items:end;gap:0 12px;
 }
 .studio.pdp-mode #priceBox{grid-column:1}
-.studio.pdp-mode #priceBox,
-.studio.pdp-mode #pdpQtyMount{grid-row:1}
 .studio.pdp-mode #pdpQtyMount{grid-column:2}
 .studio.pdp-mode #pdpQtyMount:empty{display:none}
-.studio.pdp-mode #pdpDetails{
-  grid-column:1 / -1;grid-row:2;margin-top:12px;
+.studio.pdp-mode .pdp-stage-details{
+  display:block;width:100%;margin-top:10px;
+  border-top:1px solid var(--outline-variant);
   border-bottom:1px solid var(--outline-variant);
 }
-.studio.pdp-mode #pdpDetails details.acc{padding:13px 0}
-.studio.pdp-mode #pdpDetails details.acc summary{font-size:11px}
-.studio.pdp-mode #pdpDetails details.acc p,
-.studio.pdp-mode #pdpDetails details.acc ul{font-size:12px}
+.studio.pdp-mode .pdp-stage-details details.acc{padding:14px 4px}
+.studio.pdp-mode .pdp-stage-details details.acc summary{font-size:11px}
+.studio.pdp-mode .pdp-stage-details details.acc p,
+.studio.pdp-mode .pdp-stage-details details.acc ul{font-size:12px}
 .studio.pdp-mode #pdpQtyMount .qty-row{gap:4px}
 .studio.pdp-mode #pdpQtyMount .size-key{width:auto;margin-right:2px;font-size:10px}
 .studio.pdp-mode #pdpQtyMount .size-step{width:32px;height:32px}
@@ -723,5 +735,9 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
   .utility-rail{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}
   .utility-rail > *{flex:0 0 auto}
   .utility-rail button span:last-child{display:none}
-  .utility-zoom input{width:74px}
+  .canvas-zoom-rail{left:6px;padding:5px 4px}
+  .canvas-zoom-rail input{height:82px}
+  .placement-row{grid-template-columns:1fr}
+  .placement-label{padding:0}
+  .placement-options{grid-template-columns:repeat(2,minmax(0,1fr))}
 }

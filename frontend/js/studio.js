@@ -179,7 +179,8 @@ function applyPreviewSize(){
 function studioProductChange(){
   const old=pa();
   state.product=PRODUCTS.find(p=>p.id===document.getElementById('stProduct').value);
-  state.cropMode=false;document.querySelector('.studio')?.classList.remove('crop-mode');
+  state.cropMode=false;state.activePlacement=null;
+  document.querySelector('.studio')?.classList.remove('crop-mode');
   configureProductViews(state.product.id);
   const P=pa();
   remapLayers(old,P,true);   // keep existing artwork inside the new zone
@@ -192,7 +193,7 @@ function studioProductChange(){
 }
 function setSide(s){
   if(!state.enabledViews.includes(s)) return;
-  state.side=s; state.sel=-1;state.cropMode=false;
+  state.side=s; state.sel=-1;state.cropMode=false;state.activePlacement=null;
   document.querySelector('.studio')?.classList.remove('crop-mode');
   zoomOut();   // the other side's layers were never in this zoomed box
   document.getElementById('tabF')?.classList.toggle('on',s==='front');
@@ -817,18 +818,24 @@ const PLACEMENTS = {
     ['center-chest', 'Center Chest', 'crop_5_4'],
     ['left-chest',   'Left Chest',   'align_horizontal_left'],
     ['right-chest',  'Right Chest',  'align_horizontal_right'],
+    ['upper-center', 'Upper Center', 'vertical_align_top'],
+    ['lower-center', 'Lower Center', 'vertical_align_bottom'],
   ],
   back: [
     ['full-back',   'Full Back',   'crop_free'],
+    ['upper-back',  'Upper Back',  'vertical_align_top'],
     ['center-back', 'Center Back', 'crop_5_4'],
+    ['lower-back',  'Lower Back',  'vertical_align_bottom'],
   ],
   left_sleeve: [
     ['full-sleeve', 'Full Sleeve', 'crop_portrait'],
     ['upper-sleeve','Upper Sleeve','vertical_align_top'],
+    ['lower-sleeve','Lower Sleeve','vertical_align_bottom'],
   ],
   right_sleeve: [
     ['full-sleeve', 'Full Sleeve', 'crop_portrait'],
     ['upper-sleeve','Upper Sleeve','vertical_align_top'],
+    ['lower-sleeve','Lower Sleeve','vertical_align_bottom'],
   ],
 };
 
@@ -843,11 +850,25 @@ function placementBox(key, P){
     return {x:P.x, y:P.y, w:P.w, h:P.h};
   if(key==='upper-sleeve')
     return {x:P.x, y:P.y, w:P.w, h:P.h*.48};
+  if(key==='lower-sleeve')
+    return {x:P.x, y:P.y+P.h*.52, w:P.w, h:P.h*.48};
   if(key==='center-chest'){
     const w=P.w*0.42; return {x:P.x+(P.w-w)/2, y:P.y+P.h*0.07, w, h:P.h*0.28};
   }
+  if(key==='upper-center'){
+    const w=P.w*0.48; return {x:P.x+(P.w-w)/2, y:P.y+P.h*0.04, w, h:P.h*0.24};
+  }
+  if(key==='lower-center'){
+    const w=P.w*0.55; return {x:P.x+(P.w-w)/2, y:P.y+P.h*0.68, w, h:P.h*0.26};
+  }
+  if(key==='upper-back'){
+    const w=P.w*0.5; return {x:P.x+(P.w-w)/2, y:P.y+P.h*0.04, w, h:P.h*0.25};
+  }
   if(key==='center-back'){
     const w=P.w*0.5; return {x:P.x+(P.w-w)/2, y:P.y+P.h*0.06, w, h:P.h*0.32};
+  }
+  if(key==='lower-back'){
+    const w=P.w*0.56; return {x:P.x+(P.w-w)/2, y:P.y+P.h*0.68, w, h:P.h*0.26};
   }
   const w=P.w*0.26, h=P.h*0.20, y=P.y+P.h*0.08;
   return key==='left-chest' ? {x:P.x+P.w*0.08, y, w, h} : {x:P.x+P.w*0.92-w, y, w, h};
@@ -904,6 +925,7 @@ function applyPlacement(key){
   pushUndo();
   const P=pa(), box=placementBox(key,P);
   const tight=fitLayerToBox(Ls[state.sel], box);
+  state.activePlacement=key;
   // zoomToBox()/zoomOut() are pure state-setters (see above) — they have to
   // run BEFORE the one draw() below, or the canvas paints at the OLD zoom
   // level and camTx/camTy/canvasZoom change out from under a bitmap that
@@ -922,11 +944,10 @@ function renderPlacementRow(){
   if(state.sel<0){ el.hidden=true; el.innerHTML=''; return; }
   el.hidden=false;
   const list=PLACEMENTS[state.side]||PLACEMENTS.front;
-  el.innerHTML=`<span class="placement-label">Placement</span>`
-    +list.map(([k,label,icon])=>`<button class="placement-btn" onclick="applyPlacement('${k}')">
+  el.innerHTML=`<span class="placement-label">Placement</span><div class="placement-options">`
+    +list.map(([k,label,icon])=>`<button class="placement-btn${state.activePlacement===k?' on':''}" onclick="applyPlacement('${k}')">
         <span class="material-symbols-outlined">${icon}</span>${label}</button>`).join('')
-    +(state._zoomed?`<button class="placement-btn zoom-out" onclick="zoomOut();draw()">
-        <span class="material-symbols-outlined">zoom_out</span>Full view</button>`:'');
+    +`</div>`;
 }
 
 /* ── The zoom camera ──────────────────────────────────────────────
@@ -969,14 +990,7 @@ function resetCamera(){
    whole operation, not one here plus one of its own. */
 function zoomToBox(box){
   const frame=document.getElementById('canvasFrame'); if(!frame) return;
-  // renderPlacementRow() FIRST: it's about to add the "Full view" exit
-  // button, and .placement-row is a flex sibling of .canvas-frame in the
-  // same column — that button appearing changes how much height the frame
-  // actually gets. Measuring fr before this mutation reads the frame's
-  // PRE-zoom size and bakes a backing store sized for a box that's about to
-  // resize out from under it — measured directly: a ~15% aspect mismatch
-  // between the backing store and the frame's actual final box, real
-  // distortion, not rounding noise. Mutate the DOM, THEN measure.
+  // Update the preset's active state before measuring and rendering.
   state._zoomed=true;
   renderPlacementRow();
   const fr=frame.getBoundingClientRect();
@@ -1025,6 +1039,9 @@ function setEditorZoom(value){
   const cx=L?L.x:P.x+P.w/2,cy=L?L.y:P.y+P.h/2;
   camTx=cv.width/2-canvasZoom*cx; camTy=cv.height/2-canvasZoom*cy;
   syncUtilityRail(); draw();
+}
+function changeEditorZoom(delta){
+  setEditorZoom((+state.editorZoom||1)+delta);
 }
 function syncUtilityRail(){
   const z=Math.max(1,Math.min(4,+state.editorZoom||1));
@@ -1637,7 +1654,9 @@ function snapMovedLayer(L){
 }
 function move(e){
   if(!drag)return;
-  if(!drag.mutated){pushUndo();drag.mutated=true;}
+  if(!drag.mutated){
+    pushUndo();drag.mutated=true;state.activePlacement=null;renderPlacementRow();
+  }
   const p=pos(e); const L=state.layers[state.side][drag.i];
   if(!L)return;
   if(drag.type==='move'){
