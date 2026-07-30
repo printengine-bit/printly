@@ -217,7 +217,8 @@ const PRINT_AREAS={
 function pa(){
   const L=mockLayout(state.product.id);
   if(L) return {x:L.px,y:L.py,w:L.pw,h:L.ph,cmW:L.cmW,cmH:L.cmH};
-  return PRINT_AREAS[state.product.id]||PRINT_AREAS.rn;
+  const base=state.product.id.split('-')[0];
+  return PRINT_AREAS[state.product.id]||PRINT_AREAS[base]||PRINT_AREAS.rn;
 }
 function pxcm(){ const P=pa(); return P.w/P.cmW; }   // pixels per cm
 
@@ -228,15 +229,14 @@ function drawGarment(c,type,color){
   c.fillStyle=color; c.strokeStyle=LINE; c.lineWidth=2;
   c.lineJoin='round';
 
-  // Women's lines share the men's silhouette IDs plus a '-women' suffix
-  // (rn-women, po-women, hd-women) — no photo exists for them yet, so this
-  // vector fallback is what actually renders. Strip the suffix to pick the
-  // right garment shape, then nudge the outline narrower at the waist so the
-  // placeholder at least reads as a fitted cut instead of reusing the men's
-  // silhouette unchanged.
+  // Audience-specific lines share a leading garment family (rn/po/hd/sw).
+  // Their dedicated photography can be added later; until then these fitted
+  // vector silhouettes keep every new catalogue SKU usable in the studio.
   const women=type.endsWith('-women');
-  const base=women?type.slice(0,-'-women'.length):type;
+  const kids=type.endsWith('-kids');
+  const base=type.split('-')[0];
   if(women){ c.save(); c.translate(260,0); c.scale(0.92,1); c.translate(-260,0); }
+  if(kids){ c.save(); c.translate(260,42); c.scale(0.80,0.84); c.translate(-260,0); }
 
   if(base==='tb'){                                   // ── TOTE BAG ──
     c.strokeStyle=LINE; c.lineWidth=7; c.lineCap='round';
@@ -273,6 +273,18 @@ function drawGarment(c,type,color){
     c.strokeStyle=SOFT; c.lineWidth=2;
     c.beginPath(); c.moveTo(176,406); c.lineTo(344,406);
     c.lineTo(344,474); c.lineTo(176,474); c.closePath(); c.stroke();
+
+  } else if(base==='sw'){                            // ── CREWNECK SWEATSHIRT ──
+    c.beginPath();
+    c.moveTo(150,92); c.quadraticCurveTo(205,62,260,62);
+    c.quadraticCurveTo(315,62,370,92);
+    c.lineTo(474,158); c.lineTo(438,232); c.lineTo(390,202);
+    c.lineTo(390,508); c.lineTo(130,508); c.lineTo(130,202);
+    c.lineTo(82,232); c.lineTo(46,158);
+    c.closePath(); c.fill(); c.stroke();
+    c.strokeStyle=SOFT; c.lineWidth=3;
+    c.beginPath(); c.arc(260,84,38,0,Math.PI); c.stroke();
+    c.beginPath(); c.moveTo(132,478); c.lineTo(388,478); c.stroke();
 
   } else if(base==='js'){                            // ── SPORTS JERSEY ──
     c.beginPath();
@@ -324,6 +336,7 @@ function drawGarment(c,type,color){
     c.beginPath(); c.strokeStyle='rgba(13,31,60,.35)';
     c.moveTo(205,72); c.quadraticCurveTo(260,115,315,72); c.stroke();
   }
+  if(kids) c.restore();
   if(women) c.restore();
   c.restore();
 }
@@ -1370,6 +1383,39 @@ function selLayer(i){
     state.cropMode=false;document.querySelector('.studio')?.classList.remove('crop-mode');
   }
   state.sel=i;renderLayers();draw();
+}
+
+/* One intentional hero product: a fixed custom hoodie, never a carousel.
+   It uses the same photographed blank and recolouring pipeline as the studio
+   so the homepage preview is an honest example of what customers can make. */
+function drawHeroHoodie(){
+  const c=document.getElementById('heroHoodie'); if(!c) return;
+  const x=c.getContext('2d');
+  x.clearRect(0,0,c.width,c.height);
+  const color='#17211B';
+  const mock=getRecoloredMock('hd',color)||mockImgs.hd;
+  if(!mock){
+    x.save(); x.translate((c.width-520*.68)/2,18); x.scale(.68,.68);
+    drawGarment(x,'hd',color); x.restore();
+    return;
+  }
+  const iw=mock.naturalWidth||mock.width,ih=mock.naturalHeight||mock.height;
+  const s=Math.min(c.width/iw,c.height/ih);
+  const ox=(c.width-iw*s)/2,oy=(c.height-ih*s)/2;
+  drawStage(x,color,0,0,c.width,c.height,18);
+  drawMockup(x,mock,ox,oy,iw*s,ih*s);
+
+  const P=MOCK.print.hd;
+  const cx=ox+P.cx*s, cy=oy+P.cy*s;
+  x.save();
+  x.textAlign='center'; x.textBaseline='middle';
+  x.fillStyle='#FFFFFF';
+  x.font=`800 ${Math.max(18,36*s)}px "Archivo Narrow"`;
+  x.fillText('PRINTLY',cx,cy-8*s);
+  x.fillStyle='#C8F232';
+  x.font=`700 ${Math.max(11,18*s)}px "Archivo Narrow"`;
+  x.fillText('ORIGINALS',cx,cy+22*s);
+  x.restore();
 }
 /* Locked layers ignore the layer list's +/− controls. */
 function bump(i,f){

@@ -453,6 +453,7 @@ def init_db():
             ("unisex", "bags", "Tote Bag", "tb"),
         ])
     _seed_women_lines(c)
+    _seed_kids_lines(c)
     _replace_legacy_palette(c)
     _seed_print_views(c)
 
@@ -575,6 +576,14 @@ PRINT_VIEW_SEED = {
         ("back", "Back", "back", "js_back", 0, 0, 100, 1),
     ],
     "tb": [("front", "Front", "front", "tb", 1, 1, 0, 0)],
+    "rn-women": [("front", "Front", "front", "rn", 1, 1, 0, 0)],
+    "po-women": [("front", "Front", "front", "po", 1, 1, 0, 0)],
+    "hd-women": [("front", "Front", "front", "hd", 1, 1, 0, 0)],
+    "rn-oversized-women": [("front", "Front", "front", "rn", 1, 1, 0, 0)],
+    "sw-women": [("front", "Front", "front", "rn", 1, 1, 0, 0)],
+    "rn-kids": [("front", "Front", "front", "rn", 1, 1, 0, 0)],
+    "hd-kids": [("front", "Front", "front", "hd", 1, 1, 0, 0)],
+    "sw-kids": [("front", "Front", "front", "rn", 1, 1, 0, 0)],
 }
 
 
@@ -591,6 +600,13 @@ def _seed_print_views(conn):
                        default_enabled,surcharge,sort)
                    VALUES(?,?,?,?,?,?,?,?,?)""",
                 (p[0], key, label, group, mock, required, default, fee, sort))
+            # Older audience lines already have the generic slug-as-mock
+            # fallback inserted below. Upgrade only that untouched fallback;
+            # a mock chosen later in the admin remains authoritative.
+            conn.execute(
+                """UPDATE product_print_views SET mock_key=?
+                   WHERE product_id=? AND view_key=? AND mock_key=?""",
+                (mock, p[0], key, slug))
 
     # New catalogue lines without dedicated photography still get a safe,
     # front-only vector view instead of inheriting another garment's zone.
@@ -711,30 +727,54 @@ SEED_WOMEN_PRODUCTS = [
               "Do not iron the print"],
      "chest": [46, 48, 51, 54, 57, 60], "length": [56, 58, 60, 62, 64, 66],
      "category": "hoodies"},
+    {"slug": "rn-oversized-women", "name": "Women's Oversized T-Shirt", "emoji": "👕", "base": 699,
+     "tiers": [(1, 699), (10, 529), (50, 399), (100, 329)],
+     "fabric": "220 GSM · heavyweight combed cotton, bio-washed", "fit": "Relaxed oversized fit",
+     "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
+              "Warm iron, avoid the print"],
+     "chest": [48, 51, 54, 57, 60, 63], "length": [63, 65, 67, 69, 71, 73],
+     "category": "tees"},
+    {"slug": "sw-women", "name": "Women's Crewneck Sweatshirt", "emoji": "👚", "base": 1099,
+     "tiers": [(1, 1099), (10, 849), (50, 699), (100, 579)],
+     "fabric": "300 GSM · brushed cotton-rich fleece", "fit": "Relaxed fit with ribbed waist",
+     "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
+              "Do not iron the print"],
+     "chest": [46, 49, 52, 55, 58, 61], "length": [58, 60, 62, 64, 66, 68],
+     "category": "sweatshirts"},
+]
+
+SEED_KIDS_PRODUCTS = [
+    {"slug": "rn-kids", "name": "Kids' Round Neck T-Shirt", "emoji": "👕", "base": 499,
+     "tiers": [(1, 499), (10, 379), (50, 299), (100, 239)],
+     "fabric": "180 GSM · soft combed cotton, bio-washed", "fit": "Regular kids fit",
+     "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
+              "Warm iron, avoid the print"],
+     "chest": [32, 35, 38, 41, 44, 47], "length": [43, 47, 51, 55, 59, 63],
+     "category": "tees"},
+    {"slug": "hd-kids", "name": "Kids' Hoodie", "emoji": "🧥", "base": 999,
+     "tiers": [(1, 999), (10, 799), (50, 649), (100, 529)],
+     "fabric": "280 GSM · soft brushed fleece, cotton-rich blend", "fit": "Easy kids fit",
+     "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
+              "Do not iron the print"],
+     "chest": [36, 39, 42, 45, 48, 51], "length": [44, 48, 52, 56, 60, 64],
+     "category": "hoodies"},
+    {"slug": "sw-kids", "name": "Kids' Crewneck Sweatshirt", "emoji": "👚", "base": 849,
+     "tiers": [(1, 849), (10, 679), (50, 549), (100, 449)],
+     "fabric": "280 GSM · soft cotton-rich fleece", "fit": "Relaxed kids fit",
+     "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
+              "Do not iron the print"],
+     "chest": [35, 38, 41, 44, 47, 50], "length": [43, 47, 51, 55, 59, 63],
+     "category": "sweatshirts"},
 ]
 
 
-def _seed_women_lines(conn):
-    """Adds the Women's lines alongside the original catalogue rather than
-    inside it — _seed_catalog() only ever populates an empty products
-    table, so a genuinely new SKU added later needs its own guard. Guarded
-    per-slug (like _seed_zones()), so it's safe to call on every boot and
-    only ever inserts what's actually missing.
-
-    No product photography exists for these yet — mockLayout() returns
-    null for any slug with no entry in MOCK.mocks, which is the existing,
-    already-correct "no photo" path: draw() falls back to drawGarment()'s
-    vector silhouette. studio.js gives audience='women' products their own
-    fitted silhouette there rather than reusing the Men's one unchanged, so
-    the placeholder at least looks like a different garment while real
-    photography is pending.
-    """
+def _seed_audience_lines(conn, products, audience):
+    """Add missing audience-specific catalogue lines without overwriting
+    products, prices or inventory already managed by the shop."""
     import json as _json
-    # init_db()'s connection is a plain sqlite3.connect() with no row_factory
-    # (unlike get_db()'s per-request connection), so rows come back as tuples.
     existing = {r[0] for r in conn.execute("SELECT slug FROM products").fetchall()}
     base_sort = conn.execute("SELECT COALESCE(MAX(sort),0) FROM products").fetchone()[0]
-    for i, p in enumerate(SEED_WOMEN_PRODUCTS):
+    for i, p in enumerate(products):
         if p["slug"] in existing:
             continue
         cur = conn.execute(
@@ -744,7 +784,7 @@ def _seed_women_lines(conn):
                VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
             (p["slug"], p["name"], p["emoji"], p["fabric"], _json.dumps(p["care"]),
              p["fit"], _json.dumps({"chest": p["chest"], "length": p["length"]}),
-             p["base"], 0, base_sort + i + 1, "women", p["category"]),
+             p["base"], 0, base_sort + i + 1, audience, p["category"]),
         )
         pid = cur.lastrowid
         for min_qty, price in p["tiers"]:
@@ -758,8 +798,14 @@ def _seed_women_lines(conn):
                     """INSERT INTO variants(product_id,color_hex,color_name,
                                             size_label,sku) VALUES(?,?,?,?,?)""",
                     (pid, hexv, cname, label, sku))
-    # Same honesty as the original seed: stock starts at zero, nobody has
-    # counted these blanks either.
+
+
+def _seed_women_lines(conn):
+    _seed_audience_lines(conn, SEED_WOMEN_PRODUCTS, "women")
+
+
+def _seed_kids_lines(conn):
+    _seed_audience_lines(conn, SEED_KIDS_PRODUCTS, "kids")
 
 
 def _replace_legacy_palette(conn):

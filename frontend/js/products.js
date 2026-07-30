@@ -1,7 +1,9 @@
 /* ═══════════════ PRODUCTS ═══════════════ */
 /* ── product card thumbnails (real mockups, not emoji) ── */
 const THUMB_COLORS={rn:'#E05A1E',po:'#0D1F3C',hd:'#1A1A1A',js:'#1A6FB0',tb:'#D9CDB4',
-  'rn-women':'#CE0358','po-women':'#0D1F3C','hd-women':'#1A1A1A'};
+  'rn-women':'#CE0358','po-women':'#0D1F3C','hd-women':'#7B3F96',
+  'rn-oversized-women':'#E7C9EE','sw-women':'#CE0358',
+  'rn-kids':'#2C82C9','hd-kids':'#F07A2B','sw-kids':'#16A36A'};
 function jerseyBackPrint(c){
   c.save();
   // accent side stripes
@@ -41,7 +43,8 @@ function drawProductThumb(cnv,id){
   const c=cnv.getContext('2d');
   c.clearRect(0,0,cnv.width,cnv.height);
   // photo mockup thumbnail if available
-  const img=getRecoloredMock(id,THUMB_COLORS[id]||'#FFFFFF');
+  const mock=printViews(id)[0]?.mock||id;
+  const img=getRecoloredMock(mock,THUMB_COLORS[id]||'#FFFFFF');
   if(img){
     const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
     const sc=Math.min(cnv.width/iw,cnv.height/ih);
@@ -72,6 +75,7 @@ const CATEGORIES=[
   {key:'tees',   label:'Tees'},
   {key:'polos',  label:'Polos'},
   {key:'hoodies',label:'Hoodies'},
+  {key:'sweatshirts',label:'Sweatshirts'},
   {key:'jerseys',label:'Jerseys'},
   {key:'bags',   label:'Bags'},
 ];
@@ -79,6 +83,7 @@ const AUDIENCES=[
   {key:'all',   label:'Everyone'},
   {key:'men',   label:'Men'},
   {key:'women', label:'Women'},
+  {key:'kids',  label:'Kids'},
 ];
 let prodCategory='all';
 let prodAudience='all';
@@ -140,9 +145,9 @@ function renderProducts(){
 
   let list=PRODUCTS.filter(p=>{
     if(prodCategory!=='all' && p.category!==prodCategory) return false;
-    // Unisex items (bags, jerseys) belong under either audience filter —
-    // only garments with a real audience-specific fit get excluded.
-    if(prodAudience!=='all' && p.audience!==prodAudience && p.audience!=='unisex') return false;
+    // Audience tabs show the exact cut requested. Unisex products remain
+    // under Everyone instead of leaking jerseys and bags into Women/Kids.
+    if(prodAudience!=='all' && p.audience!==prodAudience) return false;
     return !term || p.name.toLowerCase().includes(term);
   });
   const rating=p=>reviewSummary[p.id]?.average||0;
@@ -185,8 +190,8 @@ function renderProducts(){
    share CATEGORIES/AUDIENCES with the products page so there's one
    list of categories, not two that can drift. */
 const CATEGORY_ICON={tees:'checkroom',polos:'checkroom',hoodies:'dry_cleaning',
-  jerseys:'sports_score',bags:'shopping_bag'};
-const AUDIENCE_ICON={men:'man',women:'woman'};
+  sweatshirts:'styler',jerseys:'sports_score',bags:'shopping_bag'};
+const AUDIENCE_ICON={men:'man',women:'woman',kids:'child_care'};
 
 function browseCategory(audience,category){
   prodAudience=audience; prodCategory=category;
@@ -196,7 +201,7 @@ function browseCategory(audience,category){
 function renderHomeCategories(){
   const aBar=document.getElementById('homeAudienceTiles');
   if(aBar) aBar.innerHTML=AUDIENCES.filter(a=>a.key!=='all').map(a=>{
-    const count=PRODUCTS.filter(p=>p.audience===a.key||p.audience==='unisex').length;
+    const count=PRODUCTS.filter(p=>p.audience===a.key).length;
     return `
     <button class="card aud" onclick="browseCategory('${a.key}','all')" aria-label="Shop ${esc(a.label)}">
       <span class="aud-top">
