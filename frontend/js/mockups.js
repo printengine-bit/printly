@@ -126,11 +126,20 @@ function drawStage(ctx2d, garmentColor, x, y, w, h, radius){
 function drawMockup(ctx2d, mock, x, y, w, h){
   ctx2d.drawImage(mock,x,y,w,h);
 }
+/* Audience-specific catalogue SKUs reuse the photographed garment family
+   until dedicated shoots are uploaded. Resolve that family in the browser
+   too, so older database rows cannot fall back to a flat vector thumbnail. */
+function photoMockKey(pid){
+  if(MOCK.mocks[pid]) return pid;
+  const family=pid.split('-')[0];
+  const shared=family==='sw' ? 'rn' : family;
+  return MOCK.mocks[shared] ? shared : pid;
+}
 /* resolve which mockup key to use for a product + side */
 function mockKey(pid){
   const v=typeof printView==='function' ? printView(pid,state.side) : null;
   const key=v&&v.mock ? v.mock : (state.side==='front'?pid:pid+'_'+state.side);
-  return MOCK.mocks[key] ? key : pid;
+  return MOCK.mocks[key] ? key : photoMockKey(pid);
 }
 /* ── Garment size ─────────────────────────────────────────────────
    The mockup photos are one garment. Which one: REF_SIZE. Everything else

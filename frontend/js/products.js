@@ -43,7 +43,8 @@ function drawProductThumb(cnv,id){
   const c=cnv.getContext('2d');
   c.clearRect(0,0,cnv.width,cnv.height);
   // photo mockup thumbnail if available
-  const mock=printViews(id)[0]?.mock||id;
+  const configured=printViews(id)[0]?.mock||id;
+  const mock=MOCK.mocks[configured] ? configured : photoMockKey(id);
   const img=getRecoloredMock(mock,THUMB_COLORS[id]||'#FFFFFF');
   if(img){
     const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
