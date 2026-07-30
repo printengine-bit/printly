@@ -389,7 +389,7 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
 
 /* Embedded product customizer: the canvas is now part of the product page,
    with buying controls beside it and creative tools directly underneath. */
-.pdp-customizer-mount{margin-top:20px}
+.pdp-customizer-mount{margin-top:12px}
 .studio.pdp-mode{
   display:grid;grid-template-columns:minmax(0,1fr) 410px;
   align-items:start;gap:0;min-height:760px;
@@ -480,7 +480,7 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
 .canvas-print-bar,.pdp-tool-close{display:none}
 .studio.pdp-mode{
   grid-template-columns:minmax(0,1fr) 500px;
-  min-height:0;border-radius:14px;
+  min-height:0;border-radius:10px;
 }
 .studio.pdp-mode .st-stage{
   min-height:0;padding:0 14px 12px;justify-content:flex-start;
@@ -503,7 +503,7 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
 #canvasPrintGroups .material-symbols-outlined{font-size:16px;color:var(--lime)}
 .studio.pdp-mode .st-canvas-wrap{gap:8px;width:100%;max-height:none}
 .studio.pdp-mode .canvas-frame{
-  width:min(470px,calc(100vh - 280px));max-width:100%;
+  width:min(500px,calc(100vh - 260px));max-width:100%;
   border-radius:10px;background:var(--surface-container-low);
 }
 .studio.pdp-mode:not(.has-selection) .st-ruler,
@@ -577,7 +577,9 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
 .studio.pdp-mode .pdp-size-option .tier-hint{display:none}
 .studio.pdp-mode .size-pick{margin:0}
 .studio.pdp-mode .size-pick .sizes{margin:0 0 7px;gap:5px}
-.studio.pdp-mode .size-pick .size-btn{min-height:34px;padding:7px 3px}
+.studio.pdp-mode .size-pick .size-btn{
+  min-height:34px;padding:7px 3px;background:var(--surface-container-lowest);
+}
 .studio.pdp-mode .qty-row{gap:5px}
 .studio.pdp-mode .size-step{width:34px;height:34px}
 .studio.pdp-mode .size-num{min-height:34px}

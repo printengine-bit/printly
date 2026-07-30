@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   PRINTLY — "Streetwear Black" design system
+   PRINTLY — light-first storefront design system
    Tokens come from the Stitch export (streetwear_black/DESIGN.md).
 
    NOTE on values: DESIGN.md's prose quotes #111111 / #D4FF3F / #FF3B7A,
@@ -7,8 +7,8 @@
    #ce0358. The token values win here — they're what the approved screens
    look like.
 
-   Native dark mode. Depth comes from tonal layering + lime glow, never
-   from soft drop shadows.
+   Light mode is the storefront default; dark mode remains user-selectable.
+   Depth comes from restrained tonal layering and clear borders.
    ═══════════════════════════════════════════════════════════════ */
 
 :root{
@@ -72,17 +72,17 @@
 
   /* ── Radii ── */
   --r-sm:0.5rem;
-  --r:1rem;
-  --r-md:1.5rem;
-  --r-lg:2rem;
-  --r-xl:3rem;
+  --r:.75rem;
+  --r-md:1rem;
+  --r-lg:1.5rem;
+  --r-xl:2rem;
   --r-full:9999px;
 
   /* ── Spacing (strict 8px base) ── */
   --gutter:16px;
   --container-margin:24px;
-  --section-gap:80px;
-  --section-gap-sm:40px;
+  --section-gap:64px;
+  --section-gap-sm:32px;
 
   --glow-lime:0 0 15px rgba(200,242,50,.35);
   --glow-pink:0 0 15px rgba(206,3,88,.4);
@@ -99,17 +99,15 @@
    `data-theme` is stamped on <html> by js/theme.js before first paint.
    ────────────────────────────────────────────────────────────────── */
 :root[data-theme="light"]{
-  /* Acid paper, not white. Every surface carries a low-saturation wash of
-     the lime hue (~74°) so the light theme still reads as Printly rather
-     than as a default white page — and cards sit *above* the page tone
-     instead of both being #ffffff, which is what flattened it. Pure white
-     survives only in --surface-bright, for the rare lifted element. */
-  --surface:#eaedde;
-  --surface-container-lowest:#fdfdf8;
-  --surface-container-low:#f7f9ec;
-  --surface-container:#f2f5e5;
-  --surface-container-high:#e5e9d4;
-  --surface-container-highest:#d7ddc2;
+  /* Neutral daylight surfaces keep product photos and buying controls
+     visually dominant. Brand colour is concentrated in active states
+     instead of tinting every square centimetre of the page. */
+  --surface:#f4f5ef;
+  --surface-container-lowest:#ffffff;
+  --surface-container-low:#fafbf7;
+  --surface-container:#f6f7f1;
+  --surface-container-high:#eef1e6;
+  --surface-container-highest:#e3e7d8;
   --surface-bright:#ffffff;
 
   --on-surface:#191a14;
@@ -127,15 +125,15 @@
   --pink-bright:#a10244;
 
   --scrim:rgba(23,26,16,.45);
-  --hdr-bg:rgba(234,237,222,.85);
-  --sheet-bg:rgba(247,249,236,.93);
-  --stage:#e2e7d2;
+  --hdr-bg:rgba(255,255,255,.92);
+  --sheet-bg:rgba(255,255,255,.94);
+  --stage:#eef1e7;
   --warn-ink:#7a4b00;
   --warn-bg:rgba(255,199,117,.35);
   --tint-lime:rgba(139,176,0,.18);
   --tint-lime-soft:rgba(139,176,0,.07);
   --tint-pink:rgba(206,3,88,.12);
-  --shadow-card:0 18px 40px rgba(23,23,20,.16);
+  --shadow-card:0 12px 30px rgba(23,23,20,.10);
 
   --glow-lime:0 6px 18px rgba(23,23,20,.12);
   --glow-pink:0 6px 18px rgba(206,3,88,.18);
@@ -203,13 +201,13 @@ a{color:inherit;text-decoration:none}
   backdrop-filter:blur(12px);
   border-bottom:1px solid var(--outline-variant);
 }
-.hdr-inner{display:flex;align-items:center;gap:32px;padding:14px var(--container-margin);max-width:1280px;margin:0 auto}
+.hdr-inner{display:flex;align-items:center;gap:28px;padding:10px var(--container-margin);max-width:1280px;margin:0 auto}
 .logo{
   font-family:var(--ff-display);font-weight:900;font-size:24px;
   letter-spacing:-.03em;text-transform:uppercase;color:var(--primary);cursor:pointer;
 }
 .logo b{color:var(--lime-ink);font-weight:900}
-.nav{display:flex;gap:28px;flex:1}
+.nav{display:flex;gap:22px;flex:1}
 .nav-btn{
   font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
   color:var(--on-surface-variant);padding:4px 0;
@@ -217,9 +215,9 @@ a{color:inherit;text-decoration:none}
 }
 .nav-btn:hover{color:var(--lime-ink)}
 .nav-btn.on{color:var(--lime-ink);border-bottom-color:var(--lime)}
-.hdr-right{display:flex;align-items:center;gap:12px}
-.cart-btn{position:relative;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--r-full);color:var(--on-surface);transition:color .18s}
-.cart-btn:hover{color:var(--lime-ink)}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.cart-btn{position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:var(--r-sm);color:var(--on-surface);transition:background .18s,color .18s}
+.cart-btn:hover{background:var(--surface-container-high);color:var(--lime-ink)}
 .cart-count{
   position:absolute;top:4px;right:2px;min-width:18px;height:18px;padding:0 5px;
   background:var(--pink);color:#fff;border-radius:var(--r-full);
@@ -274,7 +272,7 @@ a{color:inherit;text-decoration:none}
   background:var(--surface-container-low);border-bottom:1px solid var(--outline-variant);
   overflow-x:auto;
 }
-.trust-strip-inner{display:flex;gap:32px;padding:10px var(--container-margin);white-space:nowrap}
+.trust-strip-inner{display:flex;justify-content:space-between;gap:28px;padding:8px var(--container-margin);white-space:nowrap}
 .trust-strip-inner span{
   display:inline-flex;align-items:center;gap:6px;
   font-size:12.5px;font-weight:600;color:var(--on-surface-variant);
@@ -290,22 +288,22 @@ body.pdp-active #pdpBody .crumb{margin-bottom:9px;white-space:nowrap;overflow:hi
 /* ── Buttons ──────────────────────────────────────────────────── */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  padding:14px 28px;border-radius:var(--r-full);
+  padding:12px 22px;border-radius:var(--r-sm);
   font-size:14px;font-weight:700;line-height:1;
   transition:transform .15s,box-shadow .18s,background .18s,color .18s,border-color .18s;
   min-height:44px;
 }
 .btn:active{transform:scale(.97)}
 .btn-primary{background:var(--lime);color:var(--on-lime)}
-.btn-primary:hover{box-shadow:var(--glow-lime);transform:translateY(-2px)}
+.btn-primary:hover{background:var(--lime-dim);box-shadow:0 4px 12px rgba(23,23,20,.12)}
 .btn-primary:active{transform:scale(.97) translateY(0)}
-.btn-ghost{background:transparent;border:1px solid var(--lime);color:var(--lime-ink)}
-.btn-ghost:hover{background:var(--tint-lime-soft);box-shadow:var(--glow-lime)}
-.btn-quiet{background:var(--surface-container-high);color:var(--on-surface);border:1px solid var(--outline-variant)}
+.btn-ghost{background:var(--surface-container-lowest);border:1px solid var(--outline-variant);color:var(--on-surface)}
+.btn-ghost:hover{background:var(--surface-container-high);border-color:var(--outline);color:var(--lime-ink)}
+.btn-quiet{background:var(--surface-container-lowest);color:var(--on-surface);border:1px solid var(--outline-variant)}
 .btn-quiet:hover{border-color:var(--lime);color:var(--lime-ink)}
 .btn-pink{background:var(--pink);color:#fff}
-.btn-pink:hover{box-shadow:var(--glow-pink);transform:translateY(-2px)}
-.btn-sm{padding:9px 18px;font-size:12px;min-height:38px}
+.btn-pink:hover{box-shadow:0 4px 12px rgba(206,3,88,.18)}
+.btn-sm{padding:8px 15px;font-size:12px;min-height:38px}
 .btn-block{width:100%}
 .btn:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
 
@@ -320,14 +318,14 @@ body.pdp-active #pdpBody .crumb{margin-bottom:9px;white-space:nowrap;overflow:hi
 
 /* ── Cards ────────────────────────────────────────────────────── */
 .card{
-  background:var(--surface-container-low);
+  background:var(--surface-container-lowest);
   border:1px solid var(--outline-variant);
-  border-radius:var(--r-md);
+  border-radius:var(--r);
   transition:border-color .18s,box-shadow .18s,transform .18s;
 }
-.card-pad{padding:24px}
-.card-hover:hover{border-color:var(--lime);box-shadow:var(--glow-lime)}
-.card-lift:hover{transform:translateY(-3px)}
+.card-pad{padding:22px}
+.card-hover:hover{border-color:var(--outline);box-shadow:0 8px 22px rgba(23,23,20,.09)}
+.card-lift:hover{transform:translateY(-2px)}
 
 /* ── Badges ───────────────────────────────────────────────────── */
 .badge{
@@ -349,7 +347,7 @@ body.pdp-active #pdpBody .crumb{margin-bottom:9px;white-space:nowrap;overflow:hi
 }
 .inp,input[type=text],input[type=email],input[type=password],input[type=number],input[type=tel],select,textarea{
   width:100%;padding:12px 14px;
-  background:var(--surface-container-high);
+  background:var(--surface-container-lowest);
   border:1px solid var(--outline-variant);
   border-radius:var(--r-sm);
   color:var(--on-surface);
@@ -407,10 +405,10 @@ input:-webkit-autofill:focus{
 .modal-bg.on{display:flex}
 .modal{
   position:relative;width:100%;max-width:420px;
-  background:var(--surface-container-low);
+  background:var(--surface-container-lowest);
   border:1px solid var(--outline-variant);
-  border-radius:var(--r-lg);
-  padding:32px;
+  border-radius:var(--r-md);
+  padding:28px;
 }
 .modal-wide{max-width:900px;max-height:86vh;overflow-y:auto}
 .modal-x{

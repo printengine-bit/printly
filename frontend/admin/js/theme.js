@@ -6,12 +6,10 @@
 const THEME_KEY = 'printly-theme';
 
 function storedTheme(){
-  try{ return localStorage.getItem(THEME_KEY) || 'system'; }catch(e){ return 'system'; }
+  try{ return localStorage.getItem(THEME_KEY) || 'light'; }catch(e){ return 'light'; }
 }
 function resolvedTheme(){
-  const t = storedTheme();
-  if(t === 'light' || t === 'dark') return t;
-  return matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  return storedTheme() === 'dark' ? 'dark' : 'light';
 }
 function applyTheme(){
   const t = resolvedTheme();
@@ -28,6 +26,3 @@ function toggleTheme(){
   try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
   applyTheme();
 }
-matchMedia('(prefers-color-scheme: light)').addEventListener('change', ()=>{
-  if(storedTheme() === 'system') applyTheme();
-});
