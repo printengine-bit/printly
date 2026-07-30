@@ -184,6 +184,8 @@ let state = {
   plainItem:false,
   sel:-1,
   guides:{v:false,h:false},
+  cropMode:false,
+  editorZoom:1,
   cart:[],
   aiTries:0,
   /* Per-size quantities are the single source of truth for how many pieces

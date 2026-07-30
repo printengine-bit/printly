@@ -412,16 +412,8 @@
         <div class="canvas-frame" id="canvasFrame">
           <canvas id="teeCanvas" width="520" height="560"></canvas>
         </div>
-        <div class="selected-actions" id="selectedActions">
-          <button onclick="scaleSelected(1.12)"><span class="material-symbols-outlined">zoom_in</span>Scale</button>
-          <button data-image-only onclick="cropImageSel()"><span class="material-symbols-outlined">crop</span>Crop</button>
-          <button data-image-only onclick="effectImageSel()"><span class="material-symbols-outlined">auto_fix_high</span>Effects</button>
-          <button data-image-only onclick="replaceImageSel()"><span class="material-symbols-outlined">find_replace</span>Replace</button>
-          <button onclick="alignSel('cx')"><span class="material-symbols-outlined">open_with</span>Position</button>
-          <button onclick="toggleLockSel()"><span class="material-symbols-outlined">lock</span>Lock</button>
-          <button onclick="duplicateSel()"><span class="material-symbols-outlined">content_copy</span></button>
-          <button onclick="deleteSel()"><span class="material-symbols-outlined">delete</span></button>
-        </div>
+        <!-- Rebuilt by renderContextToolbar() for the selected text/image. -->
+        <div class="selected-actions" id="selectedActions" aria-live="polite"></div>
         <div class="measure" id="measureBar"></div>
         <div class="object-actions">
           <button onclick="openImagePicker()"><span class="material-symbols-outlined">image</span>Add image</button>
@@ -430,6 +422,27 @@
           <button id="btnPreview" onclick="togglePreview()"><span class="material-symbols-outlined">visibility</span>Preview</button>
         </div>
         <div class="print-view-tabs" id="printViewTabs"></div>
+        <div class="utility-rail" id="utilityRail" aria-label="Editor utilities">
+          <div class="utility-zoom">
+            <span class="material-symbols-outlined">zoom_out</span>
+            <input id="editorZoom" type="range" min="1" max="4" step=".25" value="1"
+                   aria-label="Canvas zoom" oninput="setEditorZoom(this.value)">
+            <span class="material-symbols-outlined">zoom_in</span>
+            <output id="editorZoomValue">100%</output>
+          </div>
+          <button onclick="focusLayerPanel()" title="Layers">
+            <span class="material-symbols-outlined">layers</span><span>Layers</span>
+          </button>
+          <button onclick="downloadPNG()" title="Download PNG">
+            <span class="material-symbols-outlined">download</span><span>Download</span>
+          </button>
+          <button onclick="shareDesign()" title="Share design">
+            <span class="material-symbols-outlined">share</span><span>Share</span>
+          </button>
+          <button onclick="shareWhatsApp()" title="Share on WhatsApp">
+            <span class="material-symbols-outlined">chat</span><span>WhatsApp</span>
+          </button>
+        </div>
         <div class="badge badge-warn st-warn" id="stWarn">
           <span class="material-symbols-outlined" style="font-size:16px">warning</span>
           <span id="stWarnText">Object outside print area</span>
