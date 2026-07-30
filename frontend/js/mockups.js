@@ -27,15 +27,16 @@ function hexToRgb(h){
 /* Build a recolored mockup canvas.
 
    Two things happen per pixel, both keyed off the ORIGINAL photo:
-   1. Recolor — white fabric multiplied by the target colour, so folds and
-      shadows survive (don't replace this with a flat fill).
+   1. Recolor — the source luminance is expanded before shading the target
+      colour, so white, pastel and near-black fabric all retain their folds.
    2. Background keyed to transparent. The source photos are shot on black,
       and leaving that black opaque is what made a black tee vanish into a
       dark page. With it keyed out the garment floats, and whatever draws it
       can put a contrasting stage behind — see stageFill().
 
-   Alpha ramps across 24–56 rather than switching at a threshold, otherwise
-   the garment gets a hard jagged edge where the photo's antialiasing was. */
+   Alpha ramps across 24–120 rather than switching at a threshold, otherwise
+   the garment gets a hard jagged edge where the photo's antialiasing was.
+   Existing alpha is retained for transparent sleeve PNGs. */
 function getRecoloredMock(pid,color){
   const key=pid+'|'+color;
   if(mockCache[key]) return mockCache[key];
@@ -43,19 +44,32 @@ function getRecoloredMock(pid,color){
   const w=img.naturalWidth,h=img.naturalHeight;
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const x=c.getContext('2d'); x.drawImage(img,0,0);
-  const tint = color!=='#FFFFFF';
-  const [tr,tg,tb] = tint ? hexToRgb(color) : [0,0,0];
+  const [tr,tg,tb] = hexToRgb(color);
+  const targetLum=(.2126*tr+.7152*tg+.0722*tb)/255;
   const d=x.getImageData(0,0,w,h), p=d.data;
   for(let i=0;i<p.length;i+=4){
-    const r=p[i],g=p[i+1],b=p[i+2];
+    const r=p[i],g=p[i+1],b=p[i+2],a=p[i+3];
     const m = r>g ? (r>b?r:b) : (g>b?g:b);      // brightest channel
     if(m<=24){ p[i+3]=0; continue; }            // pure background
-    if(m<56) p[i+3] = Math.round((m-24)/32*255);
-    if(tint){
-      p[i]  = r/255*tr;
-      p[i+1]= g/255*tg;
-      p[i+2]= b/255*tb;
-    }
+    const edgeAlpha=m<120 ? (m-24)/96 : 1;
+    p[i+3]=Math.round(a*edgeAlpha);
+
+    // Expand the pale source fabric's narrow luminance range so seams,
+    // pockets and folds stay distinct on white and pastel garments.
+    const lum=.2126*r+.7152*g+.0722*b;
+    // JPEG edge pixels are the white garment blended with its old black
+    // background. Undo that premultiplication before deriving fabric tone,
+    // otherwise the cut-out gets a dark dotted halo on a white stage.
+    const fabricLum=edgeAlpha<1 ? Math.min(255,lum/edgeAlpha) : lum;
+    const tone=Math.max(0,Math.min(1,(fabricLum-120)/135));
+    const shade=.10+.90*tone;
+
+    // A neutral specular lift prevents near-black dyes from crushing every
+    // highlight into the same flat value while retaining the selected hue.
+    const sheen=36*tone*tone*tone*(1-targetLum);
+    p[i]  = Math.min(255,Math.round(tr*shade+sheen));
+    p[i+1]= Math.min(255,Math.round(tg*shade+sheen));
+    p[i+2]= Math.min(255,Math.round(tb*shade+sheen));
   }
   x.putImageData(d,0,0);
   mockCache[key]=c; return c;
@@ -75,6 +89,17 @@ function drawStage(ctx2d, garmentColor, x, y, w, h, radius){
   if(r>0 && typeof ctx2d.roundRect === 'function') ctx2d.roundRect(x,y,w,h,r);
   else ctx2d.rect(x,y,w,h);
   ctx2d.fill();
+  ctx2d.restore();
+}
+
+/* Fabric modelling belongs in getRecoloredMock(). This restrained contact
+   shadow only separates the cut-out garment from its white product stage. */
+function drawMockup(ctx2d, mock, x, y, w, h){
+  ctx2d.save();
+  ctx2d.shadowColor='rgba(13,31,60,.16)';
+  ctx2d.shadowBlur=Math.max(7,Math.min(w,h)*.018);
+  ctx2d.shadowOffsetY=Math.max(3,Math.min(w,h)*.008);
+  ctx2d.drawImage(mock,x,y,w,h);
   ctx2d.restore();
 }
 /* resolve which mockup key to use for a product + side */

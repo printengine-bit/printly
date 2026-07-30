@@ -41,12 +41,13 @@ function drawProductThumb(cnv,id){
   const c=cnv.getContext('2d');
   c.clearRect(0,0,cnv.width,cnv.height);
   // photo mockup thumbnail if available
-  const img=mockImgs[id];
+  const img=getRecoloredMock(id,THUMB_COLORS[id]||'#FFFFFF');
   if(img){
-    const iw=img.naturalWidth,ih=img.naturalHeight;
+    const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
     const sc=Math.min(cnv.width/iw,cnv.height/ih);
     const dw=iw*sc,dh=ih*sc;
-    c.drawImage(img,(cnv.width-dw)/2,(cnv.height-dh)/2,dw,dh);
+    drawStage(c,THUMB_COLORS[id]||'#FFFFFF',0,0,cnv.width,cnv.height,0);
+    drawMockup(c,img,(cnv.width-dw)/2,(cnv.height-dh)/2,dw,dh);
     return;
   }
   const s=Math.min(cnv.width/520,cnv.height/560);

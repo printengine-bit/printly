@@ -344,7 +344,7 @@ function draw(clean){
       // Stage first: the mockup's own background is transparent now, so
       // without this a dark garment sits on a dark page and disappears.
       drawStage(ctx,state.shirtColor,L.ox,L.oy,L.dw,L.dh);
-      ctx.drawImage(mock,L.ox,L.oy,L.dw,L.dh);
+      drawMockup(ctx,mock,L.ox,L.oy,L.dw,L.dh);
     }
     else drawGarment(ctx,state.product.id,state.shirtColor);
   } else {
@@ -877,7 +877,7 @@ function heroLoop(){
     // also ate any garment dark enough to look like the backdrop. It now
     // lives in getRecoloredMock() where it can key off the original photo.
     drawStage(hctx,shirt,ox,oy,dw,dh,14);
-    hctx.drawImage(mock||img,ox,oy,dw,dh);
+    drawMockup(hctx,mock||img,ox,oy,dw,dh);
     drawHeroText(l1,l2,txt,type);
   } else {
     hctx.save(); hctx.scale(360/520,380/560);
@@ -902,7 +902,7 @@ function drawAiPreview(){
     const s=Math.min(c.width/iw,c.height/ih);
     const ox=(c.width-iw*s)/2, oy=(c.height-ih*s)/2;
     drawStage(x,'#111111',ox,oy,iw*s,ih*s,14);
-    x.drawImage(mock,ox,oy,iw*s,ih*s);
+    drawMockup(x,mock,ox,oy,iw*s,ih*s);
   }
   x.textAlign='center';
   x.fillStyle='#c8f232'; x.font='800 30px "Archivo Narrow"';
