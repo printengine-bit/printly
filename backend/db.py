@@ -366,6 +366,29 @@ def init_db():
 
     _backfill_audit(c)
     _seed_catalog(c)
+
+    # Real category structure: who a garment is cut for, independent of what
+    # kind of garment it is — filtering "Women" and "Tees" are two different
+    # axes over the same table, not one hardcoded list per category.
+    _needs_audience_backfill = "audience" not in {r[1] for r in c.execute("PRAGMA table_info(products)")}
+    _add_column(c, "products", "audience", "TEXT NOT NULL DEFAULT 'unisex'")
+    _add_column(c, "products", "category", "TEXT NOT NULL DEFAULT ''")
+    if _needs_audience_backfill:
+        # One-time, gated on the column not existing yet — never repeats, so
+        # an admin's later edits to these same fields are never undone by a
+        # future boot. The original catalogue was implicitly a men's/unisex
+        # cut; tagging it explicitly is what makes "Men" as a filter mean
+        # something now that real Women's lines exist alongside it.
+        c.executemany(
+            "UPDATE products SET audience=?, category=?, name=? WHERE slug=?", [
+            ("men", "tees", "Men's Round Neck T-Shirt", "rn"),
+            ("men", "polos", "Men's Polo Shirt", "po"),
+            ("men", "hoodies", "Men's Hoodie", "hd"),
+            ("unisex", "jerseys", "Sports Jersey", "js"),
+            ("unisex", "bags", "Tote Bag", "tb"),
+        ])
+    _seed_women_lines(c)
+
     c.commit()
     c.close()
 
@@ -531,6 +554,88 @@ def _seed_catalog(conn):
     # Stock starts at zero everywhere. That's honest — nobody has counted
     # the blanks yet — and it's why placing an order must NOT be blocked on
     # stock. See catalog.py's apply_stock().
+
+
+# Real Women's product lines — not the same three garments re-tagged, but
+# their own size charts. The numbers are a genuine women's-fit chart, not
+# the Men's numbers copied across: a Women's Round Neck at "M" is not the
+# same chest measurement as a Men's Round Neck at "M", and showing the
+# men's figures under a women's label would be actively wrong. Kept in the
+# same S–3XL label scale as the rest of the catalogue on purpose — the
+# frontend's sizeKeys()/SIZES are global, not per-product, so a genuinely
+# different label scale (XS–XL) is real frontend work, not a data change;
+# the label staying shared while the measurements underneath it don't is
+# the pragmatic version of this until that's worth doing.
+SEED_WOMEN_PRODUCTS = [
+    {"slug": "rn-women", "name": "Women's Round Neck T-Shirt", "emoji": "👕", "base": 599,
+     "tiers": [(1, 599), (10, 449), (50, 349), (100, 279)],
+     "fabric": "180 GSM · 100% combed cotton, bio-washed", "fit": "Fitted, tapered waist",
+     "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
+              "Warm iron, avoid the print"],
+     "chest": [40, 42, 45, 48, 51, 54], "length": [60, 62, 64, 66, 68, 70],
+     "category": "tees"},
+    {"slug": "po-women", "name": "Women's Polo Shirt", "emoji": "🎽", "base": 899,
+     "tiers": [(1, 899), (10, 699), (50, 549), (100, 449)],
+     "fabric": "220 GSM · pique cotton with rib collar", "fit": "Fitted, tapered waist",
+     "care": ["Machine wash cold", "Do not bleach", "Hang dry in shade", "Iron on reverse"],
+     "chest": [41, 43, 46, 49, 52, 55], "length": [61, 63, 65, 67, 69, 71],
+     "category": "polos"},
+    {"slug": "hd-women", "name": "Women's Hoodie", "emoji": "🧥", "base": 1299,
+     "tiers": [(1, 1299), (10, 999), (50, 799), (100, 649)],
+     "fabric": "320 GSM · brushed fleece, cotton-poly blend", "fit": "Cropped, fitted waist",
+     "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
+              "Do not iron the print"],
+     "chest": [46, 48, 51, 54, 57, 60], "length": [56, 58, 60, 62, 64, 66],
+     "category": "hoodies"},
+]
+
+
+def _seed_women_lines(conn):
+    """Adds the Women's lines alongside the original catalogue rather than
+    inside it — _seed_catalog() only ever populates an empty products
+    table, so a genuinely new SKU added later needs its own guard. Guarded
+    per-slug (like _seed_zones()), so it's safe to call on every boot and
+    only ever inserts what's actually missing.
+
+    No product photography exists for these yet — mockLayout() returns
+    null for any slug with no entry in MOCK.mocks, which is the existing,
+    already-correct "no photo" path: draw() falls back to drawGarment()'s
+    vector silhouette. studio.js gives audience='women' products their own
+    fitted silhouette there rather than reusing the Men's one unchanged, so
+    the placeholder at least looks like a different garment while real
+    photography is pending.
+    """
+    import json as _json
+    # init_db()'s connection is a plain sqlite3.connect() with no row_factory
+    # (unlike get_db()'s per-request connection), so rows come back as tuples.
+    existing = {r[0] for r in conn.execute("SELECT slug FROM products").fetchall()}
+    base_sort = conn.execute("SELECT COALESCE(MAX(sort),0) FROM products").fetchone()[0]
+    for i, p in enumerate(SEED_WOMEN_PRODUCTS):
+        if p["slug"] in existing:
+            continue
+        cur = conn.execute(
+            """INSERT INTO products(slug,name,emoji,fabric,care_json,fit_label,
+                                    size_chart_json,base_price,one_size,sort,
+                                    audience,category)
+               VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (p["slug"], p["name"], p["emoji"], p["fabric"], _json.dumps(p["care"]),
+             p["fit"], _json.dumps({"chest": p["chest"], "length": p["length"]}),
+             p["base"], 0, base_sort + i + 1, "women", p["category"]),
+        )
+        pid = cur.lastrowid
+        for min_qty, price in p["tiers"]:
+            conn.execute(
+                "INSERT INTO price_tiers(product_id,min_qty,unit_price) VALUES(?,?,?)",
+                (pid, min_qty, price))
+        for hexv, cname, code in COLORS:
+            for label in SIZES:
+                sku = "%s-%s-%s" % (p["slug"].upper(), code, label.upper().replace(" ", ""))
+                conn.execute(
+                    """INSERT INTO variants(product_id,color_hex,color_name,
+                                            size_label,sku) VALUES(?,?,?,?,?)""",
+                    (pid, hexv, cname, label, sku))
+    # Same honesty as the original seed: stock starts at zero, nobody has
+    # counted these blanks either.
 
 
 def _add_column(conn, table, column, decl):

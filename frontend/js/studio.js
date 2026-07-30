@@ -143,7 +143,17 @@ function drawGarment(c,type,color){
   c.fillStyle=color; c.strokeStyle=LINE; c.lineWidth=2;
   c.lineJoin='round';
 
-  if(type==='tb'){                                   // ── TOTE BAG ──
+  // Women's lines share the men's silhouette IDs plus a '-women' suffix
+  // (rn-women, po-women, hd-women) — no photo exists for them yet, so this
+  // vector fallback is what actually renders. Strip the suffix to pick the
+  // right garment shape, then nudge the outline narrower at the waist so the
+  // placeholder at least reads as a fitted cut instead of reusing the men's
+  // silhouette unchanged.
+  const women=type.endsWith('-women');
+  const base=women?type.slice(0,-'-women'.length):type;
+  if(women){ c.save(); c.translate(260,0); c.scale(0.92,1); c.translate(-260,0); }
+
+  if(base==='tb'){                                   // ── TOTE BAG ──
     c.strokeStyle=LINE; c.lineWidth=7; c.lineCap='round';
     c.beginPath(); c.moveTo(196,195); c.bezierCurveTo(196,95,246,95,246,195); c.stroke();
     c.beginPath(); c.moveTo(274,195); c.bezierCurveTo(274,95,324,95,324,195); c.stroke();
@@ -154,7 +164,7 @@ function drawGarment(c,type,color){
     c.closePath(); c.fill(); c.stroke();
     c.beginPath(); c.strokeStyle=SOFT; c.moveTo(152,205); c.lineTo(368,205); c.stroke();
 
-  } else if(type==='hd'){                            // ── HOODIE ──
+  } else if(base==='hd'){                            // ── HOODIE ──
     c.beginPath();
     c.moveTo(140,115); c.quadraticCurveTo(195,82,260,82);
     c.quadraticCurveTo(325,82,380,115);
@@ -179,7 +189,7 @@ function drawGarment(c,type,color){
     c.beginPath(); c.moveTo(176,406); c.lineTo(344,406);
     c.lineTo(344,474); c.lineTo(176,474); c.closePath(); c.stroke();
 
-  } else if(type==='js'){                            // ── SPORTS JERSEY ──
+  } else if(base==='js'){                            // ── SPORTS JERSEY ──
     c.beginPath();
     c.moveTo(155,95); c.lineTo(260,150); c.lineTo(365,95);
     c.lineTo(452,148); c.lineTo(416,208); c.lineTo(380,182);
@@ -194,7 +204,7 @@ function drawGarment(c,type,color){
     c.beginPath(); c.moveTo(160,190); c.lineTo(160,498); c.stroke();
     c.beginPath(); c.moveTo(360,190); c.lineTo(360,498); c.stroke();
 
-  } else if(type==='po'){                            // ── POLO SHIRT ──
+  } else if(base==='po'){                            // ── POLO SHIRT ──
     c.beginPath();
     c.moveTo(150,90); c.quadraticCurveTo(190,62,260,62);
     c.quadraticCurveTo(330,62,370,90);
@@ -229,6 +239,7 @@ function drawGarment(c,type,color){
     c.beginPath(); c.strokeStyle='rgba(13,31,60,.35)';
     c.moveTo(205,72); c.quadraticCurveTo(260,115,315,72); c.stroke();
   }
+  if(women) c.restore();
   c.restore();
 }
 /* `clean` renders the garment + artwork only, with no editor overlays —

@@ -194,6 +194,7 @@ a{color:inherit;text-decoration:none}
 .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.grid-5{grid-template-columns:repeat(5,minmax(0,1fr))}
 
 /* ── Header ───────────────────────────────────────────────────── */
 .hdr{
@@ -226,6 +227,62 @@ a{color:inherit;text-decoration:none}
 }
 .cart-count[data-count="0"]{display:none}
 .hamburger{display:none;width:44px;height:44px;align-items:center;justify-content:center;border-radius:var(--r-sm);color:var(--on-surface)}
+
+/* ── Header search ────────────────────────────────────────────── */
+/* Desktop: an icon in hdr-right opens a dropdown panel below the header.
+   Mobile: hdr-right is already at capacity (four 44px controls exactly
+   filling 375px, see the @media(max-width:900px) note below), so there the
+   search box lives inline at the top of the hamburger drawer instead of a
+   fifth icon competing for the same row. */
+.nav-search{display:none}
+.hdr-search-panel{
+  display:none;position:absolute;top:100%;left:0;right:0;
+  background:var(--surface);border-bottom:1px solid var(--outline-variant);
+  box-shadow:0 16px 32px rgba(0,0,0,.18);
+}
+.hdr-search-panel.on{display:block}
+.hdr-search-box{
+  display:flex;align-items:center;gap:12px;
+  padding:22px 0 14px;border-bottom:1px solid var(--outline-variant);
+}
+.hdr-search-box input{flex:1;background:none;border:none;color:var(--on-surface);font-size:17px}
+.hdr-search-box input:focus{outline:none}
+.hdr-search-box .material-symbols-outlined{color:var(--on-surface-variant);font-size:24px}
+.hdr-search-results{padding:8px 0 16px}
+.hdr-search-results .sr-item{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 8px;border-radius:var(--r-sm);cursor:pointer;min-height:44px;
+}
+.hdr-search-results .sr-item:hover{background:var(--surface-container-low)}
+.hdr-search-results .sr-empty{padding:14px 8px;color:var(--on-surface-variant);font-size:13.5px}
+@media(max-width:900px){
+  #searchBtn{display:none}
+  .nav-search{
+    display:flex;align-items:center;gap:10px;
+    background:var(--surface-container-low);border:1px solid var(--outline-variant);
+    border-radius:var(--r-sm);padding:0 14px;height:44px;margin-bottom:8px;
+  }
+  .nav-search input{flex:1;height:100%;background:none;border:none;color:var(--on-surface);font-size:15px}
+  .nav-search input:focus{outline:none}
+  .nav-search .material-symbols-outlined{color:var(--on-surface-variant);font-size:20px}
+  #navSearchResults:empty{display:none}
+  #navSearchResults{margin-bottom:8px}
+}
+
+/* ── Trust strip ──────────────────────────────────────────────── */
+.trust-strip{
+  background:var(--surface-container-low);border-bottom:1px solid var(--outline-variant);
+  overflow-x:auto;
+}
+.trust-strip-inner{display:flex;gap:32px;padding:10px var(--container-margin);white-space:nowrap}
+.trust-strip-inner span{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12.5px;font-weight:600;color:var(--on-surface-variant);
+}
+.trust-strip-inner .material-symbols-outlined{font-size:16px;color:var(--lime-ink)}
+@media(max-width:560px){
+  .trust-strip-inner{gap:22px}
+}
 
 /* ── Buttons ──────────────────────────────────────────────────── */
 .btn{
@@ -449,7 +506,7 @@ input:-webkit-autofill:focus{
 
 /* ── Responsive ───────────────────────────────────────────────── */
 @media(max-width:1024px){
-  .grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid-4,.grid-5{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ftr-grid{grid-template-columns:1fr 1fr;gap:32px}
 }
 /* Nav collapses at 900px, not 768 — six uppercase items get cramped and
@@ -474,7 +531,7 @@ input:-webkit-autofill:focus{
     border-bottom:1px solid var(--outline-variant);
   }
   .nav-btn.on{border-bottom-color:var(--lime)}
-  .grid-3,.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid-3,.grid-4,.grid-5{grid-template-columns:repeat(2,minmax(0,1fr))}
   .hdr-inner{gap:12px}
 }
 @media(max-width:768px){
@@ -486,7 +543,7 @@ input:-webkit-autofill:focus{
   .aud a,.t-label[href],a.t-lime{display:inline-block;padding:10px 0}
 }
 @media(max-width:560px){
-  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .grid-2,.grid-3,.grid-4,.grid-5{grid-template-columns:1fr}
   .ftr-grid{grid-template-columns:1fr}
   .card-pad{padding:18px}
   .modal{padding:24px}

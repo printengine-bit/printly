@@ -46,6 +46,8 @@ def catalog_payload(db=None):
             "fit": p["fit_label"],
             "care": json.loads(p["care_json"] or "[]"),
             "chart": json.loads(p["size_chart_json"] or "{}"),
+            "audience": p["audience"],
+            "category": p["category"],
         })
     colors = [{"hex": r["color_hex"], "name": r["color_name"]} for r in db.execute(
         "SELECT DISTINCT color_hex,color_name FROM variants WHERE active=1 "
@@ -206,7 +208,7 @@ def _product_public(db, p):
            FROM variants WHERE product_id=?""", (p["id"],)).fetchone()
     return {"id": p["id"], "slug": p["slug"], "name": p["name"], "emoji": p["emoji"],
             "fabric": p["fabric"], "fit": p["fit_label"], "hsn_code": p["hsn_code"],
-            "cost_price": p["cost_price"],
+            "cost_price": p["cost_price"], "audience": p["audience"], "category": p["category"],
             "base_price": p["base_price"], "one_size": bool(p["one_size"]),
             "active": bool(p["active"]), "sort": p["sort"],
             "tiers": _tiers_for(db, p["id"]),
