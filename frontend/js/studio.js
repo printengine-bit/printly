@@ -234,8 +234,16 @@ function drawGarment(c,type,color){
 /* `clean` renders the garment + artwork only, with no editor overlays —
    used by captureThumb() so cart/design/order thumbnails don't have the
    print-area guide or selection UI baked into them. */
+/* `canvasZoom`/`camTx`/`camTy` are the current camera: draw() applies them
+   as the canvas's transform before painting the unchanged logical 520×560
+   scene, so this one line is what makes every existing drawImage/fillText
+   call in the function below sample fresh detail from the source images at
+   whatever resolution `cv.width`/`cv.height` currently hold — see
+   zoomToBox() for why that's a genuine fix and not just a bigger blur. */
 function draw(clean){
-  ctx.clearRect(0,0,520,560);
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.setTransform(canvasZoom,0,0,canvasZoom,camTx,camTy);
   const L=mockLayout(state.product.id);
   if(L){
     const mock=getRecoloredMock(L.key,state.shirtColor);
@@ -501,11 +509,10 @@ function applyPlacement(key){
   if(state.sel<0){ toast('Select which layer to place — tap it in the layers list'); return; }
   const P=pa(), box=placementBox(key,P);
   const tight=fitLayerToBox(Ls[state.sel], box);
-  // zoomToBox()/zoomOut() set canvasZoom, which draw() reads to size the
-  // selection chrome — they have to run BEFORE draw(), or the chrome bakes
-  // into the bitmap at the previous zoom level and then gets re-scaled by
-  // the newly-applied CSS transform on top of that. Drawing first was
-  // exactly how a "fixed 11px" delete badge ended up 66px across.
+  // zoomToBox()/zoomOut() are pure state-setters (see above) — they have to
+  // run BEFORE the one draw() below, or the canvas paints at the OLD zoom
+  // level and camTx/camTy/canvasZoom change out from under a bitmap that
+  // was never re-rendered against them.
   const full=key==='full-front'||key==='full-back';
   if(full) zoomOut(); else zoomToBox(box);
   draw();
@@ -521,56 +528,93 @@ function renderPlacementRow(){
   el.innerHTML=`<span class="placement-label">Placement</span>`
     +list.map(([k,label,icon])=>`<button class="placement-btn" onclick="applyPlacement('${k}')">
         <span class="material-symbols-outlined">${icon}</span>${label}</button>`).join('')
-    +(state._zoomed?`<button class="placement-btn zoom-out" onclick="zoomOut()">
+    +(state._zoomed?`<button class="placement-btn zoom-out" onclick="zoomOut();draw()">
         <span class="material-symbols-outlined">zoom_out</span>Full view</button>`:'');
 }
 
-/* Purely a CSS transform on the canvas element — the internal 520×560
-   drawing space never changes, so nothing downstream (pos(), layer maths,
-   export) needs to know the view is zoomed. pos() already reads the
-   canvas's live getBoundingClientRect(), which reflects the transform, so
-   drag/resize/click hit-testing keep working exactly as before while
-   zoomed in — see the .canvas-frame comment in index.html.
+/* ── The zoom camera ──────────────────────────────────────────────
+   First cut of this used a CSS transform: scale up the existing 520×560
+   canvas element optically, same pixels, just bigger on screen. That's why
+   an uploaded logo came out visibly soft when zoomed into a chest
+   placement — a few dozen actual pixels stretched to fill the viewport is
+   stretching, not detail.
 
-   `canvasZoom` is the one thing that DOES need to know: draw() divides its
-   selection-chrome sizes (the delete badge, size label, resize handle,
-   print-area dashes) by it, so that chrome stays a constant on-screen size
-   instead of being scaled up right along with the artwork — at 6x zoom, a
-   badge sized for the normal view would render 66px across and eclipse
-   whatever it's sitting next to. Callers must draw() AFTER this runs, not
-   before, or the chrome bakes into the bitmap at the wrong scale. */
-let canvasZoom = 1;
+   This version changes what draw() actually RENDERS instead. `cv.width`/
+   `cv.height` — the canvas's backing store, not its CSS size — grow to
+   match the frame's on-screen size × devicePixelRatio, and canvasZoom/
+   camTx/camTy describe a camera: draw() applies them as the 2D context's
+   transform before painting the unchanged logical 520×560 scene. Every
+   existing drawImage/fillText call benefits automatically, because canvas
+   samples fresh from the SOURCE image (the uploaded logo, the mockup
+   photo) at whatever resolution the backing store now asks for — not from
+   a small already-rendered patch. The CSS-displayed size of the canvas
+   never changes; only the resolution behind it does.
+
+   Ceiling on quality is now the source image's own resolution, same as it
+   always was for the final printed artwork — a decent uploaded PNG should
+   look sharp; the 720px mockup photos still won't hold up much past this
+   zoom level, and no amount of backing-store resolution fixes that (see
+   the CLAUDE.md note by SEED_ZONES / the mockups/ directory).
+
+   canvasZoom is still what draw() divides its selection-chrome sizes by
+   (the delete badge, size label, print-area dashes), for the same reason
+   as before: chrome baked into the bitmap at a fixed logical size would
+   now render enormous at high zoom just like the CSS version did. */
+let canvasZoom = 1, camTx = 0, camTy = 0;
+
+function resetCamera(){
+  cv.width = 520; cv.height = 560;
+  canvasZoom = 1; camTx = 0; camTy = 0;
+}
+
+/* State-setters only — no draw() call inside either. A caller that's also
+   repositioning a layer (applyPlacement) needs exactly one redraw for the
+   whole operation, not one here plus one of its own. */
 function zoomToBox(box){
   const frame=document.getElementById('canvasFrame'); if(!frame) return;
-  cv.style.transform='none';
-  void cv.offsetWidth;                              // flush before measuring
-  const r=cv.getBoundingClientRect();
-  const cx=r.left+r.width/2, cy=r.top+r.height/2;
-  const bx=r.left+(box.x+box.w/2)/520*r.width;
-  const by=r.top+(box.y+box.h/2)/560*r.height;
-  const pad=1.35;                                    // margin so the box doesn't touch the frame edge
-  const k=Math.min(6, Math.max(1.2, Math.min(520/(box.w*pad), 560/(box.h*pad))));
-  // Scaling from the canvas's own centre keeps the maths in one step: the
-  // box's centre lands at C + k*(offset from C), then a plain-pixel
-  // translate (applied as the OUTER transform, so it's untouched by the
-  // scale) walks that point onto the frame's centre.
-  const postBx=cx+k*(bx-cx), postBy=cy+k*(by-cy);
-  const fr=frame.getBoundingClientRect();
-  const dx=(fr.left+fr.width/2)-postBx, dy=(fr.top+fr.height/2)-postBy;
-  cv.style.transformOrigin='center center';
-  cv.style.transform=`translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${k.toFixed(3)})`;
-  canvasZoom=k;
+  // renderPlacementRow() FIRST: it's about to add the "Full view" exit
+  // button, and .placement-row is a flex sibling of .canvas-frame in the
+  // same column — that button appearing changes how much height the frame
+  // actually gets. Measuring fr before this mutation reads the frame's
+  // PRE-zoom size and bakes a backing store sized for a box that's about to
+  // resize out from under it — measured directly: a ~15% aspect mismatch
+  // between the backing store and the frame's actual final box, real
+  // distortion, not rounding noise. Mutate the DOM, THEN measure.
   state._zoomed=true;
   renderPlacementRow();
+  const fr=frame.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1, 3);   // capped: memory, not quality, past 3x
+  // Both dimensions from the SAME measurement (fr), on purpose, even though
+  // the frame's declared aspect-ratio is 520/560 and fr.width/fr.height
+  // don't always resolve to exactly that. The camera transform below is a
+  // uniform scale, so it doesn't care what aspect the backing store ends up
+  // — a mismatched *box* just shows a little more context on one side. What
+  // DOES matter is that the backing store's own aspect matches the canvas
+  // element's actual CSS-rendered box (which width:100%/height:100% ties to
+  // this same fr) — canvas stretches backing store to CSS size per-axis
+  // independently, so if those two disagree, THAT'S what actually ellipses
+  // a circle. Deriving cv.height from a fixed 520/560 ratio instead of
+  // fr.height was tried and reverted for exactly this reason.
+  cv.width  = Math.round(fr.width*dpr)  || 520;
+  cv.height = Math.round(fr.height*dpr) || 560;
+  const pad=1.35;                                       // margin so the box doesn't touch the frame edge
+  // Deliberately uncapped by any "6x-looks-enough" number — the backing
+  // store is bounded by frame size × dpr regardless of how this comes out,
+  // so a small box legitimately earning a big k is exactly the point: more
+  // real device pixels behind the same on-screen area.
+  const k=Math.min(50, Math.max(1, Math.min(cv.width/(box.w*pad), cv.height/(box.h*pad))));
+  canvasZoom=k;
+  // Centres the box in backing-store space: box's logical centre × k, then
+  // however far that lands from the backing store's own centre is the
+  // translate needed to bring it there.
+  camTx = cv.width/2  - k*(box.x+box.w/2);
+  camTy = cv.height/2 - k*(box.y+box.h/2);
 }
 function zoomOut(){
-  cv.style.transform='none';
-  if(state._zoomed){
-    canvasZoom=1;
-    state._zoomed=false;
-    renderPlacementRow();
-    draw();   // chrome was drawn small to counteract the zoom — undo that now the transform is gone
-  }
+  const was=state._zoomed;
+  resetCamera();
+  state._zoomed=false;
+  if(was) renderPlacementRow();
 }
 
 function layerBounds(L){
@@ -752,11 +796,27 @@ function renderLayers(){
    draw() paints the selection box, size readout, delete badge and scale
    handle for the selected layer, and toDataURL captures whatever is on the
    canvas — so a naive capture bakes that UI into cart and design
-   thumbnails. Deselect, redraw, capture, then put the selection back. */
+   thumbnails. Deselect, redraw, capture, then put the selection back.
+
+   Also has to survive a zoom being active. draw() now genuinely renders
+   whatever camTx/camTy/canvasZoom point at — a cropped chest close-up, if
+   that's what's on screen — not just a CSS-magnified view of the same full
+   frame like the first version of this feature. A cart thumbnail showing a
+   giant logo crop instead of the garment would be wrong, so this forces an
+   unzoomed render for the capture and puts the on-screen zoom back after. */
 function captureThumb(type='image/jpeg', quality=0.7){
+  const was = state._zoomed
+    ? {zoom:canvasZoom, tx:camTx, ty:camTy, w:cv.width, h:cv.height}
+    : null;
+  if(was) resetCamera();
   draw(true);                       // garment + artwork only
   const data=cv.toDataURL(type,quality);
   draw();                           // restore the editing view
+  if(was){
+    cv.width=was.w; cv.height=was.h;
+    canvasZoom=was.zoom; camTx=was.tx; camTy=was.ty;
+    draw();                         // back to whatever zoom the user was looking at
+  }
   return data;
 }
 
@@ -899,10 +959,19 @@ function downloadPNG(){
 
 /* drag + resize */
 let drag=null;
+/* Two steps now instead of one. cv.width/r.width still correctly maps a
+   screen-pixel offset to a BACKING-STORE pixel — that part is unchanged and
+   doesn't care what canvasZoom currently is. But the backing store is no
+   longer 1:1 with the logical 520×560 space draw() paints in (see
+   zoomToBox()); (dx,dy) has to run back through the inverse of the same
+   camera transform draw() applied, or a click while zoomed would hit-test
+   against the wrong layer. */
 function pos(e){
   const r=cv.getBoundingClientRect();
   const p=e.touches?e.touches[0]:e;
-  return {x:(p.clientX-r.left)*(cv.width/r.width),y:(p.clientY-r.top)*(cv.height/r.height)};
+  const dx=(p.clientX-r.left)*(cv.width/r.width);
+  const dy=(p.clientY-r.top)*(cv.height/r.height);
+  return {x:(dx-camTx)/canvasZoom, y:(dy-camTy)/canvasZoom};
 }
 function down(e){
   const p=pos(e); const Ls=state.layers[state.side];
@@ -945,10 +1014,20 @@ cv.addEventListener('wheel',e=>{
 // The ruler is measured against the canvas's RENDERED width, which the
 // stylesheet ties to the viewport — so it has to be redrawn when that
 // changes or it stops lining up with the print zone.
+//
+// A zoom now also sizes the canvas's actual backing store off the frame's
+// rendered dimensions (see zoomToBox()) — if the window resizes while
+// zoomed, that backing store is stale relative to the new frame size.
+// Re-fitting it is more machinery than this is worth; exiting the zoom is
+// simple and always correct, so that's what a resize does.
 let rulerTick=0;
 addEventListener('resize',()=>{
   clearTimeout(rulerTick);
-  rulerTick=setTimeout(()=>{ if(document.getElementById('v-studio').classList.contains('on')) draw(); },120);
+  rulerTick=setTimeout(()=>{
+    if(!document.getElementById('v-studio').classList.contains('on')) return;
+    if(state._zoomed) zoomOut();
+    draw();
+  },120);
 });
 // keyboard: Delete / Backspace removes selected element (when not typing in a field)
 window.addEventListener('keydown',e=>{
