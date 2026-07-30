@@ -143,7 +143,7 @@
         <p class="t-mut">Can't draw? Describe what you want and our generator produces
           print-ready art for your next drop.</p>
         <ul>
-          <li><span class="material-symbols-outlined">bolt</span> High-resolution, 300 DPI print output</li>
+          <li><span class="material-symbols-outlined">bolt</span> High-resolution, 200 DPI print output</li>
           <li><span class="material-symbols-outlined">bolt</span> Five streetwear-tuned styles</li>
           <li><span class="material-symbols-outlined">bolt</span> Background removed automatically</li>
         </ul>
@@ -303,7 +303,7 @@
               <button class="btn btn-pink btn-block" style="margin-top:10px" id="aiImgBtn" onclick="aiImage()">
                 <span class="material-symbols-outlined" style="font-size:20px">bolt</span> Generate
               </button>
-              <p class="ai-note">Free via Pollinations. Background auto-removed, 300 DPI print-ready.</p>
+              <p class="ai-note">Free via Pollinations. Background auto-removed, 200 DPI print-ready.</p>
             </div>
           </div>
         </div>
@@ -396,7 +396,7 @@
 <section class="view" id="v-cart">
   <div class="wrap section">
     <h1 class="t-h1">Shopping <span class="t-lime">bag</span></h1>
-    <p class="t-mut" style="margin:8px 0 32px">Review, then place the order — we email a digital proof within 2 hours.</p>
+    <p class="t-mut" style="margin:8px 0 32px">Review, then place the order — your digital proof appears on My Orders within 2 hours.</p>
     <div id="cartBody"></div>
   </div>
 </section>
@@ -424,6 +424,132 @@
     <!-- Support lives with the orders on purpose: "something is wrong with
          my order" is a thought people have while looking at the order. -->
     <div id="helpBody"></div>
+  </div>
+</section>
+
+<!-- ══════════════ POLICY PAGES ══════════════
+     Static content, no render function needed — go() just toggles .view.on
+     like any other page. Numbers that live in the database (shipping cost,
+     the free-shipping threshold) are described rather than hardcoded here,
+     since an admin can change them and this text would silently go stale. -->
+<section class="view" id="v-shipping">
+  <div class="wrap section legal">
+    <h1 class="t-h1">Shipping <span class="t-lime">policy</span></h1>
+    <p class="t-mut" style="margin:8px 0 32px">Everything ships from Pune, Maharashtra, all-India.</p>
+
+    <h2 class="t-h3">Timeline</h2>
+    <p>Every order gets a digital proof — usually within 2 hours of ordering — and nothing
+      goes to the press until you approve it. Once approved, we print, quality-check and
+      dispatch within 48 hours. Transit time on top of that depends on your pincode; check
+      the delivery estimate on any product page before you order.</p>
+
+    <h2 class="t-h3">Cost</h2>
+    <p>Shipping is a flat rate shown at checkout, waived automatically once your order passes
+      the free-shipping threshold shown in your cart. Both figures are set by us and can
+      change — what you see at checkout is always the current, correct one.</p>
+
+    <h2 class="t-h3">Tracking</h2>
+    <p>Once dispatched, your order carries a courier name and AWB number, visible on
+      <a href="#" onclick="go('orders');return false">My Orders</a>. We currently hand
+      tracking numbers over manually rather than emailing them — check that page for the
+      latest status.</p>
+
+    <h2 class="t-h3">Address accuracy</h2>
+    <p>We print and ship to the address on the order. If a parcel is returned to us because
+      of an incomplete or incorrect address, re-dispatch is at the shipping cost above —
+      double-check your PIN code and phone number before confirming.</p>
+  </div>
+</section>
+
+<section class="view" id="v-returns">
+  <div class="wrap section legal">
+    <h1 class="t-h1">Returns &amp; <span class="t-lime">refunds</span></h1>
+    <p class="t-mut" style="margin:8px 0 32px">Custom-printed goods work differently from off-the-shelf ones — here's exactly how.</p>
+
+    <h2 class="t-h3">Before we print</h2>
+    <p>Nothing goes on a garment until you approve the digital proof, so this is the point to
+      catch a mistake. You can request changes or cancel with no cost at all before approving.</p>
+
+    <h2 class="t-h3">After you approve</h2>
+    <p>Once a proof is approved, printing begins on a garment cut specifically for your order
+      — at that point we can no longer cancel, resize, or refund for a change of mind. This
+      is standard for custom/personalised goods and matches what every print-on-demand shop
+      operates under.</p>
+
+    <h2 class="t-h3">What's always covered</h2>
+    <p>If what arrives has a genuine print defect, was damaged in transit, or isn't what you
+      ordered, that's on us — a free reprint or a full refund, no argument. Reach out from
+      <a href="#" onclick="go('orders');return false">My Orders → Raise a request</a> with a
+      photo within 7 days of delivery and we'll sort it from there.</p>
+
+    <h2 class="t-h3">Refund method</h2>
+    <p>Any refund goes back the way it came — no store credit unless you'd genuinely rather
+      have that.</p>
+  </div>
+</section>
+
+<section class="view" id="v-terms">
+  <div class="wrap section legal">
+    <h1 class="t-h1">Terms of <span class="t-lime">service</span></h1>
+    <p class="t-mut" style="margin:8px 0 32px">The short version: design responsibly, we print faithfully.</p>
+
+    <h2 class="t-h3">Your designs</h2>
+    <p>Anything you upload — a logo, a photo, artwork — has to be something you actually have
+      the right to print. Don't upload someone else's copyrighted or trademarked work unless
+      it's yours to use. We reserve the right to decline printing anything illegal, hateful,
+      or that infringes someone else's rights.</p>
+
+    <h2 class="t-h3">Pricing</h2>
+    <p>The price shown at checkout is the one that's charged — it's computed by our server
+      from the current bulk-pricing tiers and tax rate at the moment you order, not a figure
+      your browser makes up. If a price changes between opening your cart and checking out,
+      we'll tell you rather than silently charging the new number.</p>
+
+    <h2 class="t-h3">Accounts</h2>
+    <p>Keep your password to yourself; you're responsible for orders placed from your signed-in
+      account. Saved designs and past orders are tied to your account, not your device.</p>
+
+    <h2 class="t-h3">Payment</h2>
+    <p>Placing an order reserves it — we confirm payment with you directly before anything is
+      printed. We'll update this page the day that changes to an automated checkout.</p>
+
+    <h2 class="t-h3">Governing law</h2>
+    <p>These terms are governed by the laws of India, with courts in Pune, Maharashtra having
+      jurisdiction over any dispute.</p>
+  </div>
+</section>
+
+<section class="view" id="v-privacy">
+  <div class="wrap section legal">
+    <h1 class="t-h1">Privacy <span class="t-lime">policy</span></h1>
+    <p class="t-mut" style="margin:8px 0 32px">What we collect, why, and what we don't do with it.</p>
+
+    <h2 class="t-h3">What we collect</h2>
+    <p>Your name, email and phone number when you create an account; a delivery address when
+      you place an order; and whatever you upload or type into the Design Studio to build
+      your print.</p>
+
+    <h2 class="t-h3">What it's used for</h2>
+    <p>Fulfilling your order, letting you sign back in to track it or reorder, and answering
+      you if you contact support. Nothing here is used to build an advertising profile, and
+      we don't have an ad business to build one for.</p>
+
+    <h2 class="t-h3">Payment data</h2>
+    <p>We don't currently process or store card or payment details on this site at all —
+      payment is confirmed with you directly, outside the checkout flow, until an automated
+      payment gateway is live.</p>
+
+    <h2 class="t-h3">Sharing</h2>
+    <p>Your delivery details go to the courier that ships your order and nowhere else. We
+      don't sell customer data, to anyone, ever.</p>
+
+    <h2 class="t-h3">What's stored on your device</h2>
+    <p>Just your theme preference (light/dark) and a session cookie that keeps you signed in
+      — both there to make the site work, not to track you elsewhere.</p>
+
+    <h2 class="t-h3">Your data, your call</h2>
+    <p>Want your account or design history deleted? Email
+      <a href="mailto:hello@printly.in">hello@printly.in</a> and we'll action it.</p>
   </div>
 </section>
 
@@ -478,7 +604,14 @@
       <div>
         <h4>Support</h4>
         <a href="#" onclick="go('orders');return false">My orders</a>
+        <a href="#" onclick="go('shipping');return false">Shipping</a>
+        <a href="#" onclick="go('returns');return false">Returns &amp; refunds</a>
         <a href="mailto:hello@printly.in">Contact</a>
+      </div>
+      <div>
+        <h4>Legal</h4>
+        <a href="#" onclick="go('terms');return false">Terms of service</a>
+        <a href="#" onclick="go('privacy');return false">Privacy policy</a>
       </div>
       <div>
         <h4>The workshop</h4>
