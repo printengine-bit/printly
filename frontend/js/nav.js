@@ -1,5 +1,9 @@
 /* ═══════════════ NAV ═══════════════ */
 function go(v){
+  if(v==='studio'){
+    openProduct(state.product&&state.product.id||PRODUCTS[0].id);
+    return;
+  }
   state.view=v;
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('v-'+v).classList.add('on');
@@ -10,7 +14,6 @@ function go(v){
   if(v==='designs') renderDesigns();
   if(v==='wishlist') renderWishlistPage();
   if(v==='pdp') renderPdp();
-  if(v==='studio') draw();
   document.getElementById('navLinks').classList.remove('open');
   window.scrollTo({top:0});
 }

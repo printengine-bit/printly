@@ -6,6 +6,8 @@ window.PRINTLY_MOCKS={
     "po_back": "mockups/po_back.jpg",
     "hd": "mockups/hd.jpg",
     "hd_back": "mockups/hd_back.jpg",
+    "hd_left_sleeve": "mockups/hd_left_sleeve.png",
+    "hd_right_sleeve": "mockups/hd_right_sleeve.png",
     "js": "mockups/js.jpg",
     "js_back": "mockups/js_back.jpg"
   },
@@ -57,6 +59,22 @@ window.PRINTLY_MOCKS={
       "h": 320,
       "cmW": 38,
       "cmH": 53
+    },
+    "hd_left_sleeve": {
+      "cx": 650,
+      "cy": 680,
+      "w": 150,
+      "h": 560,
+      "cmW": 10,
+      "cmH": 32
+    },
+    "hd_right_sleeve": {
+      "cx": 650,
+      "cy": 680,
+      "w": 150,
+      "h": 560,
+      "cmW": 10,
+      "cmH": 32
     },
     "js": {
       "cx": 360,

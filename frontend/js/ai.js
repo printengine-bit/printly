@@ -28,6 +28,8 @@ Rules: 1-3 lines max, punchy short text (each under 22 chars), high contrast vs 
     // apply
     if(d.shirt && /^#([0-9a-f]{6})$/i.test(d.shirt)){ state.shirtColor=d.shirt;
       document.querySelectorAll('.sw').forEach(x=>x.classList.remove('on')); }
+    pushUndo();
+    markCustomized();
     state.layers[state.side]=[];
     const P=pa(), cx=P.x+P.w/2, cy=P.y+P.h/2;
     const n=d.lines.length, startY=cy-((n-1)*30);
@@ -89,8 +91,10 @@ async function aiImage(){
     if(!d.ok) throw new Error(d.error||'Generation failed');
     const img=new Image();
     img.onload=()=>{
+      pushUndo();
       const P=pa();
       const ratio=img.width/img.height, w=Math.min(170,P.w-24), h=w/ratio;
+      markCustomized();
       state.layers[state.side].push({type:'img',img,x:P.x+P.w/2,y:P.y+P.h/2,w,h});
       state.sel=state.layers[state.side].length-1;
       renderLayers(); draw();

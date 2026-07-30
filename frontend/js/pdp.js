@@ -19,14 +19,59 @@ state.pdp = {id:null, side:'front', color:'#FFFFFF', size:'M'};
    one missing half its content. */
 
 function openProduct(pid){
+  parkStudio();
   state.pdp.id=pid;
   state.pdp.side='front';
   state.pdp.color='#FFFFFF';
   state.pdp.size='M';
+  const p=product(pid);
+  if(p){
+    state.product=p;
+    const sel=document.getElementById('stProduct'); if(sel) sel.value=pid;
+    configureProductViews(pid);
+    state.shirtColor='#FFFFFF';
+    state.plainItem=false;
+    resetSizesForProduct();
+    updateProductSub();
+  }
   go('pdp');
+}
+function openPdp(pid){ openProduct(pid); }
+
+function parkStudio(){
+  const studio=document.querySelector('.studio');
+  const parking=document.getElementById('studioParking');
+  if(studio&&parking&&studio.parentElement!==parking){
+    studio.classList.remove('pdp-mode');
+    parking.appendChild(studio);
+  }
+}
+function setGarmentColor(c){
+  state.shirtColor=c;
+  document.querySelectorAll('#pdpSwatches .sw,#swatches .sw')
+    .forEach(el=>el.classList.toggle('on',el.title===c));
+  draw();
+}
+function mountPdpCustomizer(p){
+  const studio=document.querySelector('.studio'), mount=document.getElementById('pdpCustomizerMount');
+  if(!studio||!mount) return;
+  studio.classList.add('pdp-mode');
+  mount.appendChild(studio);
+  studioTab('assets');
+  document.getElementById('pdpEditorTitle').textContent=p.name;
+  document.getElementById('pdpEditorRating').innerHTML=starsFor(p.id);
+  document.getElementById('pdpEditorWish').innerHTML=wishHeart(p.id,'lg');
+  document.getElementById('pdpFabric').innerHTML=`<b>${esc(p.fit||'Custom fit')}</b><span>${esc(p.fabric||'Premium fabric')}</span>`;
+  document.getElementById('plainItemToggle').checked=!!state.plainItem;
+  document.getElementById('pdpSwatches').innerHTML=SHIRT_COLORS.map(c=>
+    `<button class="sw${c===state.shirtColor?' on':''}" style="background:${c}" title="${c}"
+       aria-label="${esc(COLOR_NAMES[c]||c)}" onclick="setGarmentColor('${c}')"></button>`).join('');
+  renderPrintControls();
+  renderSizeGrid(); updatePrice(); renderLayers(); applyPreviewSize(); draw();
 }
 
 function renderPdp(){
+  parkStudio();
   const el=document.getElementById('pdpBody'); if(!el) return;
   const p=PRODUCTS.find(x=>x.id===state.pdp.id);
   if(!p){ el.innerHTML='<div class="empty">Product not found.</div>'; return; }
@@ -139,6 +184,14 @@ function renderPdp(){
       </div>
     </div>`;
 
+  const old=el.querySelector('.pdp');
+  if(old){
+    const mount=document.createElement('div');
+    mount.id='pdpCustomizerMount';
+    mount.className='pdp-customizer-mount';
+    old.replaceWith(mount);
+  }
+  mountPdpCustomizer(p);
   drawPdp();
   document.querySelectorAll('.pthumb').forEach(c=>drawProductThumb(c,c.dataset.p));
   loadReviews(p.id);

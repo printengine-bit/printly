@@ -13,6 +13,7 @@ function initStudio(){
     sw.appendChild(d);
   });
   updateProductSub();
+  configureProductViews(state.product.id);
   resetSizesForProduct();
   updatePrice();
   // Without this the layers column is a bare heading until the first edit —
@@ -20,6 +21,7 @@ function initStudio(){
   // on the one screen that most needs it.
   renderLayers();
   renderPlacementRow();
+  renderPrintControls();
 }
 /* Left-panel tab switcher (Base / Assets / AI) */
 function studioTab(name){
@@ -36,12 +38,78 @@ function updateProductSub(){
   const el=document.getElementById('stProductSub');
   if(el) el.textContent=PRODUCT_SPEC[state.product.id]||'Premium fabric';
 }
+function configureProductViews(pid, preserve=false){
+  const defs=printViews(pid);
+  defs.forEach(v=>{ if(!Array.isArray(state.layers[v.key])) state.layers[v.key]=[]; });
+  if(!preserve || state._viewProduct!==pid){
+    state.enabledViews=defs.filter(v=>v.required||v.default).map(v=>v.key);
+  }else{
+    state.enabledViews=(state.enabledViews||[]).filter(k=>defs.some(v=>v.key===k));
+    defs.filter(v=>v.required).forEach(v=>{
+      if(!state.enabledViews.includes(v.key)) state.enabledViews.push(v.key);
+    });
+  }
+  if(!state.enabledViews.includes(state.side)) state.side=state.enabledViews[0]||defs[0].key;
+  state._viewProduct=pid;
+}
+function printGroups(){
+  const out=[];
+  printViews(state.product.id).forEach(v=>{
+    let g=out.find(x=>x.key===v.group);
+    if(!g){ g={key:v.group,label:v.group==='sleeves'?'Sleeves':v.label,views:[],fee:+v.surcharge||0}; out.push(g); }
+    g.views.push(v); g.fee=Math.max(g.fee,+v.surcharge||0);
+  });
+  return out;
+}
+function togglePrintGroup(key,on){
+  const g=printGroups().find(x=>x.key===key); if(!g) return;
+  if(!on && g.views.some(v=>v.required)){ renderPrintControls(); return; }
+  if(!on && g.views.some(v=>(state.layers[v.key]||[]).length) &&
+     !confirm('Turn off this print location? Its artwork will stay saved, but it will not be printed or priced.')){
+    renderPrintControls(); return;
+  }
+  g.views.forEach(v=>{
+    const i=state.enabledViews.indexOf(v.key);
+    if(on && i<0) state.enabledViews.push(v.key);
+    if(!on && i>=0) state.enabledViews.splice(i,1);
+  });
+  if(!state.enabledViews.includes(state.side)) setSide(state.enabledViews[0]);
+  renderPrintControls(); updatePrice(); syncCta();
+}
+function renderPrintControls(){
+  const groups=document.getElementById('printSideGroups');
+  if(groups) groups.innerHTML=printGroups().map(g=>{
+    const on=g.views.every(v=>state.enabledViews.includes(v.key));
+    const required=g.views.some(v=>v.required);
+    return `<label class="print-check${required?' required':''}">
+      <input type="checkbox" ${on?'checked':''} ${(required||state.plainItem)?'disabled':''}
+             onchange="togglePrintGroup('${g.key}',this.checked)">
+      <span>${esc(g.label)}</span>${g.fee?`<small>+₹${g.fee}</small>`:''}
+    </label>`;
+  }).join('');
+  const tabs=document.getElementById('printViewTabs');
+  if(tabs) tabs.innerHTML=enabledPrintViews().map(v=>
+    `<button class="${state.side===v.key?'on':''}" onclick="setSide('${v.key}')">${esc(v.label)}</button>`
+  ).join('');
+}
+function togglePlainItem(on){
+  state.plainItem=!!on;
+  renderPrintControls(); updatePrice(); syncCta();
+}
+function markCustomized(){
+  if(!state.plainItem) return;
+  state.plainItem=false;
+  const t=document.getElementById('plainItemToggle'); if(t) t.checked=false;
+  renderPrintControls();
+}
 function addJerseyKit(){
+  markCustomized();
   const nm=(document.getElementById('jkName').value||'').trim().toUpperCase();
   const nu=(document.getElementById('jkNum').value||'').trim();
   const s1=(document.getElementById('jkSp1').value||'').trim().toUpperCase();
   const s2=(document.getElementById('jkSp2').value||'').trim().toUpperCase();
   const col=document.getElementById('jkColor').value;
+  pushUndo();
   setSide('back');
   const P=pa(), cx=P.x+P.w/2;
   const L=[];
@@ -64,8 +132,8 @@ function toggleJerseyKit(){
    smaller than a hoodie's) and wrong when only the *size* changes, where
    the print is a fixed physical thing and the garment moved around it. */
 function remapLayers(old,P,shrink){
-  ['front','back'].forEach(s=>{
-    state.layers[s].forEach(L=>{
+  Object.keys(state.layers).forEach(s=>{
+    (state.layers[s]||[]).forEach(L=>{
       const rx=(L.x-old.x)/old.w, ry=(L.y-old.y)/old.h;
       L.x=P.x+rx*P.w; L.y=P.y+ry*P.h;
       if(shrink && P.w<old.w){
@@ -101,21 +169,25 @@ function applyPreviewSize(){
 function studioProductChange(){
   const old=pa();
   state.product=PRODUCTS.find(p=>p.id===document.getElementById('stProduct').value);
+  configureProductViews(state.product.id);
   const P=pa();
   remapLayers(old,P,true);   // keep existing artwork inside the new zone
   zoomOut();                 // the box a zoom was framing belonged to the old product's zone
   toggleJerseyKit();
   updateProductSub();
   resetSizesForProduct();   // size keys differ (a tote is one-size)
-  updatePrice(); draw();
+  renderPrintControls(); updatePrice(); draw();
   toast(state.product.name+' — mockup updated');
 }
 function setSide(s){
+  if(!state.enabledViews.includes(s)) return;
   state.side=s; state.sel=-1;
   zoomOut();   // the other side's layers were never in this zoomed box
-  document.getElementById('tabF').classList.toggle('on',s==='front');
-  document.getElementById('tabB').classList.toggle('on',s==='back');
-  document.getElementById('sideLabel').textContent=s;
+  document.getElementById('tabF')?.classList.toggle('on',s==='front');
+  document.getElementById('tabB')?.classList.toggle('on',s==='back');
+  const label=printView(state.product.id,s)?.label||s.replaceAll('_',' ');
+  const sideLabel=document.getElementById('sideLabel'); if(sideLabel) sideLabel.textContent=label;
+  renderPrintControls();
   renderPlacementRow();   // front/back offer different presets
   renderLayers(); applyPreviewSize(); draw();
 }
@@ -287,37 +359,56 @@ function draw(clean){
     ctx.beginPath(); ctx.rect(P.x,P.y,P.w,P.h); ctx.clip();
     if(L.type==='text'){
       ctx.font=`${L.bold?'700':'400'} ${L.size}px "${L.font}"`;
-      ctx.fillStyle=L.color; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      if(L.shadow){
+        ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=6*u;
+        ctx.shadowOffsetX=2*u; ctx.shadowOffsetY=2*u;
+      }
+      if(L.stroke){
+        ctx.lineWidth=Math.max(2,L.size/14); ctx.strokeStyle='#000000';
+        ctx.strokeText(L.text,L.x,L.y);
+      }
+      ctx.fillStyle=L.color;
       ctx.fillText(L.text,L.x,L.y);
+      ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
     } else if(L.type==='img'&&L.img){
-      ctx.drawImage(L.img,L.x-L.w/2,L.y-L.h/2,L.w,L.h);
+      drawImageLayer(ctx,L);
     }
     ctx.restore();
     if(i===state.sel && !clean){
       const b=layerBounds(L);
-      ctx.strokeStyle='#c8f232'; ctx.lineWidth=2*u;
+      ctx.strokeStyle=L.locked?'#999':'#c8f232'; ctx.lineWidth=2*u;
       ctx.strokeRect(b.x,b.y,b.w,b.h);
       // live size readout in cm
       const k=pxcm();
       ctx.fillStyle='#c8f232'; ctx.font=`700 ${11*u}px Inter,sans-serif`; ctx.textAlign='center';
       ctx.fillText(`${(b.w/k).toFixed(1)} × ${(b.h/k).toFixed(1)} cm`, b.x+b.w/2, b.y-8*u);
-      // scale handle (bottom-right) — visual affordance for the wheel resize
-      ctx.fillStyle='#c8f232';
-      ctx.fillRect(b.x+b.w-5*u,b.y+b.h-5*u,10*u,10*u);
-      // on-canvas delete badge (top-right corner). `r` is sized in screen
-      // pixels via `u`, not canvas pixels — a "fixed 11px" badge at 6x zoom
-      // rendered 66px across, big enough to hide the artwork it sits beside.
-      // state._delHit shrinks by the same factor, so the tap target stays a
-      // constant comfortable on-screen size at any zoom instead of growing
-      // into the artwork or shrinking to unhittable.
-      const bx=b.x+b.w, by=b.y, r=11*u;
-      state._delHit={x:bx,y:by,r:r+3*u};
-      ctx.beginPath(); ctx.arc(bx,by,r,0,Math.PI*2);
-      ctx.fillStyle='#ce0358'; ctx.fill();
-      ctx.strokeStyle='#fff'; ctx.lineWidth=2*u; ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(bx-4*u,by-4*u); ctx.lineTo(bx+4*u,by+4*u);
-      ctx.moveTo(bx+4*u,by-4*u); ctx.lineTo(bx-4*u,by+4*u); ctx.stroke();
+      if(L.locked){
+        // Locked layers can't be dragged, resized or deleted from the
+        // canvas — no resize handle, no delete badge, just a glyph saying
+        // why nothing responds. Unlock from the toolbar or the layer row.
+        state._delHit=null;
+        ctx.font=`700 ${11*u}px Inter,sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillStyle='#999'; ctx.fillText('🔒 LOCKED', b.x+b.w/2, b.y+b.h/2);
+      } else {
+        // scale handle (bottom-right) — visual affordance for the wheel resize
+        ctx.fillStyle='#c8f232';
+        ctx.fillRect(b.x+b.w-5*u,b.y+b.h-5*u,10*u,10*u);
+        // on-canvas delete badge (top-right corner). `r` is sized in screen
+        // pixels via `u`, not canvas pixels — a "fixed 11px" badge at 6x zoom
+        // rendered 66px across, big enough to hide the artwork it sits beside.
+        // state._delHit shrinks by the same factor, so the tap target stays a
+        // constant comfortable on-screen size at any zoom instead of growing
+        // into the artwork or shrinking to unhittable.
+        const bx=b.x+b.w, by=b.y, r=11*u;
+        state._delHit={x:bx,y:by,r:r+3*u};
+        ctx.beginPath(); ctx.arc(bx,by,r,0,Math.PI*2);
+        ctx.fillStyle='#ce0358'; ctx.fill();
+        ctx.strokeStyle='#fff'; ctx.lineWidth=2*u; ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(bx-4*u,by-4*u); ctx.lineTo(bx+4*u,by+4*u);
+        ctx.moveTo(bx+4*u,by-4*u); ctx.lineTo(bx-4*u,by+4*u); ctx.stroke();
+      }
     }
   });
   // centre snap guides
@@ -406,10 +497,22 @@ function syncToolbar(){
   const live=state.sel>=0;
   document.querySelectorAll('.st-toolbar button[data-needsel]')
     .forEach(b=>b.disabled=!live);
+  const L=live?state.layers[state.side][state.sel]:null;
+  document.getElementById('selectedActions')?.classList.toggle('on',live);
+  document.getElementById('btnStroke')?.classList.toggle('on', !!(L&&L.stroke));
+  document.getElementById('btnShadow')?.classList.toggle('on', !!(L&&L.shadow));
+  document.getElementById('btnCrop')?.classList.toggle('on', !!(L&&L.cropZoom>1));
+  document.getElementById('btnEffects')?.classList.toggle('on', !!(L&&L.effect));
+  document.querySelectorAll('[data-image-only]').forEach(b=>b.disabled=!L||L.type!=='img');
+  const u=document.getElementById('btnUndo'), r=document.getElementById('btnRedo');
+  if(u) u.disabled=!undoStack.length;
+  if(r) r.disabled=!redoStack.length;
 }
 function alignSel(mode){
   const L=state.layers[state.side][state.sel];
   if(!L){ toast('Select an item first'); return; }
+  if(L.locked){ toast('Unlock to edit'); return; }
+  pushUndo();
   const P=pa(), b=layerBounds(L);
   if(mode==='cx') L.x=P.x+P.w/2;
   if(mode==='cy') L.y=P.y+P.h/2;
@@ -422,6 +525,8 @@ function alignSel(mode){
 function fitWidth(){
   const L=state.layers[state.side][state.sel];
   if(!L){ toast('Select an item first'); return; }
+  if(L.locked){ toast('Unlock to edit'); return; }
+  pushUndo();
   const P=pa(); let guard=0;
   while(layerBounds(L).w > P.w-16 && guard++<60) bumpRaw(L,0.96);
   while(layerBounds(L).w < P.w-30 && guard++<120) bumpRaw(L,1.03);
@@ -430,6 +535,52 @@ function fitWidth(){
 function bumpRaw(L,f){
   if(L.type==='text') L.size=Math.max(8,Math.min(110,L.size*f));
   else { L.w*=f; L.h*=f; }
+}
+function drawImageLayer(c,L){
+  const filters={grayscale:'grayscale(1)',contrast:'contrast(1.35) saturate(1.15)',soft:'saturate(.75) brightness(1.08)'};
+  c.filter=filters[L.effect]||'none';
+  const z=Math.max(1,+L.cropZoom||1);
+  const iw=L.img.naturalWidth||L.img.width, ih=L.img.naturalHeight||L.img.height;
+  const sw=iw/z, sh=ih/z, sx=(iw-sw)/2, sy=(ih-sh)/2;
+  c.drawImage(L.img,sx,sy,sw,sh,L.x-L.w/2,L.y-L.h/2,L.w,L.h);
+  c.filter='none';
+}
+function cropImageSel(){
+  const L=state.layers[state.side][state.sel];
+  if(!L||L.type!=='img'){ toast('Select an image layer to crop'); return; }
+  if(L.locked){ toast('Unlock to edit'); return; }
+  pushUndo();
+  const steps=[1,1.2,1.5,2], cur=+L.cropZoom||1;
+  L.cropZoom=steps[(steps.indexOf(cur)+1)%steps.length];
+  draw(); toast(L.cropZoom===1?'Crop reset':`Crop zoom ${L.cropZoom}×`);
+}
+function effectImageSel(){
+  const L=state.layers[state.side][state.sel];
+  if(!L||L.type!=='img'){ toast('Select an image layer for effects'); return; }
+  if(L.locked){ toast('Unlock to edit'); return; }
+  pushUndo();
+  const modes=['','grayscale','contrast','soft'];
+  L.effect=modes[(modes.indexOf(L.effect||'')+1)%modes.length];
+  draw(); toast(L.effect?`Effect: ${L.effect}`:'Effects removed');
+}
+function scaleSelected(f){
+  if(state.sel<0){ toast('Select an item first'); return; }
+  bumpFromList(state.sel,f); renderLayers();
+}
+function openImagePicker(){ document.getElementById('imgInput')?.click(); }
+function openTextTool(){
+  studioTab('assets'); document.getElementById('txtInput')?.focus();
+  document.querySelector('.st-left')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function openAiTool(){
+  studioTab('ai');
+  document.querySelector('.st-left')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function togglePreview(){
+  state.previewMode=!state.previewMode;
+  document.getElementById('btnPreview')?.classList.toggle('on',state.previewMode);
+  if(state.previewMode) state.sel=-1;
+  draw(state.previewMode);
 }
 
 /* ═══════════════ STUDIO: placement presets ═══════════════
@@ -451,6 +602,14 @@ const PLACEMENTS = {
     ['full-back',   'Full Back',   'crop_free'],
     ['center-back', 'Center Back', 'crop_5_4'],
   ],
+  left_sleeve: [
+    ['full-sleeve', 'Full Sleeve', 'crop_portrait'],
+    ['upper-sleeve','Upper Sleeve','vertical_align_top'],
+  ],
+  right_sleeve: [
+    ['full-sleeve', 'Full Sleeve', 'crop_portrait'],
+    ['upper-sleeve','Upper Sleeve','vertical_align_top'],
+  ],
 };
 
 /* Box for a preset, in canvas-internal coordinates, derived from the live
@@ -460,7 +619,10 @@ const PLACEMENTS = {
    sitting high and to one side; a full print fills the zone with a small
    margin so it doesn't visually bleed to the edge. */
 function placementBox(key, P){
-  if(key==='full-front' || key==='full-back') return {x:P.x, y:P.y, w:P.w, h:P.h};
+  if(key==='full-front' || key==='full-back' || key==='full-sleeve')
+    return {x:P.x, y:P.y, w:P.w, h:P.h};
+  if(key==='upper-sleeve')
+    return {x:P.x, y:P.y, w:P.w, h:P.h*.48};
   if(key==='center-chest'){
     const w=P.w*0.42; return {x:P.x+(P.w-w)/2, y:P.y+P.h*0.07, w, h:P.h*0.28};
   }
@@ -524,10 +686,10 @@ function applyPlacement(key){
   // run BEFORE the one draw() below, or the canvas paints at the OLD zoom
   // level and camTx/camTy/canvasZoom change out from under a bitmap that
   // was never re-rendered against them.
-  const full=key==='full-front'||key==='full-back';
+  const full=key==='full-front'||key==='full-back'||key==='full-sleeve';
   if(full) zoomOut(); else zoomToBox(box);
   draw();
-  const all=PLACEMENTS.front.concat(PLACEMENTS.back), hit=all.find(p=>p[0]===key);
+  const all=Object.values(PLACEMENTS).flat(), hit=all.find(p=>p[0]===key);
   const label=hit?hit[1]:'Placement';
   toast(tight ? `${label} applied — that text is a tight fit here; try Center Chest or shorten it`
               : label+' applied');
@@ -715,6 +877,8 @@ function drawAiPreview(){
 function addText(){
   const t=document.getElementById('txtInput').value.trim();
   if(!t){ toast('Type some text first'); return; }
+  markCustomized();
+  pushUndo();
   const P=pa();
   state.layers[state.side].push({type:'text',text:t,x:P.x+P.w/2,y:P.y+P.h/2,size:34,
     font:document.getElementById('txtFont').value,
@@ -726,10 +890,12 @@ function addText(){
 function addImage(){
   const f=document.getElementById('imgInput').files[0];
   if(!f){ toast('Choose an image file first'); return; }
+  markCustomized();
   const r=new FileReader();
   r.onload=e=>{
     const img=new Image();
     img.onload=()=>{
+      pushUndo();
       const P=pa();
       const ratio=img.width/img.height, w=Math.min(140,P.w-30), h=w/ratio;
       state.layers[state.side].push({type:'img',img,x:P.x+P.w/2,y:P.y+P.h/2,w,h});
@@ -763,16 +929,16 @@ function coachHTML(){
 function renderLayers(){
   const el=document.getElementById('layerList'); const Ls=state.layers[state.side];
   const head=document.getElementById('layerHead');
-  const empty=!Ls.length && !state.layers[state.side==='front'?'back':'front'].length;
+  const other=enabledPrintViews().find(v=>v.key!==state.side&&(state.layers[v.key]||[]).length);
+  const empty=!Ls.length && !other;
   // "Active layers" over a getting-started guide reads as a broken list.
   if(head) head.hidden=empty;
   if(!Ls.length){
-    const other=state.side==='front'?'back':'front';
-    el.innerHTML = state.layers[other].length
+    el.innerHTML = other
       ? `<div class="empty" style="padding:32px 8px">
           <span class="material-symbols-outlined">layers_clear</span>
           <p style="font-size:13px">Nothing on the ${state.side} yet.<br>
-            Your design is on the ${other} — switch sides to see it.</p>
+            Your design is on ${esc(other.label)} — switch views to see it.</p>
         </div>`
       : coachHTML();
     if(typeof syncCta==='function') syncCta();
@@ -786,16 +952,19 @@ function renderLayers(){
       : (L.img ? `<img src="${L.img.src}" alt="">` : `<span class="material-symbols-outlined" style="font-size:18px">image</span>`);
     const name=isText ? esc(L.text) : 'Image layer';
     const sub=isText ? `Text · ${Math.round(L.size)}px` : `Image · ${Math.round(L.w)}×${Math.round(L.h)}`;
-    return `<div class="layer${i===state.sel?' on':''}">
+    return `<div class="layer${i===state.sel?' on':''}${L.locked?' locked':''}">
       <div class="layer-thumb">${thumb}</div>
       <div class="layer-meta" onclick="selLayer(${i})">
         <div class="layer-name">${name}</div>
         <div class="layer-sub">${sub}</div>
       </div>
       <div class="layer-acts">
-        <button onclick="bump(${i},1.15)" title="Bigger">+</button>
-        <button onclick="bump(${i},0.87)" title="Smaller">−</button>
-        <button class="del" onclick="delLayer(${i})" title="Remove">
+        <button onclick="bumpFromList(${i},1.15)" title="Bigger" ${L.locked?'disabled':''}>+</button>
+        <button onclick="bumpFromList(${i},0.87)" title="Smaller" ${L.locked?'disabled':''}>−</button>
+        <button onclick="toggleLock(${i})" title="${L.locked?'Unlock':'Lock'}">
+          <span class="material-symbols-outlined" style="font-size:16px">${L.locked?'lock':'lock_open'}</span>
+        </button>
+        <button class="del" onclick="delLayer(${i})" title="Remove" ${L.locked?'disabled':''}>
           <span class="material-symbols-outlined" style="font-size:16px">delete</span>
         </button>
       </div>
@@ -914,10 +1083,23 @@ function capturePrintArt(side){
   layers.forEach(L=>{
     if(L.type==='text'){
       x.font=`${L.bold?'700':'400'} ${L.size}px "${L.font}"`;
-      x.fillStyle=L.color; x.textAlign='center'; x.textBaseline='middle';
+      x.textAlign='center'; x.textBaseline='middle';
+      // Matches draw()'s text rendering exactly — the print file has to
+      // carry whatever stroke/shadow the customer saw on screen, not a
+      // plain-fill version of it.
+      if(L.shadow){
+        x.shadowColor='rgba(0,0,0,.45)'; x.shadowBlur=6;
+        x.shadowOffsetX=2; x.shadowOffsetY=2;
+      }
+      if(L.stroke){
+        x.lineWidth=Math.max(2,L.size/14); x.strokeStyle='#000000';
+        x.strokeText(L.text,L.x,L.y);
+      }
+      x.fillStyle=L.color;
       x.fillText(L.text,L.x,L.y);
+      x.shadowColor='transparent'; x.shadowBlur=0; x.shadowOffsetX=0; x.shadowOffsetY=0;
     } else if(L.type==='img' && L.img){
-      x.drawImage(L.img,L.x-L.w/2,L.y-L.h/2,L.w,L.h);
+      drawImageLayer(x,L);
     }
   });
   state.side = prev;
@@ -953,15 +1135,125 @@ function printSpec(side){
   return spec.length ? {zone, layers:spec} : null;
 }
 function selLayer(i){ state.sel=i; renderLayers(); draw(); }
+/* Locked layers ignore both the wheel-resize and the layer list's +/−
+   buttons — one guard here covers both paths instead of repeating the
+   check at each call site. */
 function bump(i,f){
   const L=state.layers[state.side][i];
+  if(!L || L.locked) return;
   if(L.type==='text') L.size=Math.max(10,Math.min(90,L.size*f));
   else { L.w*=f; L.h*=f; }
   draw();
 }
-function delLayer(i){ state.layers[state.side].splice(i,1); state.sel=-1; state._delHit=null; renderLayers(); draw(); toast('Removed'); }
+/* Wraps bump() with an undo snapshot for the layer list's own +/− buttons —
+   each click is a natural, discrete undo step. The wheel handler below
+   snapshots differently: once per resize *gesture*, not per tick. */
+function bumpFromList(i,f){ pushUndo(); bump(i,f); }
+function delLayer(i){
+  const L=state.layers[state.side][i];
+  if(!L) return;
+  if(L.locked){ toast('Unlock to delete'); return; }
+  pushUndo();
+  state.layers[state.side].splice(i,1); state.sel=-1; state._delHit=null; renderLayers(); draw(); toast('Removed');
+}
 function deleteSel(){ if(state.sel>=0) delLayer(state.sel); }
-function clearSide(){ state.layers[state.side]=[]; state.sel=-1; renderLayers(); draw(); }
+function clearSide(){ pushUndo(); state.layers[state.side]=[]; state.sel=-1; renderLayers(); draw(); }
+
+/* ═══════════════ STUDIO: undo / redo ═══════════════
+   One stack of {front,back} snapshots, taken right before each mutation —
+   never continuously during a drag or a resize gesture, or a single drag
+   would flood the stack with one entry per mousemove. Layer objects hold
+   only primitives plus an immutable Image reference (images are never
+   mutated in place), so a shallow copy per layer is a real, independent
+   snapshot rather than a second reference to the same objects. */
+const UNDO_LIMIT = 50;
+let undoStack = [], redoStack = [];
+function _cloneLayers(){
+  return Object.fromEntries(Object.entries(state.layers)
+    .map(([key,layers])=>[key,(layers||[]).map(L=>({...L}))]));
+}
+function pushUndo(){
+  undoStack.push(_cloneLayers());
+  if(undoStack.length>UNDO_LIMIT) undoStack.shift();
+  redoStack.length=0;
+}
+function _restoreLayers(snap){
+  state.layers=snap;
+  state.sel=-1; state._delHit=null;
+  renderLayers(); draw();
+}
+function undoEdit(){
+  if(!undoStack.length) return;
+  redoStack.push(_cloneLayers());
+  _restoreLayers(undoStack.pop());
+  toast('Undid last change');
+}
+function redoEdit(){
+  if(!redoStack.length) return;
+  undoStack.push(_cloneLayers());
+  _restoreLayers(redoStack.pop());
+  toast('Redid change');
+}
+
+/* ═══════════════ STUDIO: duplicate / lock / replace ═══════════════ */
+function duplicateSel(){
+  const L=state.layers[state.side][state.sel];
+  if(!L){ toast('Select an item first'); return; }
+  pushUndo();
+  // Nudged, not stacked exactly on top — otherwise the copy is invisible
+  // until you drag it and looks like duplicate did nothing. Never locked,
+  // even if the original was: it's a new object, not the protected one.
+  const copy={...L, x:L.x+16, y:L.y+16, locked:false};
+  state.layers[state.side].push(copy);
+  state.sel=state.layers[state.side].length-1;
+  renderLayers(); draw(); toast('Duplicated');
+}
+function toggleLock(i){
+  const L=state.layers[state.side][i];
+  if(!L) return;
+  pushUndo();
+  L.locked=!L.locked;
+  renderLayers(); draw();
+  toast(L.locked?'Layer locked':'Layer unlocked');
+}
+function toggleLockSel(){
+  if(state.sel<0){ toast('Select an item first'); return; }
+  toggleLock(state.sel);
+}
+function replaceImageSel(){
+  const L=state.layers[state.side][state.sel];
+  if(!L || L.type!=='img'){ toast('Select an image layer to replace'); return; }
+  if(L.locked){ toast('Unlock to edit'); return; }
+  const input=document.createElement('input');
+  input.type='file'; input.accept='image/*';
+  input.onchange=()=>{
+    const f=input.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        pushUndo();
+        L.img=img;   // position and size stay exactly where they were
+        renderLayers(); draw(); toast('Image replaced');
+      };
+      img.src=e.target.result;
+    };
+    r.readAsDataURL(f);
+  };
+  input.click();
+}
+function toggleStrokeSel(){
+  const L=state.layers[state.side][state.sel];
+  if(!L || L.type!=='text'){ toast('Select a text layer first'); return; }
+  if(L.locked){ toast('Unlock to edit'); return; }
+  pushUndo(); L.stroke=!L.stroke; draw();
+}
+function toggleShadowSel(){
+  const L=state.layers[state.side][state.sel];
+  if(!L || L.type!=='text'){ toast('Select a text layer first'); return; }
+  if(L.locked){ toast('Unlock to edit'); return; }
+  pushUndo(); L.shadow=!L.shadow; draw();
+}
 function downloadPNG(){
   const a=document.createElement('a');
   a.download='printly-design.png'; a.href=cv.toDataURL('image/png'); a.click();
@@ -996,7 +1288,13 @@ function down(e){
   for(let i=Ls.length-1;i>=0;i--){
     const b=layerBounds(Ls[i]);
     if(p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h){
-      state.sel=i; drag={i,dx:p.x-Ls[i].x,dy:p.y-Ls[i].y};
+      state.sel=i;
+      // Locked layers select (so the toolbar/layer row can unlock them)
+      // but don't start a drag — one guard here, at the only place a drag
+      // can begin, covers mouse and touch both. The undo snapshot happens
+      // lazily in move() on the first actual movement, not here — a plain
+      // click-to-select with no drag would otherwise push a no-op step.
+      if(!Ls[i].locked) drag={i,dx:p.x-Ls[i].x,dy:p.y-Ls[i].y,snapped:false};
       renderLayers(); draw(); e.preventDefault(); return;
     }
   }
@@ -1004,6 +1302,7 @@ function down(e){
 }
 function move(e){
   if(!drag)return;
+  if(!drag.snapped){ pushUndo(); drag.snapped=true; }
   const p=pos(e); const L=state.layers[state.side][drag.i];
   let nx=p.x-drag.dx, ny=p.y-drag.dy;
   // snap to print-area centre lines
@@ -1018,8 +1317,16 @@ window.addEventListener('mouseup',up);
 cv.addEventListener('touchstart',down,{passive:false});
 cv.addEventListener('touchmove',move,{passive:false});
 cv.addEventListener('touchend',up);
+// One undo snapshot per resize *gesture*, not per tick — a scroll fires
+// dozens of wheel events, and pushUndo()-ing every one of them would make
+// a single zoom-in/out take dozens of Ctrl+Z presses to undo. A gesture
+// ends after 500ms of no wheel activity on the same layer.
+let wheelGestureOpen=false, wheelGestureTimer=0;
 cv.addEventListener('wheel',e=>{
   if(state.sel<0)return; e.preventDefault();
+  if(!wheelGestureOpen){ pushUndo(); wheelGestureOpen=true; }
+  clearTimeout(wheelGestureTimer);
+  wheelGestureTimer=setTimeout(()=>{ wheelGestureOpen=false; },500);
   bump(state.sel, e.deltaY<0?1.06:0.94);
 },{passive:false});
 // The ruler is measured against the canvas's RENDERED width, which the
@@ -1046,5 +1353,11 @@ window.addEventListener('keydown',e=>{
   if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT') return;
   if((e.key==='Delete'||e.key==='Backspace') && state.sel>=0){
     e.preventDefault(); delLayer(state.sel);
+  }
+  if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z'){
+    e.preventDefault(); undoEdit();
+  }
+  if((e.ctrlKey||e.metaKey) && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key.toLowerCase()==='z'))){
+    e.preventDefault(); redoEdit();
   }
 });

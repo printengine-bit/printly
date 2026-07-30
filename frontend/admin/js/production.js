@@ -52,14 +52,16 @@ async function renderJobs(el){
               .map(([k,n])=>`<span class="size-chip"><b>${n}</b>×${esc(k)}</span>`).join('')
               || `<span class="tiny dim">${l.qty} pcs</span>`}</td>
             <td data-label="Stage">${stageBadge(l.status)}</td>
-            <td data-label="Artwork">${['front','back'].map(side=>{
+            <td data-label="Artwork">${[...new Set([
+              ...Object.keys(l.art||{}), ...Object.keys(l.spec||{})
+            ])].map(side=>{
               const url = l.art && l.art[side];
               const spec = l.spec && l.spec[side];
               if(!url && !spec) return '';
               return `<div style="margin-bottom:6px">
                 ${url?`<a class="btn btn-quiet btn-sm" href="${esc(url)}" download>
                   <span class="material-symbols-outlined" style="font-size:15px">download</span>
-                  ${side}</a>`:`<span class="tiny dim">${side}: no file</span>`}
+                  ${esc(side.replaceAll('_',' '))}</a>`:`<span class="tiny dim">${esc(side.replaceAll('_',' '))}: no file</span>`}
                 ${spec?`<div class="tiny dim">${(spec.layers||[]).map(x=>
                   `${x.w}×${x.h} cm, ${x.fromTop} from top`).join('; ')}</div>`:''}
               </div>`;

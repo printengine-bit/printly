@@ -23,6 +23,16 @@ def _tiers_for(db, product_id):
         (product_id,))]
 
 
+def _print_views_for(db, product_id):
+    return [{
+        "key": r["view_key"], "label": r["label"], "group": r["group_key"],
+        "mock": r["mock_key"], "required": bool(r["required"]),
+        "default": bool(r["default_enabled"]), "surcharge": r["surcharge"],
+    } for r in db.execute(
+        """SELECT * FROM product_print_views
+           WHERE product_id=? AND active=1 ORDER BY sort,id""", (product_id,))]
+
+
 def catalog_payload(db=None):
     """The catalogue in exactly the shape frontend/js/data.js used to
     declare by hand — same keys, same types — so every render function
@@ -48,6 +58,7 @@ def catalog_payload(db=None):
             "chart": json.loads(p["size_chart_json"] or "{}"),
             "audience": p["audience"],
             "category": p["category"],
+            "print_views": _print_views_for(db, p["id"]),
         })
     colors = [{"hex": r["color_hex"], "name": r["color_name"]} for r in db.execute(
         "SELECT DISTINCT color_hex,color_name FROM variants WHERE active=1 "
@@ -107,6 +118,35 @@ def unit_price(db, product_id, qty):
     return base["base_price"] if base else 0.0
 
 
+def print_view_price(db, product_id, requested, layer_keys=None):
+    """Return (selected keys, grouped surcharge, error).
+
+    Required locations are always included. Optional locations are validated
+    against the product, and a commercial group is charged once even when it
+    contains two canvases (left and right sleeve).
+    """
+    rows = db.execute(
+        """SELECT * FROM product_print_views
+           WHERE product_id=? AND active=1 ORDER BY sort,id""",
+        (product_id,)).fetchall()
+    by_key = {r["view_key"]: r for r in rows}
+    if isinstance(requested, list):
+        wanted = {str(k) for k in requested}
+    else:
+        # Backward compatibility for carts saved before print_views existed.
+        wanted = {str(k) for k in (layer_keys or []) if k in by_key}
+    wanted.update(r["view_key"] for r in rows if r["required"])
+    unknown = sorted(k for k in wanted if k not in by_key)
+    if unknown:
+        return None, 0, "That print location is not available for this product."
+    selected = [r["view_key"] for r in rows if r["view_key"] in wanted]
+    groups = {}
+    for key in selected:
+        r = by_key[key]
+        groups[r["group_key"]] = max(groups.get(r["group_key"], 0), r["surcharge"])
+    return selected, round(sum(groups.values()), 2), None
+
+
 def line_qty(item):
     sizes = item.get("sizes")
     if isinstance(sizes, dict) and sizes:
@@ -139,13 +179,20 @@ def quote(db, items, promo_code=None, user_id=None):
         qty = line_qty(it)
         if qty < 1:
             return None, "Pick at least one size before ordering."
-        unit = unit_price(db, p["id"], qty)
+        selected, print_extra, view_error = print_view_price(
+            db, p["id"], it.get("print_views"), (it.get("layers") or {}).keys())
+        if view_error:
+            return None, view_error
+        base_unit = unit_price(db, p["id"], qty)
+        unit = base_unit + print_extra
         total = round(unit * qty, 2)
         rate = gst_rate(tax, unit)
         subtotal += total
         gst += total * rate / 100.0
         lines.append({"pid": p["slug"], "product": p["name"], "qty": qty,
-                      "unit": unit, "total": total, "gst_percent": rate})
+                      "base_unit": base_unit, "print_extra": print_extra,
+                      "print_views": selected, "unit": unit, "total": total,
+                      "gst_percent": rate})
     subtotal = round(subtotal, 2)
     # Rounded once at the end, not per line, so the figure matches what the
     # browser shows — it sums the same way.
@@ -238,6 +285,7 @@ def _product_public(db, p):
             "base_price": p["base_price"], "one_size": bool(p["one_size"]),
             "active": bool(p["active"]), "sort": p["sort"],
             "tiers": _tiers_for(db, p["id"]),
+            "print_views": _print_views_for(db, p["id"]),
             "stock": stock["s"], "variants": stock["n"], "low": stock["low"]}
 
 
@@ -307,6 +355,35 @@ def update_product(pid):
         for min_qty, price in sorted(set(clean)):
             db.execute("INSERT INTO price_tiers(product_id,min_qty,unit_price) VALUES(?,?,?)",
                        (pid, min_qty, price))
+
+    views = d.get("print_views")
+    if isinstance(views, list):
+        import re
+        clean_views, seen = [], set()
+        for i, v in enumerate(views):
+            if not isinstance(v, dict):
+                return jsonify(ok=False, error="Every print view needs its settings."), 400
+            key = str(v.get("key") or "").strip().lower()
+            label = str(v.get("label") or "").strip()[:40]
+            group = str(v.get("group") or key).strip().lower()
+            mock = str(v.get("mock") or "").strip()[:80]
+            fee = v.get("surcharge", 0)
+            if (not re.match(r"^[a-z0-9_]+$", key) or key in seen or not label
+                    or not re.match(r"^[a-z0-9_]+$", group) or not mock
+                    or not isinstance(fee, (int, float)) or fee < 0):
+                return jsonify(ok=False, error="Check the print view keys, labels, mockups and fees."), 400
+            seen.add(key)
+            clean_views.append((key, label, group, mock, 1 if v.get("required") else 0,
+                                1 if v.get("default") else 0, float(fee), i))
+        if not clean_views or not any(v[4] for v in clean_views):
+            return jsonify(ok=False, error="A product needs at least one required print view."), 400
+        db.execute("DELETE FROM product_print_views WHERE product_id=?", (pid,))
+        db.executemany(
+            """INSERT INTO product_print_views(
+                   product_id,view_key,label,group_key,mock_key,required,
+                   default_enabled,surcharge,sort)
+               VALUES(?,?,?,?,?,?,?,?,?)""",
+            [(pid,) + v for v in clean_views])
 
     log(db, "product", pid, "updated", note=p["slug"])
     db.commit()

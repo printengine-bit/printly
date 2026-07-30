@@ -18,10 +18,13 @@ function gstFor(lines){
 function gstLabel(rates){
   return 'GST ' + (rates.length ? rates.map(r=>r+'%').join(' + ') : TAX.gst_percent+'%');
 }
-function unitPrice(p,q){
+function baseUnitPrice(p,q){
   let u=p.tiers[0][1];
   p.tiers.forEach(([min,pr])=>{ if(q>=min)u=pr; });
   return u;
+}
+function unitPrice(p,q,keys){
+  return baseUnitPrice(p,q)+printExtra(p,keys===undefined?(state.enabledViews||[]):keys);
 }
 /* ── Size picker ──────────────────────────────────────────────────
    Two faces over one piece of state. `state.sizes` is still the only place
@@ -171,14 +174,16 @@ function resetSizesForProduct(){
 function updatePrice(){
   const q=sizeTotal(state.sizes);
   document.getElementById('qtyLabel').textContent=q;
-  const p=state.product, u=unitPrice(p,Math.max(1,q));
+  const p=state.product, base=baseUnitPrice(p,Math.max(1,q));
+  const extra=state.plainItem?0:printExtra(p,state.enabledViews), u=base+extra;
   const box=document.getElementById('priceBox');
 
   if(q<1){
     // A total of ₹99 with nothing in the order is just the shipping line
     // showing through, and it reads as a broken price.
     box.innerHTML=`
-      <div class="price-line"><span>Unit price</span><span>₹${u.toLocaleString('en-IN')}</span></div>
+      <div class="price-line"><span>Garment</span><span>₹${base.toLocaleString('en-IN')}</span></div>
+      ${extra?`<div class="price-line"><span>Print locations</span><span>+₹${extra.toLocaleString('en-IN')}</span></div>`:''}
       <div class="price-note">Choose a size to see the total.</div>`;
   } else {
     // Free shipping is a rupee threshold, not a piece count. This line used
@@ -188,6 +193,8 @@ function updatePrice(){
     const sub=u*q, g=gstFor([{unit:u,total:sub}]);
     const ship=sub>TAX.free_shipping_over?0:TAX.shipping_flat, tot=sub+g.amount+ship;
     box.innerHTML=`
+      <div class="price-line"><span>Garment</span><span>₹${base.toLocaleString('en-IN')}</span></div>
+      ${extra?`<div class="price-line"><span>Print locations</span><span>+₹${extra.toLocaleString('en-IN')}</span></div>`:''}
       <div class="price-line"><span>Unit price</span><span>₹${u.toLocaleString('en-IN')}</span></div>
       <div class="price-line"><span>${esc(p.name)} × ${q}</span><span>₹${sub.toLocaleString('en-IN')}</span></div>
       <div class="price-line"><span>${gstLabel(g.rates)}</span><span>₹${g.amount.toLocaleString('en-IN')}</span></div>
@@ -220,7 +227,7 @@ function renderTierHint(q){
    get a toast. Both conditions are still re-checked in addToCart(). */
 function syncCta(){
   const btn=document.getElementById('addBtn'); if(!btn) return;
-  const hasDesign=state.layers.front.length||state.layers.back.length;
+  const hasDesign=state.plainItem||enabledPrintViews().some(v=>(state.layers[v.key]||[]).length);
   let label='Add to cart', icon='arrow_forward', off=false;
   if(!hasDesign){ label='Add a design first'; icon='draw'; off=true; }
   else if(sizeTotal(state.sizes)<1){ label='Choose a size'; icon='straighten'; off=true; }
@@ -238,25 +245,30 @@ function setCartCount(){
   el.dataset.count=n;
 }
 function addToCart(){
-  const hasDesign=state.layers.front.length||state.layers.back.length;
+  const views=state.plainItem?[]:enabledPrintViews();
+  const hasDesign=state.plainItem||views.some(v=>(state.layers[v.key]||[]).length);
   if(!hasDesign){ toast('Add a design first — text, logo or AI'); return; }
   const q=sizeTotal(state.sizes);
   if(q<1){ toast('Pick at least one size'); return; }
-  const p=state.product, u=unitPrice(p,q);
+  const p=state.product, u=state.plainItem?baseUnitPrice(state.product,q):unitPrice(state.product,q,state.enabledViews);
   // JPEG, not PNG — this thumbnail is stored inside the order row, and a
   // full-size PNG of the canvas is ~10x bigger for no visible benefit.
   const thumb=captureThumb();
   // Drop empty sizes — production only needs the ones actually ordered.
   const sizes=Object.fromEntries(Object.entries(state.sizes).filter(([,n])=>+n>0));
+  const layerData=Object.fromEntries(views.map(v=>[v.key,(state.layers[v.key]||[]).map(stripImg)]));
+  const specs=Object.fromEntries(views.map(v=>[v.key,printSpec(v.key)]));
+  const art=Object.fromEntries(views.map(v=>[v.key,capturePrintArt(v.key)]));
   state.cart.push({pid:p.id,product:p.name,qty:q,sizes,unit:u,total:u*q,shirt:state.shirtColor,
-    layers:JSON.parse(JSON.stringify({front:state.layers.front.map(stripImg),back:state.layers.back.map(stripImg)})),
+    print_views:views.map(v=>v.key), plain_item:state.plainItem,
+    layers:JSON.parse(JSON.stringify(layerData)),
     // The measured print spec, and the print-ready artwork itself. Both have
     // to be captured HERE: the canvas still holds the live Image objects,
     // which stripImg() is about to drop. `_art` is held in memory only and
     // uploaded at checkout — see uploadArt() — so abandoned carts don't
     // leave orphaned files on the volume.
-    spec:{front:printSpec('front'), back:printSpec('back')},
-    _art:{front:capturePrintArt('front'), back:capturePrintArt('back')},
+    spec:specs,
+    _art:art,
     thumb});
   setCartCount();
   toast('Added to cart 🛒');
@@ -432,7 +444,7 @@ async function uploadArt(){
   for(const line of state.cart){
     const {_art, ...rest}=line;
     const art={};
-    for(const side of ['front','back']){
+    for(const side of Object.keys(_art||{})){
       if(!_art||!_art[side]) continue;
       const res=await fetch(BACKEND+'/api/artwork',{method:'POST',
         headers:{'Content-Type':'application/json'},credentials:'include',

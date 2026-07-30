@@ -37,6 +37,25 @@ const ONE_SIZE_KEY=CATALOG.oneSizeKey;
 function product(pid){ return PRODUCTS.find(p => p.id === pid); }
 function isSized(pid){ const p=product(pid); return p ? !p.one_size : true; }
 function sizeKeys(pid){ return isSized(pid) ? SIZES : [ONE_SIZE_KEY]; }
+function printViews(pid){
+  const p=product(pid);
+  return (p&&p.print_views&&p.print_views.length) ? p.print_views : [
+    {key:'front',label:'Front',group:'front',mock:pid,required:true,default:true,surcharge:0}
+  ];
+}
+function printView(pid,key){ return printViews(pid).find(v=>v.key===key); }
+function enabledPrintViews(){
+  const on=new Set(state.enabledViews||[]);
+  return printViews(state.product.id).filter(v=>on.has(v.key));
+}
+function printExtra(p,keys){
+  const wanted=new Set(keys||[]);
+  const groups={};
+  printViews(p.id).forEach(v=>{
+    if(wanted.has(v.key)) groups[v.group]=Math.max(groups[v.group]||0,+v.surcharge||0);
+  });
+  return Object.values(groups).reduce((n,v)=>n+v,0);
+}
 
 /* A fresh breakdown for a product. Opens empty on purpose: pre-selecting a
    size the customer never chose is how someone ends up with an M they

@@ -89,8 +89,9 @@ function drawStage(ctx2d, garmentColor, x, y, w, h, radius){
 }
 /* resolve which mockup key to use for a product + side */
 function mockKey(pid){
-  if(state.side==='back' && MOCK.mocks[pid+'_back']) return pid+'_back';
-  return pid;
+  const v=typeof printView==='function' ? printView(pid,state.side) : null;
+  const key=v&&v.mock ? v.mock : (state.side==='front'?pid:pid+'_'+state.side);
+  return MOCK.mocks[key] ? key : pid;
 }
 /* ── Garment size ─────────────────────────────────────────────────
    The mockup photos are one garment. Which one: REF_SIZE. Everything else
@@ -163,7 +164,9 @@ let state = {
   product:PRODUCTS[0],
   shirtColor:'#FFFFFF',
   side:'front',
-  layers:{front:[],back:[]},   // {type:'text'|'img', ...}
+  layers:{front:[],back:[],left_sleeve:[],right_sleeve:[]},
+  enabledViews:['front'],
+  plainItem:false,
   sel:-1,
   guides:{v:false,h:false},
   cart:[],

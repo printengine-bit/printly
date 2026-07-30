@@ -231,15 +231,5 @@ function renderHomeProducts(){
 }
 
 function pickProduct(id){
-  state.product=PRODUCTS.find(p=>p.id===id);
-  document.getElementById('stProduct').value=id;
-  toggleJerseyKit();
-  updateProductSub();
-  // Size keys differ between products (a tote is one-size), and skipping
-  // this left the studio holding a breakdown keyed to the previous garment.
-  resetSizesForProduct();
-  // Arriving from the product page, the size shown selected there is the
-  // one the customer just looked at — carry it rather than asking again.
-  if(state.pdp && state.pdp.id===id && state.pdp.size && isSized(id)) pickSize(state.pdp.size);
-  go('studio'); updatePrice(); draw(); toast(state.product.name+' selected');
+  openProduct(id);
 }

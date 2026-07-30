@@ -14,7 +14,8 @@ function serialiseLayers(){
     c.src = L.img ? L.img.src : null;   // data URI or mockup path
     return c;
   };
-  return {front:state.layers.front.map(one), back:state.layers.back.map(one)};
+  return Object.fromEntries(Object.entries(state.layers)
+    .map(([key,layers])=>[key,(layers||[]).map(one)]));
 }
 
 /* Rebuild layer objects, waiting for every image to decode before drawing —
@@ -28,13 +29,14 @@ function hydrateLayers(data){
     img.src=L.src; out.img=img; delete out.src;
     return out;
   };
-  const layers={front:(data.front||[]).map(one), back:(data.back||[]).map(one)};
+  const layers=Object.fromEntries(Object.entries(data||{})
+    .map(([key,items])=>[key,(items||[]).map(one)]));
   return Promise.all(pending).then(()=>layers);
 }
 
 async function saveDesign(){
   if(!state.user){ openLogin(); toast('Sign in to save your designs'); return; }
-  if(!state.layers.front.length && !state.layers.back.length){
+  if(!enabledPrintViews().some(v=>(state.layers[v.key]||[]).length)){
     toast('Add something to the design first'); return;
   }
   const suggested = state.designName || (state.product.name+' drop');
@@ -74,6 +76,9 @@ async function loadDesign(id){
       el.classList.toggle('on', el.title===state.shirtColor));
 
     state.layers=await hydrateLayers(d.design.layers);
+    configureProductViews(state.product.id,true);
+    state.enabledViews=printViews(state.product.id)
+      .filter(v=>v.required||(state.layers[v.key]||[]).length).map(v=>v.key);
     state.sel=-1;
     // A template is a starting point, not a document you overwrite.
     state.designId = d.design.is_template ? null : d.design.id;
@@ -83,8 +88,8 @@ async function loadDesign(id){
     // The saved design can be for a different garment, and a tote's size
     // keys aren't a tee's — rebuild the breakdown before pricing it.
     toggleJerseyKit(); updateProductSub(); resetSizesForProduct(); updatePrice();
-    setSide('front'); renderLayers(); draw();
-    go('studio');
+    setSide(state.enabledViews[0]||'front'); renderLayers(); draw();
+    openPdp(state.product.id);
     toast(d.design.is_template ? 'Template loaded — make it yours' : 'Opened “'+d.design.name+'”');
   }catch(err){ toast('Could not reach the server — try again.'); }
 }
@@ -102,9 +107,10 @@ async function deleteDesign(id, name){
 }
 
 function newDesign(){
-  state.layers={front:[],back:[]};
+  state.layers={front:[],back:[],left_sleeve:[],right_sleeve:[]};
+  configureProductViews(state.product.id);
   state.sel=-1; state.designId=null; state.designName=null;
-  setSide('front'); renderLayers(); draw(); go('studio');
+  setSide('front'); renderLayers(); draw(); openPdp(state.product.id);
   toast('Fresh canvas');
 }
 

@@ -75,7 +75,7 @@ def template_detail(did):
         layers = {}
 
     sides, uploaded = {}, 0
-    for side in ("front", "back"):
+    for side in layers:
         out = []
         for l in layers.get(side) or []:
             if not isinstance(l, dict):
@@ -209,21 +209,24 @@ def photos():
     # one — and inventing `tb_back` would report a second.
     mdir = os.path.join(os.path.dirname(__file__), "..", "frontend", "mockups")
     try:
-        files = sorted(f for f in os.listdir(mdir) if f.lower().endswith(".jpg"))
+        files = sorted(f for f in os.listdir(mdir)
+                       if os.path.splitext(f)[1].lower() in (".jpg", ".jpeg", ".png", ".webp"))
     except OSError:
         files = []
 
     out = []
     for f in files:
         key = os.path.splitext(f)[0]
-        slug = key[:-5] if key.endswith("_back") else key
+        suffixes = ("_left_sleeve", "_right_sleeve", "_back")
+        suffix = next((s for s in suffixes if key.endswith(s)), "")
+        slug = key[:-len(suffix)] if suffix else key
         try:
             size = os.path.getsize(os.path.join(mdir, f))
         except OSError:
             size = 0
         out.append({
             "product": names.get(slug, slug), "product_id": slug,
-            "side": "back" if key.endswith("_back") else "front",
+            "side": suffix[1:].replace("_", " ") if suffix else "front",
             "key": key, "file": "mockups/%s" % f, "bytes": size,
             "zone": zones.get(key),
             # A photo with no zone row is the real fault: mockLayout() would
@@ -250,10 +253,11 @@ def set_zone(key):
     if not cur:
         return jsonify(ok=False, error="No such mockup."), 404
     vals = {}
-    # Bounds are sanity, not policy: mockup space is 720px wide, and a print
+    # Bounds are sanity, not policy. New high-resolution product photography
+    # can be larger than the original 720px mockups.
     # zone measured in metres or millimetres is a typo either way.
-    for field, lo, hi in (("cx", 0, 720), ("cy", 0, 900), ("w", 10, 720),
-                          ("h", 10, 900), ("cm_w", 1, 200), ("cm_h", 1, 200)):
+    for field, lo, hi in (("cx", 0, 4000), ("cy", 0, 4000), ("w", 10, 4000),
+                          ("h", 10, 4000), ("cm_w", 1, 200), ("cm_h", 1, 200)):
         v = d.get(field, cur[field])
         try:
             v = float(v)

@@ -133,6 +133,13 @@ function editProduct(id){
       <button class="btn btn-quiet btn-sm" onclick="addTier()">Add tier</button>
     </div>
 
+    <h3 class="tiny muted" style="text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">
+      Printable views</h3>
+    <p class="tiny dim" style="margin-bottom:10px">Each canvas has its own mockup and zone.
+      Views sharing a group (both sleeves) charge that group's fee only once.</p>
+    <div id="pe_views">${(p.print_views||[]).map((v,i)=>printViewRow(v,i)).join('')}</div>
+    <button class="btn btn-quiet btn-sm" style="margin:4px 0 18px" onclick="addPrintView()">Add view</button>
+
     <label class="field"><span>Storefront visibility</span>
       <select id="pe_active">
         <option value="1" ${p.active?'selected':''}>Live — shown to customers</option>
@@ -160,6 +167,25 @@ function tierRow(qty, price, i){
 function addTier(){
   document.getElementById('pe_tiers').insertAdjacentHTML('beforeend', tierRow('', '', 0));
 }
+function printViewRow(v={}){
+  return `<div class="card print-view-row" style="padding:12px;margin-bottom:8px">
+    <div class="form-grid">
+      <label class="field"><span>Key</span><input class="pv-key" value="${esc(v.key||'')}"></label>
+      <label class="field"><span>Customer label</span><input class="pv-label" value="${esc(v.label||'')}"></label>
+      <label class="field"><span>Price group</span><input class="pv-group" value="${esc(v.group||'')}"></label>
+      <label class="field"><span>Mockup key</span><input class="pv-mock" value="${esc(v.mock||'')}"></label>
+      <label class="field"><span>Surcharge ₹</span><input class="pv-fee" value="${+v.surcharge||0}"></label>
+      <label class="field"><span>Behaviour</span><span class="row" style="gap:12px;min-height:40px">
+        <label><input class="pv-required" type="checkbox" ${v.required?'checked':''}> Required</label>
+        <label><input class="pv-default" type="checkbox" ${v.default?'checked':''}> Default</label>
+      </span></label>
+    </div>
+    <button class="btn btn-quiet btn-sm" onclick="this.closest('.print-view-row').remove()">Remove view</button>
+  </div>`;
+}
+function addPrintView(){
+  document.getElementById('pe_views').insertAdjacentHTML('beforeend',printViewRow());
+}
 
 async function saveProduct(id){
   const tiers = [...document.querySelectorAll('#pe_tiers .tier-row')].map(r=>[
@@ -175,6 +201,15 @@ async function saveProduct(id){
     cost_price: parseFloat(document.getElementById('pe_cost').value) || 0,
     active: document.getElementById('pe_active').value === '1',
     tiers,
+    print_views:[...document.querySelectorAll('#pe_views .print-view-row')].map(r=>({
+      key:r.querySelector('.pv-key').value.trim(),
+      label:r.querySelector('.pv-label').value.trim(),
+      group:r.querySelector('.pv-group').value.trim(),
+      mock:r.querySelector('.pv-mock').value.trim(),
+      surcharge:parseFloat(r.querySelector('.pv-fee').value)||0,
+      required:r.querySelector('.pv-required').checked,
+      default:r.querySelector('.pv-default').checked,
+    })),
   });
   if(!d.ok){ toast(d.error); return; }
   toast('Saved — live on the storefront after a refresh');

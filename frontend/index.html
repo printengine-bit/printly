@@ -233,7 +233,8 @@
 </section>
 
 <!-- ══════════════ DESIGN STUDIO ══════════════ -->
-<section class="view" id="v-studio">
+<section class="view" id="v-studio" aria-hidden="true">
+  <div id="studioParking">
   <div class="studio">
 
     <!-- ── LEFT: tools ── -->
@@ -294,7 +295,7 @@
           </div>
           <div class="st-group">
             <label>Add image / logo</label>
-            <input type="file" id="imgInput" accept="image/*">
+            <input type="file" id="imgInput" accept="image/*" onchange="addImage()">
             <button class="btn btn-quiet btn-block" style="margin-top:10px" onclick="addImage()">
               <span class="material-symbols-outlined">upload</span> Place on garment
             </button>
@@ -366,6 +367,9 @@
            selected, so the eight tools that can't do anything yet look
            unavailable instead of answering with a toast. -->
       <div class="st-toolbar">
+        <button id="btnUndo" onclick="undoEdit()" title="Undo" disabled><span class="material-symbols-outlined">undo</span></button>
+        <button id="btnRedo" onclick="redoEdit()" title="Redo" disabled><span class="material-symbols-outlined">redo</span></button>
+        <span class="sep"></span>
         <button data-needsel onclick="alignSel('left')" title="Align left"><span class="material-symbols-outlined">format_align_left</span></button>
         <button data-needsel onclick="alignSel('cx')" title="Centre horizontally"><span class="material-symbols-outlined">align_horizontal_center</span></button>
         <button data-needsel onclick="alignSel('right')" title="Align right"><span class="material-symbols-outlined">format_align_right</span></button>
@@ -375,6 +379,13 @@
         <button data-needsel onclick="alignSel('bottom')" title="Align bottom"><span class="material-symbols-outlined">vertical_align_bottom</span></button>
         <span class="sep"></span>
         <button data-needsel onclick="fitWidth()" title="Fit to print width"><span class="material-symbols-outlined">fit_screen</span></button>
+        <span class="sep"></span>
+        <button data-needsel onclick="duplicateSel()" title="Duplicate"><span class="material-symbols-outlined">content_copy</span></button>
+        <button data-needsel data-image-only onclick="replaceImageSel()" title="Replace image"><span class="material-symbols-outlined">find_replace</span></button>
+        <button data-needsel data-image-only id="btnCrop" onclick="cropImageSel()" title="Cycle crop"><span class="material-symbols-outlined">crop</span></button>
+        <button data-needsel data-image-only id="btnEffects" onclick="effectImageSel()" title="Image effects"><span class="material-symbols-outlined">auto_fix_high</span></button>
+        <button data-needsel id="btnStroke" onclick="toggleStrokeSel()" title="Text outline"><span class="material-symbols-outlined">format_color_text</span></button>
+        <button data-needsel id="btnShadow" onclick="toggleShadowSel()" title="Text shadow"><span class="material-symbols-outlined">blur_on</span></button>
         <button data-needsel onclick="deleteSel()" title="Delete selected"><span class="material-symbols-outlined">delete</span></button>
         <button onclick="downloadPNG()" title="Download preview"><span class="material-symbols-outlined">download</span></button>
       </div>
@@ -396,7 +407,24 @@
         <div class="canvas-frame" id="canvasFrame">
           <canvas id="teeCanvas" width="520" height="560"></canvas>
         </div>
+        <div class="selected-actions" id="selectedActions">
+          <button onclick="scaleSelected(1.12)"><span class="material-symbols-outlined">zoom_in</span>Scale</button>
+          <button data-image-only onclick="cropImageSel()"><span class="material-symbols-outlined">crop</span>Crop</button>
+          <button data-image-only onclick="effectImageSel()"><span class="material-symbols-outlined">auto_fix_high</span>Effects</button>
+          <button data-image-only onclick="replaceImageSel()"><span class="material-symbols-outlined">find_replace</span>Replace</button>
+          <button onclick="alignSel('cx')"><span class="material-symbols-outlined">open_with</span>Position</button>
+          <button onclick="toggleLockSel()"><span class="material-symbols-outlined">lock</span>Lock</button>
+          <button onclick="duplicateSel()"><span class="material-symbols-outlined">content_copy</span></button>
+          <button onclick="deleteSel()"><span class="material-symbols-outlined">delete</span></button>
+        </div>
         <div class="measure" id="measureBar"></div>
+        <div class="object-actions">
+          <button onclick="openImagePicker()"><span class="material-symbols-outlined">image</span>Add image</button>
+          <button onclick="openTextTool()"><span class="material-symbols-outlined">title</span>Add text</button>
+          <button onclick="openAiTool()"><span class="material-symbols-outlined">auto_awesome</span>AI design</button>
+          <button id="btnPreview" onclick="togglePreview()"><span class="material-symbols-outlined">visibility</span>Preview</button>
+        </div>
+        <div class="print-view-tabs" id="printViewTabs"></div>
         <div class="badge badge-warn st-warn" id="stWarn">
           <span class="material-symbols-outlined" style="font-size:16px">warning</span>
           <span id="stWarnText">Object outside print area</span>
@@ -414,6 +442,28 @@
 
     <!-- ── RIGHT: layers + summary ── -->
     <aside class="st-side st-right scroll-thin">
+      <div class="pdp-config" id="pdpConfig">
+        <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
+          <div>
+            <h1 class="pdp-editor-title" id="pdpEditorTitle">Custom product</h1>
+            <div id="pdpEditorRating"></div>
+          </div>
+          <div id="pdpEditorWish"></div>
+        </div>
+        <div class="pdp-option">
+          <span class="st-lbl">Print sides</span>
+          <div class="print-side-groups" id="printSideGroups"></div>
+        </div>
+        <div class="pdp-option">
+          <span class="st-lbl">Colour</span>
+          <div class="swatches" id="pdpSwatches"></div>
+        </div>
+        <label class="plain-toggle">
+          <input id="plainItemToggle" type="checkbox" onchange="togglePlainItem(this.checked)">
+          <span><b>Plain item</b><small>Order without custom printing</small></span>
+        </label>
+        <div class="pdp-fabric" id="pdpFabric"></div>
+      </div>
       <div class="st-layers">
         <div class="spread" id="layerHead" style="margin-bottom:14px">
           <span class="st-lbl" style="margin:0">Active layers</span>
@@ -439,6 +489,7 @@
         <p class="ships">Ships within 48 hours from Pune</p>
       </div>
     </aside>
+  </div>
   </div>
 </section>
 

@@ -221,7 +221,7 @@ async function renderPhotos(el){
         </div>
         <button class="btn btn-primary btn-sm" onclick="saveZone('${esc(p.key)}')">Save zone</button>
         <p class="tiny dim" style="margin-top:8px">Pixels are measured on the
-          720px-wide mockup photo; centimetres are the real printable size on
+          mockup photo at its native resolution; centimetres are the real printable size on
           that garment.</p>`
         : `<div class="alert warn"><span class="material-symbols-outlined">error</span>
            <span>No zone recorded — the studio falls back to the round-neck tee's

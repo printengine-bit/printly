@@ -89,6 +89,25 @@ def init_db():
         unit_price REAL NOT NULL)""")
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_tier ON price_tiers(product_id,min_qty)")
 
+    # Configurable printable views. `group_key` lets two physical views share
+    # one commercial option (left + right sleeve are a single "Sleeves"
+    # surcharge), while each view keeps its own mockup and print zone.
+    c.execute("""CREATE TABLE IF NOT EXISTS product_print_views(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL REFERENCES products(id),
+        view_key TEXT NOT NULL,
+        label TEXT NOT NULL,
+        group_key TEXT NOT NULL,
+        mock_key TEXT NOT NULL,
+        required INTEGER NOT NULL DEFAULT 0,
+        default_enabled INTEGER NOT NULL DEFAULT 0,
+        surcharge REAL NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        sort INTEGER NOT NULL DEFAULT 0,
+        UNIQUE(product_id,view_key))""")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_print_views_product "
+              "ON product_print_views(product_id,active,sort)")
+
     # The actual stockable unit: one product in one colour in one size.
     c.execute("""CREATE TABLE IF NOT EXISTS variants(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -428,6 +447,7 @@ def init_db():
             ("unisex", "bags", "Tote Bag", "tb"),
         ])
     _seed_women_lines(c)
+    _seed_print_views(c)
 
     c.commit()
     c.close()
@@ -513,9 +533,61 @@ SEED_ZONES = {
     "po_back": (363, 300, 230, 300, 38, 48),
     "hd":      (360, 255, 220, 230, 36, 36),
     "hd_back": (360, 300, 235, 320, 38, 53),
+    # Generated side-profile hoodie photos are 1280px square. These are
+    # conservative starter zones; the admin zone screen remains the authority
+    # after the physical blank is measured.
+    "hd_left_sleeve":  (650, 680, 150, 560, 10, 32),
+    "hd_right_sleeve": (650, 680, 150, 560, 10, 32),
     "js":      (360, 330, 230, 300, 36, 46),
     "js_back": (342, 360, 250, 360, 38, 52),
 }
+
+
+PRINT_VIEW_SEED = {
+    "rn": [
+        ("front", "Front", "front", "rn", 1, 1, 0, 0),
+        ("back", "Back", "back", "rn_back", 0, 0, 100, 1),
+    ],
+    "po": [
+        ("front", "Front", "front", "po", 1, 1, 0, 0),
+        ("back", "Back", "back", "po_back", 0, 0, 120, 1),
+    ],
+    "hd": [
+        ("front", "Front", "front", "hd", 1, 1, 0, 0),
+        ("back", "Back", "back", "hd_back", 0, 0, 130, 1),
+        ("left_sleeve", "Left sleeve", "sleeves", "hd_left_sleeve", 0, 0, 130, 2),
+        ("right_sleeve", "Right sleeve", "sleeves", "hd_right_sleeve", 0, 0, 130, 3),
+    ],
+    "js": [
+        ("front", "Front", "front", "js", 1, 1, 0, 0),
+        ("back", "Back", "back", "js_back", 0, 0, 100, 1),
+    ],
+    "tb": [("front", "Front", "front", "tb", 1, 1, 0, 0)],
+}
+
+
+def _seed_print_views(conn):
+    """Add missing view rows without overwriting later admin changes."""
+    for slug, views in PRINT_VIEW_SEED.items():
+        p = conn.execute("SELECT id FROM products WHERE slug=?", (slug,)).fetchone()
+        if not p:
+            continue
+        for key, label, group, mock, required, default, fee, sort in views:
+            conn.execute(
+                """INSERT OR IGNORE INTO product_print_views(
+                       product_id,view_key,label,group_key,mock_key,required,
+                       default_enabled,surcharge,sort)
+                   VALUES(?,?,?,?,?,?,?,?,?)""",
+                (p[0], key, label, group, mock, required, default, fee, sort))
+
+    # New catalogue lines without dedicated photography still get a safe,
+    # front-only vector view instead of inheriting another garment's zone.
+    conn.execute(
+        """INSERT OR IGNORE INTO product_print_views(
+               product_id,view_key,label,group_key,mock_key,required,
+               default_enabled,surcharge,sort)
+           SELECT id,'front','Front','front',slug,1,1,0,0
+           FROM products""")
 
 
 def _seed_zones(conn):
