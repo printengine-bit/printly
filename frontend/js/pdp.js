@@ -6,8 +6,6 @@
    shipping separate per-colour photos: getRecoloredMock() already produces
    a canvas for any product/colour, so swatches here are live. */
 
-state.pdp = {id:null, side:'front', color:'#FFFFFF', size:'M'};
-
 /* SIZES comes from data.js. It must NOT be re-declared here: these are
    classic scripts sharing one global scope, so a duplicate `const` is a
    parse error that silently discards this entire file — the whole product
@@ -20,10 +18,6 @@ state.pdp = {id:null, side:'front', color:'#FFFFFF', size:'M'};
 
 function openProduct(pid){
   parkStudio();
-  state.pdp.id=pid;
-  state.pdp.side='front';
-  state.pdp.color='#FFFFFF';
-  state.pdp.size='M';
   const p=product(pid);
   if(p){
     state.product=p;
@@ -67,19 +61,46 @@ function mountPdpCustomizer(p){
   document.getElementById('pdpSwatches').innerHTML=SHIRT_COLORS.map(c=>
     `<button class="sw${c===state.shirtColor?' on':''}" style="background:${c}" title="${c}"
        aria-label="${esc(COLOR_NAMES[c]||c)}" onclick="setGarmentColor('${c}')"></button>`).join('');
+  renderPdpDetails(p);
   renderPrintControls();
   renderSizeGrid(); updatePrice(); renderLayers(); applyPreviewSize(); draw();
+}
+
+/* Care instructions, size guide and delivery estimate have no live
+   equivalent elsewhere on the merged page (unlike bulk pricing, which the
+   size grid + tier-hint already show in real time) — they still need a
+   home, so they're a details/accordion block inside pdp-config rather
+   than a separate static gallery that gets thrown away on load. */
+function renderPdpDetails(p){
+  const el=document.getElementById('pdpDetails'); if(!el) return;
+  const chart=p.chart && p.chart.chest ? {label:p.fit, ...p.chart} : null;
+  el.innerHTML=`
+    <details class="acc"><summary>Fabric &amp; composition</summary>
+      <p>${esc(p.fabric||'Premium fabric')}</p></details>
+    <details class="acc"><summary>Care instructions</summary>
+      <ul>${(p.care||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></details>
+    ${chart?`<details class="acc"><summary>Size guide — ${esc(chart.label)}</summary>
+      <table class="size-table">
+        <tr><th>Size</th><th>Chest (in)</th><th>Length (cm)</th></tr>
+        ${chart.chest.map((c,i)=>`<tr><td><b>${chart.chest.length>1?SIZES[i]:'One size'}</b></td>
+          <td>${c}</td><td>${chart.length[i]}</td></tr>`).join('')}
+      </table>
+      <p style="font-size:12px">Chest measured flat, armpit to armpit. Allow ±1 in tolerance.</p>
+    </details>`:''}
+    <details class="acc"><summary>Delivery estimate</summary>
+      <div class="row" style="gap:8px;margin-top:2px">
+        <input class="inp" id="pinInput" placeholder="Enter 6-digit pincode" maxlength="6" inputmode="numeric">
+        <button class="btn btn-quiet btn-sm" onclick="checkPincode()">Check</button>
+      </div>
+      <div id="pinResult" style="font-size:13px;margin-top:10px"></div>
+    </details>`;
 }
 
 function renderPdp(){
   parkStudio();
   const el=document.getElementById('pdpBody'); if(!el) return;
-  const p=PRODUCTS.find(x=>x.id===state.pdp.id);
+  const p=PRODUCTS.find(x=>x.id===state.product.id);
   if(!p){ el.innerHTML='<div class="empty">Product not found.</div>'; return; }
-
-  const f={spec:p.fabric||'Premium fabric', care:p.care||[]};
-  const chart=p.chart && p.chart.chest ? {label:p.fit, ...p.chart} : null;
-  const hasBack=!!(MOCK.mocks[p.id+'_back']);
 
   el.innerHTML=`
     <div class="crumb">
@@ -88,80 +109,7 @@ function renderPdp(){
       <span>${esc(p.name)}</span>
     </div>
 
-    <div class="pdp">
-      <div class="pdp-gallery">
-        <div class="pdp-main"><canvas id="pdpCanvas" width="520" height="560"></canvas></div>
-        <div class="pdp-thumbs">
-          <div class="pdp-thumb on" data-side="front" onclick="pdpSide('front')">
-            <canvas class="pdp-tc" data-side="front" width="150" height="160"></canvas>
-          </div>
-          ${hasBack?`<div class="pdp-thumb" data-side="back" onclick="pdpSide('back')">
-            <canvas class="pdp-tc" data-side="back" width="150" height="160"></canvas>
-          </div>`:''}
-        </div>
-      </div>
-
-      <div>
-        <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
-          <h1 class="t-h1">${esc(p.name)}</h1>
-          ${wishHeart(p.id,'lg')}
-        </div>
-        <div style="margin:12px 0 24px" id="pdpRating">${starsFor(p.id)}</div>
-
-        <div class="t-label t-mut" style="margin-bottom:8px">Bulk pricing</div>
-        <div class="tiers">
-          ${p.tiers.map((t,i)=>`<div class="tier${i===3?' best':''}">
-            <div class="tier-q">${t[0]}${i===p.tiers.length-1?'+':'–'+(p.tiers[i+1]?p.tiers[i+1][0]-1:'')} pcs</div>
-            <div class="tier-p">₹${t[1].toLocaleString('en-IN')}</div>
-          </div>`).join('')}
-        </div>
-        <p class="t-dim" style="font-size:12px;margin-bottom:24px">Inclusive of printing. GST and shipping shown at checkout.</p>
-
-        <div class="t-label t-mut" style="margin-bottom:10px">Colour</div>
-        <div class="swatches" style="margin-bottom:24px">
-          ${SHIRT_COLORS.map(c=>`<div class="sw${c===state.pdp.color?' on':''}"
-             style="background:${c}" title="${c}" onclick="pdpColor('${c}')"></div>`).join('')}
-        </div>
-
-        ${chart&&chart.chest.length>1?`
-        <div class="spread" style="margin-bottom:10px">
-          <span class="t-label t-mut">Size</span>
-          <a href="#" class="t-lime t-label" onclick="document.getElementById('sizeChart').open=true;return false">Size guide</a>
-        </div>
-        <div class="sizes" style="margin-bottom:24px">
-          ${SIZES.map(s=>`<button class="size-btn${s===state.pdp.size?' on':''}" onclick="pdpSize('${s}')">${s}</button>`).join('')}
-        </div>`:''}
-
-        <button class="btn btn-primary btn-block" onclick="pickProduct('${p.id}')">
-          Design this in Studio <span class="material-symbols-outlined">arrow_forward</span>
-        </button>
-
-        <div class="deliv">
-          <div class="row" style="gap:8px;margin-bottom:10px">
-            <span class="material-symbols-outlined t-lime" style="font-size:20px">local_shipping</span>
-            <span class="t-label">Delivery estimate</span>
-          </div>
-          <div class="row" style="gap:8px">
-            <input class="inp" id="pinInput" placeholder="Enter 6-digit pincode" maxlength="6" inputmode="numeric">
-            <button class="btn btn-quiet btn-sm" onclick="checkPincode()">Check</button>
-          </div>
-          <div id="pinResult" style="font-size:13px;margin-top:10px"></div>
-        </div>
-
-        <details class="acc"><summary>Fabric &amp; composition</summary>
-          <p>${esc(f.spec)}</p></details>
-        <details class="acc"><summary>Care instructions</summary>
-          <ul>${f.care.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></details>
-        ${chart?`<details class="acc" id="sizeChart"><summary>Size guide — ${esc(chart.label)}</summary>
-          <table class="size-table">
-            <tr><th>Size</th><th>Chest (in)</th><th>Length (cm)</th></tr>
-            ${chart.chest.map((c,i)=>`<tr><td><b>${chart.chest.length>1?SIZES[i]:'One size'}</b></td>
-              <td>${c}</td><td>${chart.length[i]}</td></tr>`).join('')}
-          </table>
-          <p style="font-size:12px">Chest measured flat, armpit to armpit. Allow ±1 in tolerance.</p>
-        </details>`:''}
-      </div>
-    </div>
+    <div id="pdpCustomizerMount" class="pdp-customizer-mount"></div>
 
     <div class="section-sm" style="margin-top:24px">
       <div class="spread" style="margin-bottom:24px">
@@ -185,60 +133,9 @@ function renderPdp(){
       </div>
     </div>`;
 
-  const old=el.querySelector('.pdp');
-  if(old){
-    const mount=document.createElement('div');
-    mount.id='pdpCustomizerMount';
-    mount.className='pdp-customizer-mount';
-    old.replaceWith(mount);
-  }
   mountPdpCustomizer(p);
-  drawPdp();
   document.querySelectorAll('.pthumb').forEach(c=>drawProductThumb(c,c.dataset.p));
   loadReviews(p.id);
-}
-
-/* Paint the gallery from the shared recolour engine. */
-function drawPdp(){
-  const p=PRODUCTS.find(x=>x.id===state.pdp.id); if(!p) return;
-  const key = state.pdp.side==='back' && MOCK.mocks[p.id+'_back'] ? p.id+'_back' : p.id;
-
-  const paint=(cnv,k)=>{
-    if(!cnv) return;
-    const c=cnv.getContext('2d');
-    c.clearRect(0,0,cnv.width,cnv.height);
-    const mock=getRecoloredMock(k,state.pdp.color) || mockImgs[k];
-    if(!mock){ drawGarment(c,p.id,state.pdp.color); return; }
-    const iw=mock.width||mock.naturalWidth, ih=mock.height||mock.naturalHeight;
-    const s=Math.min(cnv.width/iw,cnv.height/ih);
-    const ox=(cnv.width-iw*s)/2, oy=(cnv.height-ih*s)/2;
-    // Thumbnails are small, so scale the corner radius with the canvas.
-    drawStage(c,state.pdp.color,ox,oy,iw*s,ih*s,cnv.width<120?6:16);
-    c.drawImage(mock,ox,oy,iw*s,ih*s);
-  };
-  paint(document.getElementById('pdpCanvas'),key);
-  document.querySelectorAll('.pdp-tc').forEach(cnv=>{
-    const s=cnv.dataset.side;
-    paint(cnv, s==='back'&&MOCK.mocks[p.id+'_back'] ? p.id+'_back' : p.id);
-  });
-}
-
-function pdpSide(side){
-  state.pdp.side=side;
-  document.querySelectorAll('.pdp-thumb').forEach(t=>t.classList.toggle('on',t.dataset.side===side));
-  drawPdp();
-}
-function pdpColor(c){
-  state.pdp.color=c;
-  document.querySelectorAll('#v-pdp .sw').forEach(el=>el.classList.toggle('on',el.title===c));
-  drawPdp();
-}
-function pdpSize(s){
-  state.pdp.size=s;
-  // Scoped to this view: the studio's size chips reuse .size-btn and are
-  // still in the DOM while hidden, so an unscoped query moved their
-  // selection too.
-  document.querySelectorAll('#v-pdp .size-btn').forEach(b=>b.classList.toggle('on',b.textContent===s));
 }
 
 async function checkPincode(){

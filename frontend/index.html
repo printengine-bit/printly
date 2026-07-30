@@ -194,7 +194,7 @@
           <li><span class="material-symbols-outlined">bolt</span> Five streetwear-tuned styles</li>
           <li><span class="material-symbols-outlined">bolt</span> Background removed automatically</li>
         </ul>
-        <button class="btn btn-primary" onclick="go('studio');studioTab('ai')">Try the AI designer free →</button>
+        <button class="btn btn-primary" onclick="go('studio');openAiTool()">Try the AI designer free →</button>
       </div>
       <div class="hero-stage">
         <canvas id="aiPreview" width="340" height="360"></canvas>
@@ -477,6 +477,7 @@
           <span><b>Plain item</b><small>Order without custom printing</small></span>
         </label>
         <div class="pdp-fabric" id="pdpFabric"></div>
+        <div id="pdpDetails"></div>
       </div>
       <div class="st-layers" id="pdpLayerSection" hidden>
         <div class="spread" id="layerHead" style="margin-bottom:14px">

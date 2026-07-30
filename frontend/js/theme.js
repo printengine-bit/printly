@@ -43,6 +43,5 @@ function repaintForTheme(){
   if(typeof draw === 'function' && document.getElementById('teeCanvas')) draw();
   if(typeof heroLoop === 'function' && document.getElementById('heroTee')) heroLoop();
   if(typeof drawAiPreview === 'function') drawAiPreview();
-  if(typeof drawPdp === 'function' && state.pdp && state.pdp.id) drawPdp();
   if(typeof paintCursorGrid === 'function') paintCursorGrid();
 }
