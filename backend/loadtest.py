@@ -1,5 +1,5 @@
 """
-Load test for Printly — validates the "100 concurrent users" target from
+Load test for Print Engine — validates the "100 concurrent users" target from
 the production-readiness plan. Deliberately excludes /api/generate-image:
 that endpoint is capped to 1 concurrent request by design (Pollinations'
 free-tier rate limit), so hammering it here would just spam 429s and burn

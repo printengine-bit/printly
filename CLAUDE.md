@@ -1,6 +1,6 @@
 # Project context for Claude Code
 
-Printly is a single-page custom-apparel e-commerce + design studio.
+Print Engine is a single-page custom-apparel e-commerce + design studio.
 Read `README.md` first, then `docs/chat_context.txt` for the full
 build history and the reasoning behind existing decisions before
 changing anything — several things here were deliberately chosen
@@ -265,8 +265,12 @@ once and an edited stylesheet silently kept serving the cached copy.
   had to bind, so the caller can say "tight fit, try Center Chest" instead
   of silently shipping illegible text.
 - **The canvas is drawn to the garment size.** `MOCK.print` describes
-  `REF_SIZE` (M); every other size is that photo scaled by the chest ratio
-  out of the product's own size chart (`sizeScale()` in `mockups.js`).
+  the size at `REF_INDEX` in every size chart (position 1 — "M" on the
+  shared adult scale); every other size is that photo scaled by the chest
+  ratio out of the product's own size chart (`sizeScale()` in `mockups.js`).
+  It indexes by *position*, not by matching a label, so a product with its
+  own size labels (kids' age bands, via `products.size_labels_json` and
+  `sizeKeys()`) scales correctly too.
   `mockLayout()` scales the zone's px box *and* its cm figures by the same
   factor, so **`pxcm()` is identical at every size** — that's the invariant
   that keeps a 20cm print 20cm wide when you switch S→3XL, and it must not

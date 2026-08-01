@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-#  PRINTLY — Production Backend (AI Image Generation + Print Prep)
+#  PRINT ENGINE — Production Backend (AI Image Generation + Print Prep)
 #  Multi-provider:  Pollinations (free) · Gemini (free) · Replicate/Flux (paid) · ComfyUI (own GPU)
 #
 #  Install:  pip install flask flask-cors pillow requests
@@ -236,7 +236,7 @@ def moderate(prompt: str):
     p = prompt.lower()
     for w in BLOCKED:
         if w in p:
-            return False, f"'{w}' designs are not allowed on Printly."
+            return False, f"'{w}' designs are not allowed on Print Engine."
     return True, ""
 
 # ── Prompt enhancer: turn customer words into print-ready prompt ─
@@ -437,7 +437,7 @@ def stats():
     return jsonify(total_images=row["n"], total_cost_inr=round(row["cost"], 2))
 
 if __name__ == "__main__":
-    print("Printly AI backend → http://127.0.0.1:5001")
+    print("Print Engine AI backend → http://127.0.0.1:5001")
     if not os.environ.get("FLASK_SECRET_KEY"):
         print("⚠️  FLASK_SECRET_KEY not set — using a random key that changes on every "
               "restart (everyone gets logged out each time). Fine for local dev, set it "

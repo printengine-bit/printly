@@ -1,4 +1,4 @@
-# Deploying Printly to Railway
+# Deploying Print Engine to Railway
 
 One service, one volume. The repo root carries everything the builder needs
 (`requirements.txt`, `Procfile`, `railway.json`, `runtime.txt`) — Railway
@@ -35,7 +35,7 @@ so CORS isn't involved.
 
 ## 3. Region
 
-Default is US West. Printly ships from Pune to Indian customers, so every
+Default is US West. Print Engine ships from Pune to Indian customers, so every
 request is crossing the Pacific twice. Switch the service to **Southeast
 Asia (Singapore)** — it's the closest region Railway offers to India and
 cuts roughly 200ms off every request. Do it before there's data on the

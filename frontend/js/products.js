@@ -15,7 +15,7 @@ function jerseyBackPrint(c){
   // back print
   c.textAlign='center';
   c.fillStyle='#FFE9A8'; c.font='700 24px "Archivo Narrow"';
-  c.fillText('PRINTLY',260,205);                        // sponsor 1
+  c.fillText('PRINT ENGINE',260,205);                        // sponsor 1
   c.fillStyle='#FFFFFF'; c.font='700 34px "Archivo Narrow"';
   c.fillText('SHARMA',260,256);                         // player name
   c.font='700 132px "Archivo Narrow"';
@@ -29,7 +29,7 @@ function jerseyBackPrint(c){
 function toteArt(c){
   c.save(); c.textAlign='center';
   c.fillStyle='#0D1F3C'; c.font='700 30px "Archivo Narrow"';
-  c.fillText('PRINTLY',260,330);
+  c.fillText('PRINT ENGINE',260,330);
   c.strokeStyle='#E05A1E'; c.lineWidth=3;
   c.beginPath(); c.moveTo(205,348); c.lineTo(315,348); c.stroke();
   c.restore();

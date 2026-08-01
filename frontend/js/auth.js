@@ -5,10 +5,10 @@ function closeLogin(){ document.getElementById('loginModal').classList.remove('o
 function toggleAuthMode(){
   authMode = authMode==='login' ? 'signup' : 'login';
   const isSignup = authMode==='signup';
-  document.getElementById('authTitle').textContent = isSignup ? 'Create your Printly account' : 'Sign in to Printly';
+  document.getElementById('authTitle').textContent = isSignup ? 'Create your Print Engine account' : 'Sign in to Print Engine';
   document.getElementById('authNameRow').style.display = isSignup ? 'block' : 'none';
   document.getElementById('authSubmitBtn').textContent = isSignup ? 'Create account →' : 'Sign in →';
-  document.getElementById('authToggleText').textContent = isSignup ? 'Already have an account?' : 'New to Printly?';
+  document.getElementById('authToggleText').textContent = isSignup ? 'Already have an account?' : 'New to Print Engine?';
   document.getElementById('authToggleLink').textContent = isSignup ? 'Sign in' : 'Create an account';
 }
 function applyAuthUI(){
@@ -22,7 +22,7 @@ function applyAuthUI(){
   }
 }
 function userPillClick(){
-  if(confirm('Sign out of Printly?')) doLogout();
+  if(confirm('Sign out of Print Engine?')) doLogout();
 }
 async function doLogin(){
   const email=document.getElementById('authEmail').value.trim();

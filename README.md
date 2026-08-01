@@ -1,11 +1,11 @@
-# Printly — Custom T-Shirt Printing Platform
+# Print Engine — Custom T-Shirt Printing Platform
 
 A single-page e-commerce + live design studio for custom apparel
 (round neck tees, polos, hoodies, sports jerseys), with a real
 photo-mockup engine (recolor + print overlay on actual product
 photos, not geometric shapes), an AI image-generation backend, and a
 real auth + orders backend (accounts, sessions, persisted orders, an
-access-controlled admin pipeline). Brand: PRINTLY. Tagline: "Your
+access-controlled admin pipeline). Brand: PRINT ENGINE. Tagline: "Your
 Brand. Your Story. Printed."
 
 ## Folder structure

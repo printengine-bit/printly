@@ -8,7 +8,7 @@
 # Swap-in point: if a courier account ever exists, replace estimate() with
 # an API call and keep this as the fallback for when that API is down.
 #
-# India's first PIN digit is the postal zone. Printly ships from Pune, which
+# India's first PIN digit is the postal zone. Print Engine ships from Pune, which
 # is zone 4 — so bands radiate outward from there.
 from flask import Blueprint, request, jsonify
 
@@ -36,7 +36,7 @@ def estimate():
 
     first = pin[0]
     if first == "9":
-        return jsonify(ok=False, error="Army Post Office pincodes need a manual quote — email hello@printly.in."), 400
+        return jsonify(ok=False, error="Army Post Office pincodes need a manual quote — email hello@printengine.in."), 400
     if first == "0" or first not in ZONES:
         return jsonify(ok=False, error="That doesn't look like an Indian pincode."), 400
 

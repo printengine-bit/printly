@@ -319,7 +319,7 @@ def label_html(labels):
     <span>%(weight)s</span><span>%(invoice)s</span><span>%(date)s</span>
   </div>
 </div>""" % {
-            "brand": e(s["trade"] or s["name"] or "Printly"),
+            "brand": e(s["trade"] or s["name"] or "Print Engine"),
             "order": e(d["order"]), "boxes": e(str(d.get("boxes") or 1)),
             "bname": e(b["name"]), "bline1": e(b["line1"]),
             "bline2": ("<br>" + e(b["line2"])) if b["line2"] else "",
@@ -376,7 +376,7 @@ def manifest_html(day, rows, seller):
 </div>""" % {
         "day": e(day or "All shipments"),
         "couriers": e(", ".join(couriers) or "no courier recorded"),
-        "trade": e(seller["trade_name"] or seller["legal_name"] or "Printly"),
+        "trade": e(seller["trade_name"] or seller["legal_name"] or "Print Engine"),
         "saddr": e(seller["address"] or ""), "scity": e(seller["city"] or ""),
         "spin": e(seller["pincode"] or ""), "sphone": e(seller["phone"] or ""),
         "rows": body_rows or "<tr><td colspan=7 class=muted>Nothing dispatched.</td></tr>",

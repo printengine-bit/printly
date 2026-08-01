@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   PRINTLY ADMIN — standalone stylesheet
+   PRINT ENGINE ADMIN — standalone stylesheet
 
    Shares no file with the storefront on purpose: staff shouldn't download
    the design-studio CSS and customers shouldn't download this. The token
@@ -147,8 +147,10 @@ input:focus,select:focus,textarea:focus{
   width:100%;max-width:380px;background:var(--panel);
   border:1px solid var(--line);border-radius:var(--r-lg);padding:32px;
 }
+/* nowrap: the wordmark is two words and would otherwise break lines. */
 .gate-logo{
   font-family:var(--ff-display);font-weight:800;font-size:24px;margin-bottom:6px;
+  white-space:nowrap;
 }
 .gate-logo b{color:var(--lime-ink)}
 .gate-logo span{
@@ -166,7 +168,7 @@ input:focus,select:focus,textarea:focus{
   display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
 }
 .side-top{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 12px}
-.brand{font-family:var(--ff-display);font-weight:900;font-size:21px}
+.brand{font-family:var(--ff-display);font-weight:900;font-size:21px;white-space:nowrap}
 .brand b{color:var(--lime-ink)}
 .brand span{
   display:block;font-family:var(--ff-body);font-size:10px;font-weight:700;

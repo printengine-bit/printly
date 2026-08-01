@@ -66,7 +66,7 @@ function ticketList(tickets){
         ${(t.messages||[]).map(m=>`
           <div class="tk-msg ${m.from_staff?'them':''}">
             <div class="t-dim" style="font-size:11px;margin-bottom:3px">
-              ${m.from_staff?'Printly':'You'} · ${esc(fmtWhen(m.created))}</div>
+              ${m.from_staff?'Print Engine':'You'} · ${esc(fmtWhen(m.created))}</div>
             <p>${esc(m.body).replace(/\n/g,'<br>')}</p>
           </div>`).join('')}
       </div>

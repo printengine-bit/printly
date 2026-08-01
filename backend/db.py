@@ -72,7 +72,7 @@ def init_db():
         fit_label TEXT NOT NULL DEFAULT '',
         size_chart_json TEXT NOT NULL DEFAULT '{}',
         base_price REAL NOT NULL DEFAULT 0,
-        -- Blank until Printly is GST-registered. Kept here so the column
+        -- Blank until Print Engine is GST-registered. Kept here so the column
         -- doesn't need adding under time pressure the day it is.
         hsn_code TEXT NOT NULL DEFAULT '',
         one_size INTEGER NOT NULL DEFAULT 0,
@@ -144,12 +144,12 @@ def init_db():
     c.execute("CREATE INDEX IF NOT EXISTS ix_moves_created ON stock_moves(created)")
 
     # Single-row business identity. Delivery notes and shipping labels are
-    # unprintable without it, and the GSTIN stays blank until Printly is
+    # unprintable without it, and the GSTIN stays blank until Print Engine is
     # actually registered — see the note on doc_prefix below.
     c.execute("""CREATE TABLE IF NOT EXISTS company(
         id INTEGER PRIMARY KEY CHECK (id = 1),
         legal_name TEXT NOT NULL DEFAULT '',
-        trade_name TEXT NOT NULL DEFAULT 'Printly',
+        trade_name TEXT NOT NULL DEFAULT 'Print Engine',
         address TEXT NOT NULL DEFAULT '',
         city TEXT NOT NULL DEFAULT '',
         state TEXT NOT NULL DEFAULT '',

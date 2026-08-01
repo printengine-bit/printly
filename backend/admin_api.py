@@ -181,7 +181,7 @@ def set_company():
     for k in COMPANY_FIELDS:
         v = d.get(k)
         vals[k] = v.strip()[:160] if isinstance(v, str) else ""
-    # Blank is valid — Printly isn't registered yet. A *wrong* one isn't:
+    # Blank is valid — Print Engine isn't registered yet. A *wrong* one isn't:
     # it would print onto documents that claim to be tax invoices.
     if vals["gstin"] and not GSTIN_RE.match(vals["gstin"].upper()):
         return jsonify(ok=False, error="That doesn't look like a valid 15-character GSTIN."), 400

@@ -1411,7 +1411,7 @@ function drawHeroHoodie(){
   x.textAlign='center'; x.textBaseline='middle';
   x.fillStyle='#FFFFFF';
   x.font=`800 ${Math.max(18,36*s)}px "Archivo Narrow"`;
-  x.fillText('PRINTLY',cx,cy-8*s);
+  x.fillText('PRINT ENGINE',cx,cy-8*s);
   x.fillStyle='#C8F232';
   x.font=`700 ${Math.max(11,18*s)}px "Archivo Narrow"`;
   x.fillText('ORIGINALS',cx,cy+22*s);
@@ -1536,15 +1536,15 @@ function toggleShadowSel(){
 }
 function downloadPNG(){
   const a=document.createElement('a');
-  a.download='printly-design.png'; a.href=captureThumb('image/png'); a.click();
+  a.download='print-engine-design.png'; a.href=captureThumb('image/png'); a.click();
   toast('Preview downloaded');
 }
 async function shareDesign(){
   const title=`My ${state.product.name} design`;
-  const text=`I made this ${state.product.name} on Printly.`;
+  const text=`I made this ${state.product.name} on Print Engine.`;
   try{
     const data=captureThumb('image/png'),blob=await (await fetch(data)).blob();
-    const file=new File([blob],'printly-design.png',{type:'image/png'});
+    const file=new File([blob],'print-engine-design.png',{type:'image/png'});
     if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){
       await navigator.share({title,text,files:[file]});return;
     }
@@ -1558,7 +1558,7 @@ async function shareDesign(){
   }
 }
 function shareWhatsApp(){
-  const text=`I made this ${state.product.name} on Printly — ${location.href}`;
+  const text=`I made this ${state.product.name} on Print Engine — ${location.href}`;
   window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener,noreferrer');
 }
 
