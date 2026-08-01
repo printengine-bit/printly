@@ -74,6 +74,7 @@ function mountPdpCustomizer(p){
 function renderPdpDetails(p){
   const el=document.getElementById('pdpDetails'); if(!el) return;
   const chart=p.chart && p.chart.chest ? {label:p.fit, ...p.chart} : null;
+  const keys=sizeKeys(p.id);
   el.innerHTML=`
     <details class="acc"><summary>Fabric &amp; composition</summary>
       <p>${esc(p.fabric||'Premium fabric')}</p></details>
@@ -82,7 +83,7 @@ function renderPdpDetails(p){
     ${chart?`<details class="acc"><summary>Size guide — ${esc(chart.label)}</summary>
       <table class="size-table">
         <tr><th>Size</th><th>Chest (in)</th><th>Length (cm)</th></tr>
-        ${chart.chest.map((c,i)=>`<tr><td><b>${chart.chest.length>1?SIZES[i]:'One size'}</b></td>
+        ${chart.chest.map((c,i)=>`<tr><td><b>${chart.chest.length>1?(keys[i]||'—'):'One size'}</b></td>
           <td>${c}</td><td>${chart.length[i]}</td></tr>`).join('')}
       </table>
       <p style="font-size:12px">Chest measured flat, armpit to armpit. Allow ±1 in tolerance.</p>

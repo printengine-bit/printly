@@ -142,28 +142,36 @@ function mockKey(pid){
   return MOCK.mocks[key] ? key : photoMockKey(pid);
 }
 /* ── Garment size ─────────────────────────────────────────────────
-   The mockup photos are one garment. Which one: REF_SIZE. Everything else
-   is that photo scaled by how much bigger or smaller the real garment is,
-   taken from the same size chart the product page already prints — so a new
-   product needs no extra data to size correctly.
+   The mockup photos are one garment. Which one: the size sitting at
+   REF_INDEX in every size chart. Everything else is that photo scaled by
+   how much bigger or smaller the real garment is, taken from the same size
+   chart the product page already prints — so a new product needs no extra
+   data to size correctly.
+
+   Every chart (chest/length, and each product's own label list from
+   sizeKeys()) is a fixed-length positional array — REF_INDEX names a slot
+   in that array, not a label, so this works whether the labels are the
+   shared adult S..3XL scale or a product's own set (kids' age bands). It's
+   1 because that's where "M" sits in the shared scale, which every
+   existing product's chart was measured against.
 
    Chest drives it, not length. A photo can only be scaled uniformly without
    distorting the fabric, and chest is the dimension you actually read off a
-   front-on shot. Across the full S–3XL run the two ratios differ by about
-   7%, which is well inside the tolerance of a printable-area figure.
+   front-on shot. Across a full size run the two ratios differ by about 7%,
+   which is well inside the tolerance of a printable-area figure.
 
    ⚠️ This scales whatever MOCK.print says the reference garment's print
    zone is. If those base figures are wrong (rn front claims 38x50cm, which
    is generous for an M), every size is wrong by the same factor. Measure a
    real blank before trusting the numbers, not the scaling. */
-const REF_SIZE='M';
+const REF_INDEX=1;
 
 function sizeScale(pid,size){
   const p=product(pid), ch=p&&p.chart;
   if(!ch||!ch.chest||ch.chest.length<2) return 1;      // one-size product
-  const i=SIZES.indexOf(size), r=SIZES.indexOf(REF_SIZE);
-  if(i<0||r<0||!ch.chest[i]||!ch.chest[r]) return 1;
-  return ch.chest[i]/ch.chest[r];
+  const i=sizeKeys(pid).indexOf(size);
+  if(i<0||!ch.chest[i]||!ch.chest[REF_INDEX]) return 1;
+  return ch.chest[i]/ch.chest[REF_INDEX];
 }
 /* The biggest garment has to fit the canvas, so the whole run is normalised
    against it rather than against the reference. A 3XL fills the frame and
@@ -172,7 +180,7 @@ function sizeScale(pid,size){
 function maxSizeScale(pid){
   const p=product(pid), ch=p&&p.chart;
   if(!ch||!ch.chest||ch.chest.length<2) return 1;
-  return Math.max(...SIZES.map(s=>sizeScale(pid,s)));
+  return Math.max(...sizeKeys(pid).map(s=>sizeScale(pid,s)));
 }
 /* Which garment size the canvas is showing. Single mode follows the size
    they picked; bulk previews the SMALLEST size in the order, because that's
@@ -180,9 +188,9 @@ function maxSizeScale(pid){
 function previewSize(){
   const pid=state.product.id, keys=sizeKeys(pid);
   if(keys.length===1) return keys[0];
-  const ordered=SIZES.filter(k=>+state.sizes[k]>0);
-  if(ordered.length) return ordered[0];                // SIZES is S→3XL
-  return SIZES.includes(REF_SIZE)?REF_SIZE:keys[0];
+  const ordered=keys.filter(k=>+state.sizes[k]>0);      // keys is smallest→largest
+  if(ordered.length) return ordered[0];
+  return keys[REF_INDEX]||keys[0];
 }
 
 /* map a print area from mockup-space (720w) to canvas 520x560, letterboxed */

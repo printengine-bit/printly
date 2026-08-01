@@ -36,7 +36,15 @@ const ONE_SIZE_KEY=CATALOG.oneSizeKey;
 
 function product(pid){ return PRODUCTS.find(p => p.id === pid); }
 function isSized(pid){ const p=product(pid); return p ? !p.one_size : true; }
-function sizeKeys(pid){ return isSized(pid) ? SIZES : [ONE_SIZE_KEY]; }
+/* Most products share the adult S..3XL scale (the global SIZES), but a
+   product can carry its own label set (kids' age bands) via CATALOG's
+   per-product `sizes` field. Every size-picker render goes through this,
+   so setting it here is the one place that needs to know the difference. */
+function sizeKeys(pid){
+  if(!isSized(pid)) return [ONE_SIZE_KEY];
+  const p=product(pid);
+  return (p&&p.sizes&&p.sizes.length) ? p.sizes : SIZES;
+}
 function printViews(pid){
   const p=product(pid);
   return (p&&p.print_views&&p.print_views.length) ? p.print_views : [

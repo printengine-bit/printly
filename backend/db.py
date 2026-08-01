@@ -400,6 +400,11 @@ def init_db():
     # to get. Defaults to 0, and the report says so rather than pretending.
     _add_column(c, "products", "cost_price", "REAL NOT NULL DEFAULT 0")
 
+    # A product's own size labels, when its sizing doesn't match the shared
+    # adult S..3XL scale (kids' age bands, for instance). NULL/empty means
+    # "use the shared list" — every product keeps that behaviour by default.
+    _add_column(c, "products", "size_labels_json", "TEXT")
+
     # Print zones move out of js/mockup-data.js and into here, so the shop can
     # correct them against a real measured blank. The file stays as the
     # fallback for a fresh install; the DB wins once seeded. Getting these
@@ -454,6 +459,7 @@ def init_db():
         ])
     _seed_women_lines(c)
     _seed_kids_lines(c)
+    _migrate_kids_sizing(c)
     _replace_legacy_palette(c)
     _seed_print_views(c)
 
@@ -743,6 +749,12 @@ SEED_WOMEN_PRODUCTS = [
      "category": "sweatshirts"},
 ]
 
+# Age bands, not S..3XL — a parent shopping for a child doesn't read "3XL"
+# as an 8-year-old's size. One-to-one by position with each product's own
+# chest/length arrays below; the measurements aren't changing, just what
+# they're called.
+KIDS_SIZES = ["2-3Y", "4-5Y", "6-7Y", "8-9Y", "10-11Y", "12-13Y"]
+
 SEED_KIDS_PRODUCTS = [
     {"slug": "rn-kids", "name": "Kids' Round Neck T-Shirt", "emoji": "👕", "base": 499,
      "tiers": [(1, 499), (10, 379), (50, 299), (100, 239)],
@@ -750,21 +762,21 @@ SEED_KIDS_PRODUCTS = [
      "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
               "Warm iron, avoid the print"],
      "chest": [32, 35, 38, 41, 44, 47], "length": [43, 47, 51, 55, 59, 63],
-     "category": "tees"},
+     "sizes": KIDS_SIZES, "category": "tees"},
     {"slug": "hd-kids", "name": "Kids' Hoodie", "emoji": "🧥", "base": 999,
      "tiers": [(1, 999), (10, 799), (50, 649), (100, 529)],
      "fabric": "280 GSM · soft brushed fleece, cotton-rich blend", "fit": "Easy kids fit",
      "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
               "Do not iron the print"],
      "chest": [36, 39, 42, 45, 48, 51], "length": [44, 48, 52, 56, 60, 64],
-     "category": "hoodies"},
+     "sizes": KIDS_SIZES, "category": "hoodies"},
     {"slug": "sw-kids", "name": "Kids' Crewneck Sweatshirt", "emoji": "👚", "base": 849,
      "tiers": [(1, 849), (10, 679), (50, 549), (100, 449)],
      "fabric": "280 GSM · soft cotton-rich fleece", "fit": "Relaxed kids fit",
      "care": ["Machine wash cold, inside out", "Do not bleach", "Tumble dry low",
               "Do not iron the print"],
      "chest": [35, 38, 41, 44, 47, 50], "length": [43, 47, 51, 55, 59, 63],
-     "category": "sweatshirts"},
+     "sizes": KIDS_SIZES, "category": "sweatshirts"},
 ]
 
 
@@ -777,14 +789,16 @@ def _seed_audience_lines(conn, products, audience):
     for i, p in enumerate(products):
         if p["slug"] in existing:
             continue
+        own_sizes = p.get("sizes")
         cur = conn.execute(
             """INSERT INTO products(slug,name,emoji,fabric,care_json,fit_label,
                                     size_chart_json,base_price,one_size,sort,
-                                    audience,category)
-               VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+                                    audience,category,size_labels_json)
+               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (p["slug"], p["name"], p["emoji"], p["fabric"], _json.dumps(p["care"]),
              p["fit"], _json.dumps({"chest": p["chest"], "length": p["length"]}),
-             p["base"], 0, base_sort + i + 1, audience, p["category"]),
+             p["base"], 0, base_sort + i + 1, audience, p["category"],
+             _json.dumps(own_sizes) if own_sizes else None),
         )
         pid = cur.lastrowid
         for min_qty, price in p["tiers"]:
@@ -792,7 +806,7 @@ def _seed_audience_lines(conn, products, audience):
                 "INSERT INTO price_tiers(product_id,min_qty,unit_price) VALUES(?,?,?)",
                 (pid, min_qty, price))
         for hexv, cname, code in COLORS:
-            for label in SIZES:
+            for label in (own_sizes or SIZES):
                 sku = "%s-%s-%s" % (p["slug"].upper(), code, label.upper().replace(" ", ""))
                 conn.execute(
                     """INSERT INTO variants(product_id,color_hex,color_name,
@@ -806,6 +820,39 @@ def _seed_women_lines(conn):
 
 def _seed_kids_lines(conn):
     _seed_audience_lines(conn, SEED_KIDS_PRODUCTS, "kids")
+
+
+def _migrate_kids_sizing(conn):
+    """One-time fix for kids products seeded before size_labels_json existed:
+    their variants were created with adult S..3XL labels. Gated per-product
+    on the product's own size_labels_json being unset — never repeats, and
+    an admin's later edits to a kids product's sizing are never undone by a
+    future boot. Safe to rename in place: no order has referenced these
+    SKUs yet on a catalogue this new."""
+    import json as _json
+    adult_order = {label: i for i, label in enumerate(SIZES)}
+    for p in SEED_KIDS_PRODUCTS:
+        row = conn.execute(
+            "SELECT id,size_labels_json FROM products WHERE slug=?",
+            (p["slug"],)).fetchone()
+        if not row or row[1]:
+            continue
+        pid = row[0]
+        variants = conn.execute(
+            "SELECT id,size_label,sku FROM variants WHERE product_id=?", (pid,)
+        ).fetchall()
+        for vid, size_label, sku in variants:
+            i = adult_order.get(size_label)
+            if i is None or i >= len(p["sizes"]):
+                continue
+            new_label = p["sizes"][i]
+            code = sku.rsplit("-", 1)[0]
+            new_sku = "%s-%s" % (code, new_label.upper().replace(" ", ""))
+            conn.execute(
+                "UPDATE variants SET size_label=?,sku=? WHERE id=?",
+                (new_label, new_sku, vid))
+        conn.execute("UPDATE products SET size_labels_json=? WHERE id=?",
+                      (_json.dumps(p["sizes"]), pid))
 
 
 def _replace_legacy_palette(conn):

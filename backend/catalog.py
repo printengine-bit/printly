@@ -58,6 +58,10 @@ def catalog_payload(db=None):
             "chart": json.loads(p["size_chart_json"] or "{}"),
             "audience": p["audience"],
             "category": p["category"],
+            # A product's own size labels, when it doesn't use the shared
+            # adult S..3XL scale (kids' age bands). None means "use the
+            # shared list" — sizeKeys() in data.js falls back accordingly.
+            "sizes": json.loads(p["size_labels_json"]) if p["size_labels_json"] else None,
             "print_views": _print_views_for(db, p["id"]),
         })
     rows = db.execute(
@@ -71,8 +75,13 @@ def catalog_payload(db=None):
         ({"hex": r["color_hex"], "name": r["color_name"]} for r in rows
          if r["color_hex"].upper() not in known),
         key=lambda c: c["name"]))
+    # Only the shared adult scale belongs in this fallback list — a product
+    # with its own size_labels_json (kids' age bands) is excluded, or every
+    # product using the shared scale would show those alongside S..3XL.
     sizes = [r["size_label"] for r in db.execute(
-        "SELECT DISTINCT size_label FROM variants WHERE size_label<>? ", (ONE_SIZE_KEY,))]
+        """SELECT DISTINCT v.size_label FROM variants v JOIN products p ON v.product_id=p.id
+           WHERE v.size_label<>? AND (p.size_labels_json IS NULL OR p.size_labels_json='')""",
+        (ONE_SIZE_KEY,))]
     # Keep the display order the size chart assumes, not alphabetical.
     order = ["S", "M", "L", "XL", "2XL", "3XL"]
     sizes.sort(key=lambda s: order.index(s) if s in order else 99)
@@ -422,7 +431,10 @@ def product_stock(pid):
     rows = db.execute(
         "SELECT * FROM variants WHERE product_id=? ORDER BY color_name,id", (pid,)
     ).fetchall()
-    order = ["S", "M", "L", "XL", "2XL", "3XL", ONE_SIZE_KEY]
+    # A product with its own size labels (kids' age bands) orders columns by
+    # that list; everything else keeps the shared adult S..3XL order.
+    own_sizes = json.loads(p["size_labels_json"]) if p["size_labels_json"] else None
+    order = own_sizes or ["S", "M", "L", "XL", "2XL", "3XL", ONE_SIZE_KEY]
     sizes = sorted({r["size_label"] for r in rows},
                    key=lambda s: order.index(s) if s in order else 99)
     return jsonify(ok=True, product={"id": p["id"], "slug": p["slug"], "name": p["name"]},
