@@ -1,5 +1,10 @@
 /* ═══════════════ NAV ═══════════════ */
 function go(v){
+  /* There is no Studio *destination* any more — the editor is mounted into
+     the PDP, so designing always starts from picking a product. Nothing in
+     the UI routes here now, but the guard stays: `#v-studio` still exists as
+     the parking spot the editor lives in while it isn't mounted, so without
+     this a stray go('studio') would show that empty div as a blank page. */
   if(v==='studio'){
     openProduct(state.product&&state.product.id||PRODUCTS[0].id);
     return;

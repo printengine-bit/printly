@@ -301,7 +301,7 @@ function renderCart(){
     el.innerHTML=`<div class="empty">
       <span class="material-symbols-outlined">shopping_bag</span><br>
       Your bag is empty.<br><br>
-      <button class="btn btn-primary" onclick="go('studio')">Design something →</button></div>`;
+      <button class="btn btn-primary" onclick="go('products')">Browse products →</button></div>`;
     return;
   }
   let sub=0;
@@ -592,7 +592,7 @@ async function renderOrders(){
     el.innerHTML=`<div class="empty">
       <span class="material-symbols-outlined">inventory_2</span><br>
       No orders yet.<br><br>
-      <button class="btn btn-primary" onclick="go('studio')">Start designing →</button></div>`;
+      <button class="btn btn-primary" onclick="go('products')">Start designing →</button></div>`;
     return;
   }
 

@@ -38,7 +38,6 @@
       <div class="hdr-search-results" id="navSearchResults"></div>
       <button class="nav-btn on" data-v="home" onclick="go('home')">Home</button>
       <button class="nav-btn" data-v="products" onclick="go('products')">Products</button>
-      <button class="nav-btn" data-v="studio" onclick="go('studio')">Design Studio</button>
       <button class="nav-btn" data-v="cart" onclick="go('cart')">Cart</button>
       <button class="nav-btn" data-v="orders" onclick="go('orders')">My Orders</button>
       <button class="nav-btn" data-v="designs" onclick="go('designs')">My Designs</button>
@@ -89,10 +88,9 @@
           creators and crews — premium quality at lightning speed.
         </p>
         <div class="hero-actions">
-          <button class="btn btn-primary" onclick="go('studio')">
-            Open Design Studio <span class="material-symbols-outlined">arrow_forward</span>
+          <button class="btn btn-primary" onclick="go('products')">
+            Start designing <span class="material-symbols-outlined">arrow_forward</span>
           </button>
-          <button class="btn btn-ghost" onclick="go('products')">Browse products</button>
         </div>
         <div class="hero-stats">
           <div><b>48 hrs</b><span>Express delivery</span></div>
@@ -168,13 +166,13 @@
         <span class="badge badge-pink" style="align-self:flex-start;margin-bottom:14px">Colleges</span>
         <h3>Batch &amp; fest tees</h3>
         <p>Farewells, cultural fests, sports teams. One approval, we handle the rest.</p>
-        <a class="t-lime t-label" href="#" onclick="go('studio');return false">Get started →</a>
+        <a class="t-lime t-label" href="#" onclick="go('products');return false">Get started →</a>
       </div>
       <div class="card card-hover aud">
         <span class="badge badge-outline" style="align-self:flex-start;margin-bottom:14px">Creators</span>
         <h3>Personal &amp; gifting</h3>
         <p>Single-piece printing from ₹279. Couple tees, fan art — no minimums.</p>
-        <a class="t-lime t-label" href="#" onclick="go('studio');return false">Launch a drop →</a>
+        <a class="t-lime t-label" href="#" onclick="go('products');return false">Launch a drop →</a>
       </div>
     </div>
   </div>
@@ -191,7 +189,7 @@
           <li><span class="material-symbols-outlined">bolt</span> Five streetwear-tuned styles</li>
           <li><span class="material-symbols-outlined">bolt</span> Background removed automatically</li>
         </ul>
-        <button class="btn btn-primary" onclick="go('studio');openAiTool()">Try the AI designer free →</button>
+        <button class="btn btn-primary" onclick="go('products')">Try the AI designer free →</button>
       </div>
       <div class="hero-stage">
         <canvas id="aiPreview" width="340" height="360"></canvas>
@@ -657,7 +655,7 @@
 
     <h2 class="t-h3">What we collect</h2>
     <p>Your name, email and phone number when you create an account; a delivery address when
-      you place an order; and whatever you upload or type into the Design Studio to build
+      you place an order; and whatever you upload or type into the design editor to build
       your print.</p>
 
     <h2 class="t-h3">What it's used for</h2>
@@ -761,7 +759,6 @@
       <div>
         <h4>Shop</h4>
         <a href="#" onclick="go('products');return false">Products</a>
-        <a href="#" onclick="go('studio');return false">Design Studio</a>
         <a href="#" onclick="go('cart');return false">Cart</a>
       </div>
       <div>
