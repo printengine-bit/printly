@@ -593,6 +593,17 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
 }
 .studio.pdp-mode .print-view-tabs button:first-child{border-radius:999px 0 0 999px}
 .studio.pdp-mode .print-view-tabs button:last-child{border-radius:0 999px 999px 0}
+/* The segmented look above drops the lime *fill* that `.print-view-tabs
+   button.on` paints, but that rule's `color:var(--on-lime)` outranks nothing
+   and survives — and on-lime is dark ink meant to sit ON lime. Left alone the
+   selected side renders dark-on-dark and disappears. Restate both here: a
+   raised segment, and lime *ink* (never `var(--lime)` as a text colour — see
+   the token rule in CLAUDE.md), which stays legible in both themes. */
+.studio.pdp-mode .print-view-tabs button.on{
+  background:var(--surface-container-high);
+  border-color:var(--lime);
+  color:var(--lime-ink);
+}
 .studio.pdp-mode .selected-actions{position:static;z-index:7}
 .studio.pdp-mode .st-right{
   display:flex;flex-direction:column;background:var(--surface-container-lowest);
