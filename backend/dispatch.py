@@ -309,6 +309,18 @@ def ship():
         log(db, "order", row["id"], "reshipped", None, None,
             "Second parcel via %s, AWB %s" % (courier, awb))
     db.commit()
+
+    # Hung off the shipment, not the stage change: a reship takes the `else`
+    # branch above and never moves the stage, but it is a second real parcel
+    # with its own AWB and the customer needs to hear about it.
+    if row["customer_email"]:
+        from mailer import send
+        from mail_templates import order_shipped
+        display = _display_id(row["id"])
+        send(row["customer_email"], "%s shipped" % display,
+             order_shipped(row["customer_name"], display, courier, awb),
+             sender="orders", kind="order_shipped",
+             entity_type="order", entity_id=row["id"])
     return jsonify(ok=True, invoice_no=number, order=_display_id(row["id"]))
 
 

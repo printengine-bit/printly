@@ -221,6 +221,21 @@ def create_order():
                      "Earned on order", order_id=cur.lastrowid)
     db.commit()
 
+    # Confirmation email. After the commit and non-raising by construction —
+    # the order is already placed, and a mail outage must not turn a paid-for
+    # order into an error the customer sees. Only session["user_id"] is in
+    # scope here, so the address needs a lookup.
+    who = db.execute("SELECT email,name FROM users WHERE id=?",
+                     (session["user_id"],)).fetchone()
+    if who:
+        from mailer import send
+        from mail_templates import order_confirmed
+        display = _display_id(cur.lastrowid)
+        send(who["email"], "Order %s confirmed" % display,
+             order_confirmed(who["name"], display, items, total),
+             sender="orders", kind="order_confirmed",
+             entity_type="order", entity_id=cur.lastrowid)
+
     row = db.execute("SELECT * FROM orders WHERE id=?", (cur.lastrowid,)).fetchone()
     return jsonify(ok=True, order=_order_public(row), points_earned=points)
 
@@ -290,6 +305,39 @@ def admin_order_detail(order_id):
     return jsonify(ok=True, order=o)
 
 
+# Which stages are worth interrupting a customer for. Emailing all six would
+# be noise: stage 0 (Proof sent) is set at creation and covered by the
+# confirmation, and Approved/Quality check are internal bookkeeping. Shipped
+# is absent on purpose — dispatch.ship() sends a richer version carrying the
+# courier and AWB, and it updates `status` directly rather than calling
+# set_order_status(), so there is no double-send.
+STAGE_EMAILS = {
+    2: ("order_printing", "We're printing %s"),
+    5: ("order_delivered", "%s delivered"),
+}
+
+
+def _notify_stage(db, row, to_status):
+    """Tell the customer their order moved. Post-commit; never raises."""
+    tpl_name = STAGE_EMAILS.get(to_status)
+    if not tpl_name:
+        return
+    try:
+        email = row["customer_email"]
+        name = row["customer_name"]
+    except (IndexError, KeyError):
+        return                     # row came from a query without the users JOIN
+    if not email:
+        return
+    import mail_templates
+    from mailer import send
+    fn, subject = tpl_name
+    display = _display_id(row["id"])
+    send(email, subject % display,
+         getattr(mail_templates, fn)(name, display),
+         sender="orders", kind=fn, entity_type="order", entity_id=row["id"])
+
+
 @orders_bp.route("/admin/orders/<order_id>/status", methods=["POST"])
 @require("orders")
 def set_order_status(order_id):
@@ -308,6 +356,7 @@ def set_order_status(order_id):
                    (to, row["id"]))
         _log_event(db, row["id"], "stage", row["status"], to)
         db.commit()
+        _notify_stage(db, row, to)
     return jsonify(ok=True, order=_order_public(
         db.execute("SELECT * FROM orders WHERE id=?", (row["id"],)).fetchone()))
 
@@ -334,6 +383,17 @@ def cancel_order(order_id):
         apply_stock(db, items, row["id"], 1 if cancelled else -1,
                     "cancel" if cancelled else "order")
         db.commit()
+        # Only on cancel. A restore is an internal correction — telling a
+        # customer their cancelled order is back would raise more questions
+        # than it answers.
+        if cancelled and row["customer_email"]:
+            from mailer import send
+            from mail_templates import order_cancelled
+            display = _display_id(row["id"])
+            send(row["customer_email"], "%s cancelled" % display,
+                 order_cancelled(row["customer_name"], display, note),
+                 sender="orders", kind="order_cancelled",
+                 entity_type="order", entity_id=row["id"])
     return jsonify(ok=True, order=_order_public(
         db.execute("SELECT * FROM orders WHERE id=?", (row["id"],)).fetchone()))
 
@@ -358,10 +418,15 @@ def bulk_status():
         return jsonify(ok=False, error="Too many orders in one go."), 400
 
     db = get_db()
-    moved, skipped = [], []
+    moved, skipped, notify = [], [], []
     for oid in ids:
         row_id = _row_id_from_display(oid) if isinstance(oid, str) else None
-        row = db.execute("SELECT * FROM orders WHERE id=?", (row_id,)).fetchone() \
+        # JOINs users because a bulk move emails the customer exactly like a
+        # single one does, and a bare orders row carries no address.
+        row = db.execute(
+            """SELECT orders.*, users.name AS customer_name, users.email AS customer_email
+               FROM orders JOIN users ON users.id = orders.user_id
+               WHERE orders.id=?""", (row_id,)).fetchone() \
             if row_id is not None else None
         if not row:
             skipped.append({"id": oid, "why": "not found"})
@@ -376,7 +441,13 @@ def bulk_status():
                    (to, row["id"]))
         _log_event(db, row["id"], "stage", row["status"], to)
         moved.append(oid)
+        notify.append(row)
     db.commit()
+    # After the single commit, so a mail problem can't strand a half-moved
+    # batch. Marking 40 orders printed sends 40 emails — deliberate, since
+    # that is the same promise a one-at-a-time move makes.
+    for row in notify:
+        _notify_stage(db, row, to)
     return jsonify(ok=True, moved=moved, skipped=skipped)
 
 

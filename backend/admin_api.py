@@ -156,6 +156,36 @@ def audit():
     return jsonify(ok=True, entries=[_audit_public(r) for r in rows])
 
 
+@admin_bp.route("/emails")
+@owner_required
+def email_log():
+    """Recent send attempts, including skipped and failed ones.
+
+    Sending is deliberately never load-bearing — send() swallows every
+    error so a mail outage can't fail an order — which means this list is
+    the only place a bounced confirmation becomes visible. `status=failed`
+    is the one worth watching.
+    """
+    db = get_db()
+    status = request.args.get("status") or ""
+    sql = "SELECT * FROM email_log"
+    args = []
+    if status:
+        sql += " WHERE status=?"
+        args.append(status)
+    sql += " ORDER BY id DESC LIMIT 200"
+    rows = db.execute(sql, args).fetchall()
+    counts = {r["status"]: r["c"] for r in db.execute(
+        """SELECT status, COUNT(*) c FROM email_log
+           WHERE created > datetime('now','-7 days') GROUP BY status""")}
+    return jsonify(ok=True, counts=counts, entries=[{
+        "id": r["id"], "to": r["to_email"], "sender": r["sender"],
+        "subject": r["subject"], "kind": r["kind"], "status": r["status"],
+        "entity_type": r["entity_type"], "entity_id": r["entity_id"],
+        "error": r["error"], "created": r["created"],
+    } for r in rows])
+
+
 # ── Company profile ──────────────────────────────────────────────
 COMPANY_FIELDS = ("legal_name", "trade_name", "address", "city", "state",
                   "pincode", "phone", "email", "gstin", "doc_prefix")
@@ -222,9 +252,10 @@ def list_staff():
 @admin_bp.route("/staff", methods=["POST"])
 @owner_required
 def create_staff():
-    """The owner sets the first password and hands it over — there's no
-    email transport to send an invite through. must_change_password forces
-    the new account to replace it before it can do anything."""
+    """The owner sets the first password; it's emailed to the new member if
+    mail is configured, and can still be handed over verbally if it isn't
+    (send() logs a skip rather than failing). must_change_password forces
+    the account to replace it before it can do anything either way."""
     d = request.get_json(force=True, silent=True) or {}
     name = (d.get("name") or "").strip()
     email = (d.get("email") or "").strip().lower()
@@ -248,6 +279,14 @@ def create_staff():
     )
     log(db, "staff", cur.lastrowid, "created", to_val=role, note=email)
     db.commit()
+
+    from mailer import send
+    from mail_templates import staff_invite
+    send(email, "Your Print Engine staff account",
+         staff_invite(name, email, password, role),
+         sender="hello", kind="staff_invite",
+         entity_type="staff", entity_id=cur.lastrowid)
+
     row = db.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
     return jsonify(ok=True, member=_staff_public(row))
 
@@ -299,6 +338,13 @@ def update_staff(uid):
         log(db, "staff", uid, "password_reset")
 
     db.commit()
+    if password:
+        from mailer import send
+        from mail_templates import staff_password_reset
+        send(row["email"], "Your Print Engine password was reset",
+             staff_password_reset(row["name"], row["email"], password),
+             sender="hello", kind="staff_password_reset",
+             entity_type="staff", entity_id=uid)
     row = db.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
     return jsonify(ok=True, member=_staff_public(row))
 

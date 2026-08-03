@@ -79,12 +79,15 @@ Then by hand:
 
 ## Known constraints
 
-- **No email transport.** No password resets, no order emails, no proof
-  notifications. Everything is in-app. Brevo and Resend both have free tiers
-  when this becomes worth wiring up.
+- **Email needs two env vars to be live.** Set `RESEND_API_KEY` and verify
+  the domain in Resend, or every send is logged as "not sent" and customers
+  get nothing. Nothing breaks without it — sending is never load-bearing —
+  but password resets and order confirmations silently go nowhere. Check
+  Settings → Email log in the admin panel to confirm.
 - **GST.** The storefront charges a 5% GST line but there is no GSTIN on
   file. Resolve before taking real money — see the admin panel's warning on
   Settings → Company profile.
-- **Order totals are still client-computed.** Fixed in Phase 1, and it must
-  be fixed before any payment gateway goes live.
+- **No payment gateway.** Orders are placed without taking money. Totals
+  are computed server-side and a mismatch is refused, so the pricing half is
+  ready whenever a gateway is wired up.
 - **Cost.** No free tier: $5/month Hobby once the trial credit runs out.

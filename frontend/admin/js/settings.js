@@ -7,6 +7,7 @@ async function renderSettings(el, sub){
     ['company','Company profile'],
     ['staff','Staff & roles'],
     ['audit','Audit log'],
+    ['emails','Email log'],
   ].filter(([k]) => k === 'company' || SESSION.user.role === 'owner');
 
   el.innerHTML = `<div class="row" style="margin-bottom:18px">
@@ -17,6 +18,7 @@ async function renderSettings(el, sub){
   const body = document.getElementById('setBody');
   if(sub === 'staff') return renderStaff(body);
   if(sub === 'audit') return renderAudit(body);
+  if(sub === 'emails') return renderEmails(body);
   return renderCompany(body);
 }
 
@@ -156,6 +158,51 @@ async function toggleActive(id, active){
   if(!d.ok){ toast(d.error); }
   else toast(active ? 'Account enabled' : 'Account disabled');
   renderStaff(document.getElementById('setBody'));
+}
+
+/* ── Email log ───────────────────────────────────────────────────
+   Sending is never allowed to fail an order, which means a bounced
+   confirmation is invisible unless it's written down. This is where it
+   gets written down — `failed` is the row worth looking at. */
+const EMAIL_STATUS_LABEL = {sent:'Sent', failed:'Failed', skipped:'Not sent'};
+
+async function renderEmails(el){
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  const d = await api('/api/admin/emails');
+  if(!d.ok){ el.innerHTML = `<div class="empty">${esc(d.error)}</div>`; return; }
+  const c = d.counts || {};
+  const skipped = c.skipped || 0;
+  el.innerHTML = `<div class="card">
+    <h2>Email log</h2>
+    <p class="tiny muted">Every send attempt, newest first. Last 200.</p>
+    <div class="row" style="gap:14px;margin:10px 0 16px">
+      <span class="tiny"><b>${c.sent||0}</b> sent</span>
+      <span class="tiny" style="color:${(c.failed||0)?'var(--pink-ink)':'inherit'}">
+        <b>${c.failed||0}</b> failed</span>
+      <span class="tiny muted"><b>${skipped}</b> not sent</span>
+      <span class="tiny muted">· last 7 days</span>
+    </div>
+    ${skipped ? `<p class="tiny muted" style="margin-bottom:14px">
+      "Not sent" means no RESEND_API_KEY is configured — mail is off, and
+      nothing else is wrong.</p>` : ''}
+    ${d.entries.length
+      ? `<table><thead><tr><th>When</th><th>To</th><th>Subject</th><th>Status</th></tr></thead>
+         <tbody>${d.entries.map(emailRow).join('')}</tbody></table>`
+      : '<div class="empty">No emails yet.</div>'}
+  </div>`;
+}
+
+function emailRow(m){
+  const tone = m.status === 'failed' ? 'var(--pink-ink)'
+             : m.status === 'sent'   ? 'var(--lime-ink)' : 'var(--ink-dim)';
+  return `<tr>
+    <td data-label="When"><span class="tiny">${esc(m.created||'')}</span></td>
+    <td data-label="To">${esc(m.to||'')}<br>
+      <span class="tiny dim">${esc(m.kind||'')}</span></td>
+    <td data-label="Subject">${esc(m.subject||'')}
+      ${m.error?`<br><span class="tiny" style="color:var(--pink-ink)">${esc(m.error)}</span>`:''}</td>
+    <td data-label="Status"><b style="color:${tone}">${esc(EMAIL_STATUS_LABEL[m.status]||m.status||'')}</b></td>
+  </tr>`;
 }
 
 /* ── Audit log ───────────────────────────────────────────────── */

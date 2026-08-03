@@ -214,6 +214,40 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT, ip TEXT,
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+
+    # ── Email ────────────────────────────────────────────────────
+    # Every send attempt, append-only — including the ones that were skipped
+    # because no API key is configured, and the ones that failed. Sending is
+    # deliberately never load-bearing (see mailer.send), which means a
+    # failure is silent unless it is written down somewhere. Same reasoning
+    # as stock_moves: a wrong number you can see beats one you can't.
+    c.execute("""CREATE TABLE IF NOT EXISTS email_log(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        to_email TEXT NOT NULL,
+        sender TEXT NOT NULL DEFAULT '',
+        subject TEXT NOT NULL DEFAULT '',
+        kind TEXT NOT NULL DEFAULT '',
+        entity_type TEXT NOT NULL DEFAULT '',
+        entity_id INTEGER,
+        status TEXT NOT NULL DEFAULT '',
+        provider_id TEXT NOT NULL DEFAULT '',
+        error TEXT NOT NULL DEFAULT '',
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_email_kind ON email_log(kind, created)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_email_to ON email_log(to_email)")
+
+    # Password reset tokens. The token itself is NEVER stored — only its
+    # SHA-256 hash, for the same reason passwords are hashed: a leaked
+    # database must not hand out account takeovers. Single-use and
+    # short-lived; see auth.forgot_password().
+    c.execute("""CREATE TABLE IF NOT EXISTS password_resets(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        token_hash TEXT NOT NULL,
+        expires TEXT NOT NULL,
+        used INTEGER NOT NULL DEFAULT 0,
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_reset_token ON password_resets(token_hash)")
     # Saved designs — "My Designs". layers_json is the canvas snapshot WITH
     # image data kept inline (unlike the cart's stripImg()), because a design
     # has to be fully restorable. See designs.py for the size/count caps that

@@ -1,8 +1,8 @@
 /* ═══════════════ HELP / SUPPORT (customer side) ═══════════════
-   There is no email transport, so a support conversation lives here: the
-   customer raises a request against an order, staff answer in the panel,
-   and the reply appears on this page. That has to be said out loud rather
-   than implied, or people wait for an email that never arrives.
+   A support conversation lives here: the customer raises a request against
+   an order, staff answer in the panel, and the reply appears on this page.
+   A staff reply is also emailed now (see mailer.py) — but the account is
+   still the record of truth, because mail can silently fail and this can't.
 
    Deliberately part of My Orders instead of a separate page — "something is
    wrong with my order" is a thought people have while looking at the order,

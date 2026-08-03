@@ -1,9 +1,12 @@
 # ── Auth blueprint: email+password signup/login, session-based ─
-# No email verification/magic-link sending here — that needs an SMTP/email
-# provider, which is a new account/service outside this phase's ₹0 scope.
-# Plain password auth is the pragmatic MVP; add verified email later if
-# abuse becomes a real problem.
-import os, re
+# Signup is still unverified — anyone can register any address. Password
+# *reset* is real now (see /forgot and /reset below), which is the half that
+# actually locked people out; verifying the address at signup is a separate
+# decision and hasn't been made.
+import hashlib
+import os
+import re
+import secrets
 from functools import wraps
 from flask import Blueprint, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -20,6 +23,20 @@ MAX_LOGIN_ATTEMPTS_PER_IP = 20   # per IP, higher — catches one IP trying many
                                   # emails (enumeration/credential-stuffing)
                                   # without punishing a shared office/NAT IP
 LOGIN_WINDOW_MIN = 15
+
+# Reset links are a password-equivalent in an inbox, so they expire fast and
+# die on first use.
+RESET_TTL_MINUTES = 60
+MAX_RESET_REQUESTS = 5           # per email per window, same shape as login
+MAX_RESET_REQUESTS_PER_IP = 20
+
+
+def _token_hash(token):
+    """Reset tokens are stored hashed, never in the clear — a leaked database
+    must not hand out account takeovers. Plain SHA-256 rather than a password
+    KDF is right here: the token is 32 random bytes, so there is no weak
+    input to slow an attacker down over."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def login_required(fn):
@@ -168,6 +185,105 @@ def change_password():
         (generate_password_hash(fresh), row["id"]),
     )
     db.commit()
+    return jsonify(ok=True)
+
+
+@auth_bp.route("/forgot", methods=["POST"])
+def forgot_password():
+    """Start a reset. Emails a single-use link if the address exists.
+
+    **Always answers the same way**, whether or not the account exists —
+    otherwise this endpoint becomes a free account-enumeration oracle, which
+    would undo the care taken in login() to give a deactivated account the
+    same error as a wrong password.
+    """
+    d = request.get_json(force=True, silent=True) or {}
+    email = (d.get("email") or "").strip().lower()
+    generic = jsonify(ok=True, message="If that address has an account, "
+                                       "a reset link is on its way.")
+    if not EMAIL_RE.match(email):
+        return generic
+
+    db = get_db()
+    ip = request.remote_addr
+    # Same DB-backed sliding window as login() — in-memory counters wouldn't
+    # survive gunicorn forking workers. Reuses login_attempts rather than a
+    # second table: both are "someone is hammering this account" signals.
+    window = "-%d minutes" % LOGIN_WINDOW_MIN
+    by_email = db.execute(
+        "SELECT COUNT(*) c FROM login_attempts WHERE email=? AND created > datetime('now', ?)",
+        (email, window)).fetchone()["c"]
+    by_ip = db.execute(
+        "SELECT COUNT(*) c FROM login_attempts WHERE ip=? AND created > datetime('now', ?)",
+        (ip, window)).fetchone()["c"]
+    if by_email >= MAX_RESET_REQUESTS or by_ip >= MAX_RESET_REQUESTS_PER_IP:
+        # Still generic — a 429 here would leak that the address is real.
+        return generic
+    db.execute("INSERT INTO login_attempts(email, ip) VALUES(?,?)", (email, ip))
+    db.commit()
+
+    row = db.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+    if not row:
+        return generic
+    try:
+        if not row["active"]:
+            return generic
+    except (IndexError, KeyError):
+        pass                      # column predates this migration — treat as active
+
+    token = secrets.token_urlsafe(32)
+    # Any older link for this account stops working the moment a new one is
+    # asked for, so a forwarded/leaked earlier email goes dead.
+    db.execute("UPDATE password_resets SET used=1 WHERE user_id=? AND used=0",
+               (row["id"],))
+    db.execute(
+        """INSERT INTO password_resets(user_id,token_hash,expires)
+           VALUES(?,?,datetime('now', ?))""",
+        (row["id"], _token_hash(token), "+%d minutes" % RESET_TTL_MINUTES))
+    db.commit()
+
+    # After the commit, and it cannot raise — see mailer.send.
+    from mailer import send, PUBLIC_BASE_URL
+    from mail_templates import password_reset
+    send(row["email"], "Reset your Print Engine password",
+         password_reset(row["name"], "%s/?reset=%s" % (PUBLIC_BASE_URL, token),
+                        RESET_TTL_MINUTES),
+         sender="hello", kind="password_reset",
+         entity_type="user", entity_id=row["id"])
+    return generic
+
+
+@auth_bp.route("/reset", methods=["POST"])
+def reset_password():
+    """Finish a reset. Single-use, time-limited."""
+    d = request.get_json(force=True, silent=True) or {}
+    token = (d.get("token") or "").strip()
+    fresh = d.get("password") or ""
+    bad = jsonify(ok=False, error="That reset link is invalid or has expired. "
+                                  "Ask for a new one."), 400
+    if not token:
+        return bad
+    if len(fresh) < 8:
+        return jsonify(ok=False, error="New password must be at least 8 characters."), 400
+
+    db = get_db()
+    row = db.execute(
+        """SELECT pr.id, pr.user_id, users.email, users.name
+           FROM password_resets pr JOIN users ON users.id = pr.user_id
+           WHERE pr.token_hash=? AND pr.used=0 AND pr.expires > datetime('now')""",
+        (_token_hash(token),)).fetchone()
+    if not row:
+        return bad
+
+    db.execute("UPDATE users SET password_hash=?, must_change_password=0 WHERE id=?",
+               (generate_password_hash(fresh), row["user_id"]))
+    # Burn the token in the same transaction as the password change, so a
+    # concurrent second use can't slip through between the two.
+    db.execute("UPDATE password_resets SET used=1 WHERE id=?", (row["id"],))
+    db.commit()
+    # A reset is a takeover of the account; don't leave the requester signed
+    # in as whoever was using this browser before.
+    session.clear()
     return jsonify(ok=True)
 
 

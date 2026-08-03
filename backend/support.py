@@ -1,7 +1,8 @@
 # ── Support blueprint: tickets, both sides of the conversation ──
 #
-# There is no email transport, so this is not a mailbox — it's the shop's
-# record of a conversation, readable by the customer inside their account.
+# Not a mailbox — the shop's record of a conversation, readable by the
+# customer inside their account. A public staff reply is emailed too, but
+# the thread here is the record of truth: mail can fail silently, this can't.
 # A ticket can be opened by the customer from an order, or by staff logging
 # a call or a WhatsApp message that came in elsewhere. Both end up in the
 # same inbox, which is the point: one place to look.
@@ -260,6 +261,21 @@ def staff_reply(tid):
         db.execute("UPDATE tickets SET assignee_id=? WHERE id=?", (session.get("user_id"), tid))
     _touch(db, tid)
     db.commit()
+
+    # ⚠️ `not internal` is load-bearing. An internal note is a staff-only
+    # aside on the same thread — emailing one would hand the customer
+    # whatever was said about them. Same predicate the customer-facing reply
+    # count uses (`from_staff AND NOT internal`), and it must stay that way.
+    if not internal:
+        who = db.execute("SELECT email,name FROM users WHERE id=?",
+                         (t["user_id"],)).fetchone()
+        if who and who["email"]:
+            from mailer import send
+            from mail_templates import ticket_reply
+            send(who["email"], "Re: %s" % (t["subject"] or "your ticket"),
+                 ticket_reply(who["name"], tid, t["subject"], body),
+                 sender="support", kind="ticket_reply",
+                 entity_type="ticket", entity_id=tid)
     return jsonify(ok=True)
 
 

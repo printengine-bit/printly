@@ -60,6 +60,74 @@ async function checkSession(){
   }catch(err){ /* backend offline — stay signed out locally */ }
 }
 
+/* ── Password reset ───────────────────────────────────────────────
+   Two modals: ask for a link (#forgotModal), then set the new password
+   (#resetModal). The second is opened by initReset() when the page loads
+   with a ?reset=<token> query string — the link in the email. That needs no
+   Flask route of its own, because a query string doesn't change which view
+   is served. */
+function openForgot(){
+  closeLogin();
+  const pre=document.getElementById('authEmail').value.trim();
+  if(pre) document.getElementById('forgotEmail').value=pre;
+  document.getElementById('forgotMsg').textContent='';
+  document.getElementById('forgotModal').classList.add('on');
+}
+function closeForgot(){ document.getElementById('forgotModal').classList.remove('on'); }
+function closeReset(){ document.getElementById('resetModal').classList.remove('on'); }
+
+async function doForgot(){
+  const email=document.getElementById('forgotEmail').value.trim();
+  if(!email){ toast('Enter your email'); return; }
+  const btn=document.getElementById('forgotBtn'), msg=document.getElementById('forgotMsg');
+  btn.disabled=true;
+  try{
+    const res=await fetch(BACKEND+'/api/auth/forgot',{method:'POST',
+      headers:{'Content-Type':'application/json'},credentials:'include',
+      body:JSON.stringify({email})});
+    const d=await res.json();
+    // The server answers identically whether or not the account exists, so
+    // this message must not imply the address was found.
+    msg.textContent=d.message||'If that address has an account, a reset link is on its way.';
+  }catch(err){
+    msg.textContent='Could not reach the server — try again.';
+  }
+  btn.disabled=false;
+}
+
+async function doReset(){
+  const password=document.getElementById('resetPassword').value;
+  if(password.length<8){ toast('Password must be at least 8 characters'); return; }
+  const btn=document.getElementById('resetBtn'), msg=document.getElementById('resetMsg');
+  btn.disabled=true;
+  try{
+    const res=await fetch(BACKEND+'/api/auth/reset',{method:'POST',
+      headers:{'Content-Type':'application/json'},credentials:'include',
+      body:JSON.stringify({token:resetToken,password})});
+    const d=await res.json();
+    if(!d.ok){ msg.textContent=d.error||'Something went wrong'; btn.disabled=false; return; }
+    closeReset();
+    toast('Password updated — sign in with it now.');
+    openLogin();
+  }catch(err){
+    msg.textContent='Could not reach the server — try again.';
+  }
+  btn.disabled=false;
+}
+
+let resetToken='';
+/* Called once at boot from init.js. */
+function initReset(){
+  const token=new URLSearchParams(location.search).get('reset');
+  if(!token) return;
+  resetToken=token;
+  // Strip the token out of the address bar so it doesn't sit in history, get
+  // screenshotted, or leak through a Referer header on the next click.
+  history.replaceState({}, '', location.pathname);
+  document.getElementById('resetModal').classList.add('on');
+  enhancePasswordFields(document.getElementById('resetModal'));
+}
+
 /* ── Reveal a password ────────────────────────────────────────────
    A password field that shows only dots is where typos go unnoticed, and
    "at least 8 characters" is exactly the rule people fail silently.

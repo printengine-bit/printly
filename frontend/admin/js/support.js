@@ -3,9 +3,10 @@
    an order, or get logged here when a conversation happened somewhere we
    don't own — a phone call, a WhatsApp message.
 
-   There's no email transport, so a reply is delivered by appearing in the
-   customer's account. The compose box says so, because a reply that nobody
-   is notified about is worse than no reply if staff assume otherwise. */
+   A public reply is emailed to the customer AND appears in their account.
+   An internal note is neither — it stays staff-only, and mailer is never
+   called for it. That distinction is the whole reason the compose box makes
+   you choose. */
 
 const supState = {open:null, scope:'open', q:'', canned:[]};
 

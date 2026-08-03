@@ -695,10 +695,42 @@
     <div class="field"><label>Email</label><input type="email" id="authEmail" placeholder="you@company.com"></div>
     <div class="field"><label>Password</label><input type="password" id="authPassword" placeholder="At least 8 characters"></div>
     <button class="btn btn-primary btn-block" style="margin-top:8px" id="authSubmitBtn" onclick="doLogin()">Sign in →</button>
-    <p class="t-mut" style="font-size:13px;margin-top:16px;text-align:center">
+    <p class="t-mut" style="font-size:13px;margin-top:12px;text-align:center" id="authForgotRow">
+      <a href="#" onclick="openForgot();return false" class="t-lime" style="font-weight:600">Forgot your password?</a>
+    </p>
+    <p class="t-mut" style="font-size:13px;margin-top:10px;text-align:center">
       <span id="authToggleText">New to Print Engine?</span>
       <a href="#" onclick="toggleAuthMode();return false" class="t-lime" style="font-weight:600" id="authToggleLink">Create an account</a>
     </p>
+  </div>
+</div>
+
+<!-- ══════════════ FORGOT PASSWORD ══════════════ -->
+<div class="modal-bg" id="forgotModal">
+  <div class="modal">
+    <button class="modal-x" onclick="closeForgot()" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
+    <h3 class="t-h3">Reset your password</h3>
+    <p class="t-mut" style="font-size:14px;margin:6px 0 22px">
+      Enter your email and we'll send you a link to set a new one.</p>
+    <div class="field"><label>Email</label><input type="email" id="forgotEmail" placeholder="you@company.com"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:8px" id="forgotBtn" onclick="doForgot()">Send reset link →</button>
+    <p class="t-mut" style="font-size:13px;margin-top:16px;text-align:center" id="forgotMsg"></p>
+  </div>
+</div>
+
+<!-- ══════════════ SET A NEW PASSWORD ══════════════
+     Opened from the ?reset=<token> link in the email — see initReset()
+     in auth.js. No route of its own; a query string doesn't affect which
+     view Flask serves. -->
+<div class="modal-bg" id="resetModal">
+  <div class="modal">
+    <button class="modal-x" onclick="closeReset()" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
+    <h3 class="t-h3">Set a new password</h3>
+    <p class="t-mut" style="font-size:14px;margin:6px 0 22px">
+      Pick something you haven't used here before.</p>
+    <div class="field"><label>New password</label><input type="password" id="resetPassword" placeholder="At least 8 characters"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:8px" id="resetBtn" onclick="doReset()">Save password →</button>
+    <p class="t-mut" style="font-size:13px;margin-top:16px;text-align:center" id="resetMsg"></p>
   </div>
 </div>
 
