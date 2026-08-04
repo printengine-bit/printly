@@ -227,16 +227,21 @@ def create_order():
     # scope here, so the address needs a lookup.
     who = db.execute("SELECT email,name FROM users WHERE id=?",
                      (session["user_id"],)).fetchone()
+    row = db.execute("SELECT * FROM orders WHERE id=?", (cur.lastrowid,)).fetchone()
     if who:
         from mailer import send
         from mail_templates import order_confirmed
         display = _display_id(cur.lastrowid)
+        # `q` is the server's own quote — the only authority on what this
+        # order cost. Passing it rather than the bare total lets the email
+        # itemise exactly what the invoice will say, instead of a second
+        # calculation that could drift from it.
         send(who["email"], "Order %s confirmed" % display,
-             order_confirmed(who["name"], display, items, total),
+             order_confirmed(who["name"], display, items, quote=q,
+                             shipping=ship, placed=row["created"]),
              sender="orders", kind="order_confirmed",
              entity_type="order", entity_id=cur.lastrowid)
 
-    row = db.execute("SELECT * FROM orders WHERE id=?", (cur.lastrowid,)).fetchone()
     return jsonify(ok=True, order=_order_public(row), points_earned=points)
 
 
