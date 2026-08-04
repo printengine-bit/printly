@@ -714,9 +714,16 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
 }
 @media(max-width:560px){
   .studio.pdp-mode .pdp-option{grid-template-columns:78px minmax(0,1fr);gap:8px}
+  /* All four actions stay on phones. This used to hide nth-child(3) — the
+     AI designer — to keep them on one line, which dropped a headline
+     feature on the devices most customers use, and silently depended on
+     button order. Tighter padding fits four across at 375px; the row is
+     flex-wrap so anything narrower spills to a second line instead of
+     disappearing. */
   .studio.pdp-mode .object-actions{gap:6px}
-  .studio.pdp-mode .object-actions button{padding:7px 10px}
-  .studio.pdp-mode .object-actions button:nth-child(3){display:none}
+  /* Wrapping to two rows frees the vertical room to hit the 44px minimum
+     tap target these were previously under at 36px. */
+  .studio.pdp-mode .object-actions button{padding:10px 12px;min-height:44px}
   .pdp-service-row{gap:3px}
   .quick-text-options{grid-template-columns:1fr 72px}
   .selected-actions{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}
