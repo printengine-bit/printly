@@ -186,6 +186,90 @@ def email_log():
     } for r in rows])
 
 
+@admin_bp.route("/emails/test", methods=["POST"])
+@owner_required
+def send_test_emails():
+    """Send one of every template to the signed-in owner, for eyeballing.
+
+    **The recipient is never taken from the request.** It's read from the
+    caller's own user row, so this cannot be pointed at a stranger — an
+    endpoint that sends arbitrary HTML to an arbitrary address is a spam
+    relay, owner-gated or not. Subjects are prefixed [TEST] so a real
+    order confirmation is never confused with one of these.
+    """
+    db = get_db()
+    me = db.execute("SELECT email,name FROM users WHERE id=?",
+                    (session["user_id"],)).fetchone()
+    if not me or not me["email"]:
+        return jsonify(ok=False, error="Your account has no email address."), 400
+
+    import mail_templates as T
+    from mailer import send, EMAIL_ENABLED
+    if not EMAIL_ENABLED:
+        return jsonify(ok=False,
+                       error="Email is off — RESEND_API_KEY isn't set on this "
+                             "deployment, so there's nothing to test."), 400
+
+    name = me["name"] or "there"
+    # Sample data shaped like the real thing, so the templates are exercised
+    # the way a customer would actually see them — two lines, a promo
+    # discount, both GST slabs, a full address.
+    items = [
+        {"pid": "rn", "name": "Men's Round Neck T-Shirt",
+         "sizes": {"M": 2, "L": 1}, "qty": 3},
+        {"pid": "hd", "name": "Men's Hoodie", "sizes": {"L": 1}, "qty": 1,
+         "plain_item": True},
+    ]
+    quote = {"subtotal": 2796, "gst": 195, "gst_rates": [5, 12],
+             "shipping": 99, "discount": 100, "promo_code": "WELCOME10",
+             "total": 2990,
+             "lines": [{"pid": "rn", "qty": 3, "unit": 499, "total": 1497},
+                       {"pid": "hd", "qty": 1, "unit": 1299, "total": 1299}]}
+    ship = {"name": name, "line1": "12 MG Road",
+            "line2": "Flat 3, Ashoka Apartments", "city": "Pune",
+            "state": "Maharashtra", "pincode": "411001", "phone": "9822012345"}
+    oid = "PL-TEST"
+
+    outbox = [
+        ("order_confirmed",      "Order %s confirmed" % oid,
+         T.order_confirmed(name, oid, items, quote=quote, shipping=ship,
+                           placed="2026-08-04 14:00")),
+        ("order_printing",       "Printing %s" % oid,        T.order_printing(name, oid)),
+        ("order_shipped",        "%s shipped" % oid,
+         T.order_shipped(name, oid, "Delhivery", "AWB1234567890")),
+        ("order_delivered",      "%s delivered" % oid,       T.order_delivered(name, oid)),
+        ("order_cancelled",      "%s cancelled" % oid,
+         T.order_cancelled(name, oid, "Sample cancellation reason")),
+        ("password_reset",       "Reset your Print Engine password",
+         T.password_reset(name, "%s/?reset=SAMPLE-TOKEN-NOT-VALID" % _base(), 60)),
+        ("ticket_reply",         "Re: Where is my order?",
+         T.ticket_reply(name, 42, "Where is my order?",
+                        "Sorry about the wait — it went out this morning, "
+                        "tracking is on its way to you now.")),
+        ("staff_invite",         "Your Print Engine staff account",
+         T.staff_invite(name, me["email"], "sample-temp-password", "production")),
+        ("staff_password_reset", "Your Print Engine password was reset",
+         T.staff_password_reset(name, me["email"], "sample-temp-password")),
+    ]
+
+    sent, failed = [], []
+    for kind, subject, html in outbox:
+        ok = send(me["email"], "[TEST] " + subject, html,
+                  sender="hello", kind="test:" + kind,
+                  entity_type="test", entity_id=None)
+        (sent if ok else failed).append(kind)
+
+    log(db, "settings", None, "test_emails_sent",
+        note="%d sent, %d failed, to %s" % (len(sent), len(failed), me["email"]))
+    db.commit()
+    return jsonify(ok=True, to=me["email"], sent=sent, failed=failed)
+
+
+def _base():
+    from mailer import PUBLIC_BASE_URL
+    return PUBLIC_BASE_URL
+
+
 # ── Company profile ──────────────────────────────────────────────
 COMPANY_FIELDS = ("legal_name", "trade_name", "address", "city", "state",
                   "pincode", "phone", "email", "gstin", "doc_prefix")

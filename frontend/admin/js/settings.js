@@ -185,11 +185,36 @@ async function renderEmails(el){
     ${skipped ? `<p class="tiny muted" style="margin-bottom:14px">
       "Not sent" means no RESEND_API_KEY is configured — mail is off, and
       nothing else is wrong.</p>` : ''}
+    <div class="row" style="gap:10px;align-items:center;margin-bottom:16px">
+      <button class="btn btn-quiet btn-sm" id="testMailBtn" onclick="sendTestEmails()">
+        Send one of each to me</button>
+      <span class="tiny muted" id="testMailMsg">
+        Sends all 9 templates to your own address, subject-prefixed [TEST].</span>
+    </div>
     ${d.entries.length
       ? `<table><thead><tr><th>When</th><th>To</th><th>Subject</th><th>Status</th></tr></thead>
          <tbody>${d.entries.map(emailRow).join('')}</tbody></table>`
       : '<div class="empty">No emails yet.</div>'}
   </div>`;
+}
+
+/* The recipient is decided by the server from your own account row, never
+   sent from here — see send_test_emails() for why. */
+async function sendTestEmails(){
+  const btn = document.getElementById('testMailBtn');
+  const msg = document.getElementById('testMailMsg');
+  btn.disabled = true;
+  msg.textContent = 'Sending…';
+  const d = await api('/api/admin/emails/test', {});
+  if(!d.ok){
+    msg.textContent = d.error || 'Could not send.';
+    btn.disabled = false;
+    return;
+  }
+  const failed = (d.failed || []).length;
+  msg.textContent = `Sent ${(d.sent||[]).length} to ${d.to}`
+    + (failed ? ` · ${failed} failed — see the log below` : '');
+  renderEmails(document.getElementById('setBody'));
 }
 
 function emailRow(m){
