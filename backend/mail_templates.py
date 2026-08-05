@@ -318,6 +318,26 @@ def _totals_table(quote):
             'width="100%" style="margin:8px 0 18px;">' + "".join(rows) + "</table>")
 
 
+def _callout(text, label=None):
+    """Bordered block for text the customer actually needs to read — a staff
+    reply, a cancellation reason. Anything set as small muted body copy gets
+    skimmed past, which is the wrong outcome for the one line explaining why
+    their order is gone.
+
+    `white-space:pre-wrap` preserves line breaks typed by staff without
+    letting the content introduce markup — it's escaped either way.
+    """
+    head = ""
+    if label:
+        head = ('<div class="em-muted" style="font-size:11px;letter-spacing:.06em;'
+                'text-transform:uppercase;margin:0 0 5px;color:%s;">%s</div>'
+                % (MUTED, e(label)))
+    return ('<div class="em-quote em-ink" style="margin:0 0 16px;padding:14px 16px;'
+            'background:%s;border-left:3px solid %s;border-radius:6px;'
+            'font-size:14px;line-height:1.6;white-space:pre-wrap;color:%s;">'
+            '%s%s</div>' % (PAGE_BG, LIME, INK, head, e(text or "")))
+
+
 def _order_url(order_id):
     return "%s/?order=%s" % (PUBLIC_BASE_URL, order_id)
 
@@ -403,7 +423,7 @@ def order_cancelled(name, order_id, note=""):
     body = (
         _h1("Order cancelled") +
         _p("%s has been cancelled." % e(order_id)) +
-        (_muted("Reason given: " + e(note)) if note else "") +
+        (_callout(note, "Reason") if note else "") +
         _p("Any stock reserved for it has been released, and nothing further "
            "will be printed or shipped.") +
         _muted("If this wasn't expected, reply to this email and we'll look "
@@ -432,11 +452,7 @@ def ticket_reply(name, ticket_id, subject, message):
     body = (
         _h1("We've replied to your ticket") +
         _kv_table([("Ticket", "#%s" % ticket_id), ("Subject", subject or "—")]) +
-        ('<div class="em-quote" style="margin:0 0 18px;padding:14px 16px;'
-         'background:%s;border-left:3px solid %s;border-radius:6px;'
-         'font-size:14px;line-height:1.6;white-space:pre-wrap;color:%s;" '
-         'class="em-ink">%s</div>'
-         % (PAGE_BG, LIME, INK, e(message or ""))) +
+        _callout(message or "") +
         _button("Open the conversation", "%s/?ticket=%s" % (PUBLIC_BASE_URL, ticket_id)) +
         _muted("You can reply from your account, or just reply to this email — "
                "both land in the same place.")
