@@ -288,6 +288,20 @@ details.acc.tk summary{text-transform:none;letter-spacing:0;font-size:14px;gap:1
 .cart-line-total{text-align:right;flex-shrink:0}
 .cart-line-total b{font-family:var(--ff-display);font-size:20px;color:var(--lime-ink)}
 .summary-card{position:sticky;top:88px}
+/* Payment method. Whole row is the hit target, not just the radio dot —
+   a 14px circle is well under the 44px minimum on a phone. */
+.pay-methods{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.pay-opt{
+  display:flex;align-items:flex-start;gap:10px;min-height:44px;
+  padding:11px 13px;border:1px solid var(--outline-variant);
+  border-radius:var(--r-sm);cursor:pointer;transition:border-color .15s,background .15s;
+}
+.pay-opt:hover{border-color:var(--lime)}
+.pay-opt.on{border-color:var(--lime);background:var(--surface-container-high)}
+.pay-opt input{margin-top:2px;flex-shrink:0;accent-color:var(--lime)}
+.pay-opt span{display:flex;flex-direction:column;gap:2px}
+.pay-opt b{font-size:13px;font-weight:700}
+.pay-opt small{font-size:11px;color:var(--on-surface-variant);line-height:1.4}
 .trust{display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--on-surface-variant);justify-content:center;margin-top:16px}
 
 /* ── My Account ───────────────────────────────────────────────── */

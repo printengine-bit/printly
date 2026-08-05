@@ -45,7 +45,7 @@ def sales():
         """SELECT date(created) d, COUNT(*) n,
                   SUM(CASE WHEN cancelled=0 THEN total_inr ELSE 0 END) rev,
                   SUM(CASE WHEN cancelled=1 THEN 1 ELSE 0 END) cancelled
-           FROM orders WHERE date(created) >= date(?)
+           FROM orders WHERE date(created) >= date(?) AND payment_status!='pending'
            GROUP BY date(created)""", (since,)).fetchall()
     by_day = {r["d"]: r for r in rows}
     series = [{"date": d,
@@ -59,7 +59,7 @@ def sales():
     prod, gst_by_rate, pieces, taxable = {}, {}, 0, 0.0
     orders = db.execute(
         """SELECT items_json, tax_json, total_inr, cancelled
-           FROM orders WHERE date(created) >= date(?) AND cancelled=0""",
+           FROM orders WHERE date(created) >= date(?) AND cancelled=0 AND payment_status!='pending'""",
         (since,)).fetchall()
     for o in orders:
         try:
@@ -116,7 +116,7 @@ def throughput():
     days = _days(30)
 
     stages = db.execute(
-        """SELECT status, COUNT(*) n FROM orders WHERE cancelled=0 GROUP BY status""").fetchall()
+        """SELECT status, COUNT(*) n FROM orders WHERE cancelled=0 AND payment_status!='pending' GROUP BY status""").fetchall()
     by_stage = {r["status"]: r["n"] for r in stages}
     pipeline = [{"stage": i, "label": STAGE_LABELS[i], "orders": by_stage.get(i, 0)}
                 for i in range(len(STAGE_LABELS))]

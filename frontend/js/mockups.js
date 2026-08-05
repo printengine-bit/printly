@@ -239,6 +239,10 @@ let state = {
      breakdown. Both write into `sizes` above — this is a view mode, not a
      second place quantity is stored. */
   orderMode:'single',
+  /* Which way the customer intends to pay. Only meaningful when the server
+     reports payments configured; the cart falls back to COD otherwise, which
+     is how every order behaved before a gateway existed. */
+  payMethod:'razorpay',
   // Product ids the signed-in user has saved. Empty for guests — wishlist.js
   // loads the real set after login/session-restore, same as My Designs.
   wishlist:new Set(),

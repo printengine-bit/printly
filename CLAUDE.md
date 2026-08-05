@@ -326,8 +326,18 @@ p95 ≈220ms.
 
 ## Not yet done (don't assume these exist)
 
-- **Razorpay** — order totals are still client-trusted. The server MUST
-  recompute from a price table the moment payment lands.
+- ~~**Razorpay**~~ — done: `payments.py` wraps the REST API with `requests`
+  (no SDK), and `PAYMENTS_ENABLED` mirrors `EMAIL_ENABLED` so a shop with no
+  keys falls back to COD and behaves exactly as before. An online order is
+  INSERTed as `payment_status='pending'` with **no** side effects — no stock,
+  no promo burned, no points, no email — and is filtered out of My Orders,
+  the admin list, the production queue and every revenue figure. All of that
+  happens in `confirm_payment()`, which is idempotent on `orders.paid_at`
+  because Razorpay retries webhooks and the browser callback races them.
+  The webhook is the only unauthenticated POST in the codebase: it verifies
+  an HMAC over the **raw request body** (never a re-serialised dict) with
+  `compare_digest`. What's left is business, not code: live keys, and
+  refunds.
 - ~~**GST**~~ — done: two slabs, per piece, admin-editable, with invoices.
   What's left is data, not code: the **GSTIN** (Settings → Company profile,
   still blank) and the per-product **HSN codes**. Dispatch and the invoice

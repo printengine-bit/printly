@@ -819,6 +819,9 @@
 
 <!-- Catalogue from the database, substituted server-side by the `/` route.
      data.js reads this instead of declaring products inline. -->
+<!-- Razorpay Checkout. External by necessity: the payment form must be
+     served by Razorpay, not by us, so card details never touch this origin. -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>window.PRINTLY_CATALOG = {{CATALOG}};</script>
 <script src="js/mockup-data.js?v={{V}}"></script>
 <script src="js/data.js?v={{V}}"></script>

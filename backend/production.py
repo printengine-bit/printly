@@ -29,7 +29,7 @@ def _open_orders(db, stages=IN_PRODUCTION):
     return db.execute(
         """SELECT o.*, u.name AS customer FROM orders o
            JOIN users u ON u.id=o.user_id
-           WHERE o.cancelled=0 AND o.status IN (%s)
+           WHERE o.cancelled=0 AND o.payment_status!='pending' AND o.status IN (%s)
            ORDER BY o.created""" % marks, stages).fetchall()
 
 
@@ -150,7 +150,7 @@ def proofs():
     waiting = []
     for o in db.execute("""SELECT o.*, u.name AS customer, u.email FROM orders o
                            JOIN users u ON u.id=o.user_id
-                           WHERE o.cancelled=0 AND o.status=0
+                           WHERE o.cancelled=0 AND o.payment_status!='pending' AND o.status=0
                            ORDER BY o.created"""):
         age = db.execute(
             "SELECT (julianday('now') - julianday(?)) * 24 AS h", (o["created"],)

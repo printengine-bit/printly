@@ -342,6 +342,28 @@ def init_db():
     _add_column(c, "orders", "invoice_json", "TEXT")
     _add_column(c, "orders", "invoice_at", "TEXT")
 
+    # ── Payment ──────────────────────────────────────────────────
+    # 'razorpay' | 'cod'. Blank on every order placed before payments
+    # existed, which is exactly what it means: no method was recorded.
+    _add_column(c, "orders", "payment_method", "TEXT NOT NULL DEFAULT ''")
+    # ⚠️ Defaults to 'paid', NOT 'pending'. Every existing order predates
+    # payments and was a real order; defaulting to 'pending' would hide the
+    # entire order history from the admin, the print floor and every
+    # customer's My Orders the moment this deploys. An unpaid order sets
+    # 'pending' explicitly at INSERT — see orders.create_order().
+    _add_column(c, "orders", "payment_status", "TEXT NOT NULL DEFAULT 'paid'")
+    _add_column(c, "orders", "rzp_order_id", "TEXT")
+    _add_column(c, "orders", "rzp_payment_id", "TEXT")
+    # The idempotency guard. Set once, inside the same transaction that moves
+    # stock and points, so a replayed webhook can't run any of it twice —
+    # same shape as invoice_no in dispatch._issue().
+    _add_column(c, "orders", "paid_at", "TEXT")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_orders_payment "
+              "ON orders(payment_status, created)")
+    # Looked up by rzp_order_id on every webhook, which arrives without a
+    # session and knows nothing about our PKs.
+    c.execute("CREATE INDEX IF NOT EXISTS idx_orders_rzp ON orders(rzp_order_id)")
+
     # Invoice numbering. GST wants a consecutive series unique within a
     # financial year, so the year is stored alongside the counter and the
     # counter restarts when the year rolls over — see next_invoice_no().

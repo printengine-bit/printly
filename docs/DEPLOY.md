@@ -87,7 +87,9 @@ Then by hand:
 - **GST.** The storefront charges a 5% GST line but there is no GSTIN on
   file. Resolve before taking real money — see the admin panel's warning on
   Settings → Company profile.
-- **No payment gateway.** Orders are placed without taking money. Totals
-  are computed server-side and a mismatch is refused, so the pricing half is
-  ready whenever a gateway is wired up.
+- **Payments need three env vars to be live.** `RAZORPAY_KEY_ID`,
+  `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET`. Without them the cart
+  offers Cash on Delivery only — nothing breaks, it just can't take money
+  online. The webhook secret is the one people forget: without it a customer
+  who closes the tab mid-payment has paid, but the order stays pending.
 - **Cost.** No free tier: $5/month Hobby once the trial credit runs out.

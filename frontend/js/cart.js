@@ -347,8 +347,11 @@ function renderCart(){
       <div class="price-line"><span>${gstLabel(g.rates)}</span><span>₹${gAmount.toLocaleString('en-IN')}</span></div>
       <div class="price-line"><span>Shipping</span><span>${ship?'₹'+ship:'<span class="t-lime">FREE</span>'}</span></div>
       <div class="price-line total"><span>Total</span><span>₹${tot.toLocaleString('en-IN')}</span></div>
+      ${payMethodBox()}
       <button class="btn btn-primary btn-block" style="margin-top:18px" onclick="checkout(${tot})">
-        Place order · ₹${tot.toLocaleString('en-IN')}
+        ${state.payMethod==='razorpay'
+          ? `Pay ₹${tot.toLocaleString('en-IN')}`
+          : `Place order · ₹${tot.toLocaleString('en-IN')}`}
       </button>
       <div class="trust">
         <span class="material-symbols-outlined" style="font-size:16px">verified_user</span>
@@ -477,6 +480,24 @@ async function uploadArt(){
   return out;
 }
 
+/* Pay online or on delivery. Online is offered only when the server says
+   payments are configured (PRINTLY_CATALOG.payments), so a shop without
+   Razorpay keys never shows a button that can't work. */
+function payMethodBox(){
+  if(!(CATALOG.payments && CATALOG.payments.enabled)) return '';
+  const opt=(val,label,sub)=>`
+    <label class="pay-opt${state.payMethod===val?' on':''}">
+      <input type="radio" name="paymethod" value="${val}" ${state.payMethod===val?'checked':''}
+             onchange="setPayMethod('${val}')">
+      <span><b>${label}</b><small>${sub}</small></span>
+    </label>`;
+  return `<div class="pay-methods">
+    ${opt('razorpay','Pay online','UPI, cards, netbanking — via Razorpay')}
+    ${opt('cod','Cash on delivery','Pay the courier when it arrives')}
+  </div>`;
+}
+function setPayMethod(v){ state.payMethod=v; renderCart(); }
+
 async function checkout(tot){
   if(!state.user){ openLogin(); toast('Sign in to place your order'); return; }
   const bad=validateShip();
@@ -486,19 +507,77 @@ async function checkout(tot){
   try{
     const items=await uploadArt();
     const res=await fetch(BACKEND+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},
-      credentials:'include', body:JSON.stringify({items,total:tot,shipping:state.ship,promo_code:state.promo.code})});
+      credentials:'include', body:JSON.stringify({items,total:tot,shipping:state.ship,
+        promo_code:state.promo.code, payment_method:state.payMethod})});
     const d=await res.json();
-    if(!d.ok){ toast(d.error||'Could not place order'); renderCart(); return; }
-    state.cart=[]; state.promo={code:null,discount:0}; setCartCount();
-    // Loyalty points are awarded server-side, so the cached user is now
-    // stale — refresh it before the orders page reads the balance.
-    if(d.points_earned) await checkSession();
-    go('orders');
-    toast('Order '+d.order.id+' placed'+(d.points_earned?` · +${d.points_earned} points`:'')+' 🎉');
+    if(!d.ok){
+      // 409 means the server priced this differently — it sends the correct
+      // total back. Showing it beats a bare "prices have changed", which
+      // leaves the customer with no idea what the number now is.
+      if(res.status===409 && typeof d.total==='number'){
+        toast(`Price updated to ₹${d.total.toLocaleString('en-IN')} — check and place again`);
+      } else {
+        toast(d.error||'Could not place order');
+      }
+      renderCart(); return;
+    }
+    // Online payment: the order exists but is invisible and costs nothing
+    // until Razorpay confirms. Hand off to Checkout.
+    if(d.requires_payment){ return payWithRazorpay(d); }
+    finishOrder(d);
   }catch(err){
     toast(err&&err.message ? err.message : 'Could not reach the server — try again.');
     renderCart();
   }
+}
+
+/* Shared tail for a confirmed order, whichever way it was paid for. */
+async function finishOrder(d, orderId){
+  state.cart=[]; state.promo={code:null,discount:0}; setCartCount();
+  // Loyalty points are awarded server-side, so the cached user is now
+  // stale — refresh it before the orders page reads the balance.
+  if(d.points_earned) await checkSession();
+  go('orders');
+  const id=orderId || (d.order && d.order.id) || d.order;
+  toast('Order '+id+' placed'+(d.points_earned?` · +${d.points_earned} points`:'')+' 🎉');
+}
+
+/* Razorpay Checkout. The order already exists server-side as pending; this
+   only decides whether it becomes real. Dismissing the modal is not an
+   error — the pending order simply stays invisible and costs nothing. */
+function payWithRazorpay(d){
+  if(typeof Razorpay==='undefined'){
+    toast('Payment library did not load — check your connection and retry');
+    renderCart(); return;
+  }
+  const r=d.razorpay;
+  const rz=new Razorpay({
+    key:r.key, order_id:r.order_id, amount:r.amount, currency:r.currency,
+    name:'Print Engine', description:'Order '+d.order,
+    prefill:{name:state.ship.name||'', contact:state.ship.phone||'',
+             email:(state.user&&state.user.email)||''},
+    theme:{color:'#c8f232'},
+    handler: async function(resp){
+      try{
+        const v=await fetch(BACKEND+'/api/payments/verify',{method:'POST',
+          headers:{'Content-Type':'application/json'},credentials:'include',
+          body:JSON.stringify(resp)});
+        const vd=await v.json();
+        if(!vd.ok){ toast(vd.error||'Payment could not be verified'); renderCart(); return; }
+        finishOrder({}, vd.order);
+      }catch(err){
+        // The webhook is the authority and will still confirm this, so
+        // don't tell the customer the payment failed — it probably didn't.
+        toast('Payment received — confirming your order shortly');
+        go('orders');
+      }
+    },
+    modal:{ ondismiss: function(){
+      toast('Payment cancelled — your cart is still here');
+      renderCart();
+    }},
+  });
+  rz.open();
 }
 /* Which field to focus for a given validation message. */
 function shipFieldFor(msg){

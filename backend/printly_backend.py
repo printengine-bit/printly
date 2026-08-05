@@ -212,6 +212,7 @@ from customers import customers_bp
 from support import support_bp
 from content import content_bp
 from reports import reports_bp
+from payments import payments_bp
 app.register_blueprint(auth_bp)
 app.register_blueprint(artwork_bp)
 app.register_blueprint(admin_bp)
@@ -228,6 +229,7 @@ app.register_blueprint(reviews_bp)
 app.register_blueprint(shipping_bp)
 app.register_blueprint(wishlist_bp)
 app.register_blueprint(promo_bp)
+app.register_blueprint(payments_bp)
 
 # ── Content moderation: block misuse before spending money ─────
 BLOCKED = ["nude", "nsfw", "gore", "blood", "weapon", "gun", "drug",

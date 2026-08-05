@@ -187,16 +187,60 @@ def create_order():
         ), 409
     total = q["total"]
 
+    # Which way this order goes. Online payment needs keys configured AND
+    # the customer to have chosen it; anything else is treated as COD, which
+    # is the behaviour that existed before payments and is still correct
+    # when the gateway isn't set up.
+    from payments import PAYMENTS_ENABLED, PENDING, PAID, create_rzp_order
+    wants_online = (d.get("payment_method") or "").strip().lower() == "razorpay"
+    online = bool(wants_online and PAYMENTS_ENABLED)
+    method = "razorpay" if online else "cod"
+    pay_status = PENDING if online else PAID
+
     cur = db.execute(
         """INSERT INTO orders(user_id,total_inr,items_json,tax_json,ship_name,ship_phone,
                               ship_line1,ship_line2,ship_city,ship_state,ship_pincode,
-                              promo_code,discount_inr)
-           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                              promo_code,discount_inr,payment_method,payment_status)
+           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (session["user_id"], total, json.dumps(items), json.dumps(q),
          ship["name"], ship["phone"],
          ship["line1"], ship["line2"], ship["city"], ship["state"], ship["pincode"],
-         q["promo_code"], q["discount"]),
+         q["promo_code"], q["discount"], method, pay_status),
     )
+
+    if online:
+        # Nothing else happens yet. No stock off the shelf, no promo burned,
+        # no points, no email — an abandoned checkout must cost nothing and
+        # leave nothing behind. confirm_payment() does all of it once money
+        # actually arrives.
+        #
+        # The amount handed over is q["total"], never the browser's figure:
+        # `total` was only ever compared against the quote, above.
+        rzp, err = create_rzp_order(
+            q["total"], receipt=_display_id(cur.lastrowid),
+            notes={"order": _display_id(cur.lastrowid),
+                   "user_id": str(session["user_id"])})
+        if err:
+            # The order row is rolled back with everything else — there's
+            # nothing to pay against, so leaving a pending shell would be
+            # noise the customer can never resolve.
+            db.rollback()
+            return jsonify(ok=False, error=err), 502
+        db.execute("UPDATE orders SET rzp_order_id=? WHERE id=?",
+                   (rzp.get("id"), cur.lastrowid))
+        _log_event(db, cur.lastrowid, "placed", None, 0,
+                   note="Awaiting online payment")
+        db.commit()
+        return jsonify(
+            ok=True, requires_payment=True,
+            order=_display_id(cur.lastrowid),
+            razorpay={"key": __import__("payments").RAZORPAY_KEY_ID,
+                      "order_id": rzp.get("id"),
+                      "amount": rzp.get("amount"),
+                      "currency": rzp.get("currency") or "INR"},
+        )
+
+    # ── COD (and the payments-disabled path): unchanged from before ──
     if q["promo_code"]:
         from promo import redeem_promo
         redeem_promo(db, q["promo_code"], session["user_id"], cur.lastrowid, q["discount"])
@@ -248,8 +292,11 @@ def create_order():
 @orders_bp.route("/orders/mine")
 @login_required
 def my_orders():
+    # An order awaiting payment isn't an order yet — showing one here would
+    # tell a customer who abandoned checkout that they'd bought something.
     rows = get_db().execute(
-        "SELECT * FROM orders WHERE user_id=? ORDER BY created DESC", (session["user_id"],)
+        """SELECT * FROM orders WHERE user_id=? AND payment_status!='pending'
+           ORDER BY created DESC""", (session["user_id"],)
     ).fetchall()
     return jsonify(ok=True, orders=[_order_public(r) for r in rows])
 
@@ -264,6 +311,7 @@ def admin_orders():
     rows = get_db().execute(
         """SELECT orders.*, users.name AS customer_name, users.email AS customer_email
            FROM orders JOIN users ON users.id = orders.user_id
+           WHERE orders.payment_status!='pending'
            ORDER BY orders.created DESC"""
     ).fetchall()
     out = []

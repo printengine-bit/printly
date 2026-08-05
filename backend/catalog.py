@@ -95,7 +95,16 @@ def catalog_payload(db=None):
             # Print zones are admin-editable now. mockups.js merges these
             # over the defaults in mockup-data.js, so a corrected measurement
             # reaches the studio on the next load without a deploy.
-            "zones": zones_payload(db)}
+            "zones": zones_payload(db),
+            # Whether the cart may offer online payment at all. The key id is
+            # public by design — Checkout needs it client-side; the secret
+            # never leaves the server.
+            "payments": _payments_payload()}
+
+
+def _payments_payload():
+    from payments import PAYMENTS_ENABLED, RAZORPAY_KEY_ID
+    return {"enabled": PAYMENTS_ENABLED, "key": RAZORPAY_KEY_ID if PAYMENTS_ENABLED else ""}
 
 
 def tax_settings(db):
