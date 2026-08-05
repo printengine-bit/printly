@@ -534,12 +534,12 @@ async function checkout(tot){
 /* Shared tail for a confirmed order, whichever way it was paid for. */
 async function finishOrder(d, orderId){
   state.cart=[]; state.promo={code:null,discount:0}; setCartCount();
-  // Loyalty points are awarded server-side, so the cached user is now
-  // stale — refresh it before the orders page reads the balance.
-  if(d.points_earned) await checkSession();
+  // No session refresh needed: the only thing that went stale was the
+  // loyalty balance, which is no longer displayed. The points are still
+  // awarded server-side and the ledger still records them.
   go('orders');
   const id=orderId || (d.order && d.order.id) || d.order;
-  toast('Order '+id+' placed'+(d.points_earned?` · +${d.points_earned} points`:'')+' 🎉');
+  toast('Order '+id+' placed 🎉');
 }
 
 /* Razorpay Checkout. The order already exists server-side as pending; this
@@ -656,9 +656,13 @@ async function renderOrders(){
   if(stats){
     // "In production" = anything past proof but not yet delivered.
     const active=orders.filter(o=>o.status<STAGES.length-1).length;
+    // ⚠️ Loyalty balance is deliberately NOT shown. Points still accrue and
+    // the ledger is still written — see award_points() — but there is no way
+    // to spend them and no agreed policy, so showing a balance advertises a
+    // reward the shop doesn't yet honour. Put this back the day redemption
+    // exists; the numbers will all be there waiting.
     stats.innerHTML=`
-      <div class="stat-pill"><span>In production</span><b>${String(active).padStart(2,'0')}</b></div>
-      <div class="stat-pill"><span>Loyalty points</span><b>${(state.user.loyalty_points||0).toLocaleString('en-IN')}</b></div>`;
+      <div class="stat-pill"><span>In production</span><b>${String(active).padStart(2,'0')}</b></div>`;
   }
 
   // The help panel offers to raise a request against one of these, so it

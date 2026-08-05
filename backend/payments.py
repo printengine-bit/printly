@@ -157,9 +157,12 @@ def confirm_payment(db, row, rzp_payment_id):
         _log_event(db, order_id, "note",
                    note="No stock record for: " + ", ".join(missing[:6]))
 
-    # Same placeholder rule as before — 1 point per ₹100, no redemption path
-    # agreed yet. Through award_points() so the ledger and the balance move
-    # together.
+    # 1 point per ₹100. Still accrues, and still goes through award_points()
+    # so the ledger and the balance move together — but the storefront no
+    # longer *shows* a balance, because there's no way to spend it and no
+    # agreed policy. Accruing quietly costs nothing and means the history is
+    # already there whenever redemption is decided; advertising a reward the
+    # shop doesn't honour is the part that was wrong.
     points = int(float(row["total_inr"]) // 100)
     if points:
         from customers import award_points

@@ -347,8 +347,11 @@ p95 ≈220ms.
   visual check for humans, not a scannable barcode.
 - **Parcel weight** is entered by hand because no product carries a weight.
   A `grams` column on `products` would let dispatch prefill it.
-- **Loyalty redemption** — points accrue on a placeholder rule (1 per
-  ₹100) with no way to spend them and no agreed policy. The *ledger* is
-  real now (every movement recorded, balances reconcile); the **policy**
-  still isn't. Don't advertise points to customers until it is.
+- **Loyalty redemption** — points still accrue (1 per ₹100) and the ledger
+  is real, but the balance is **deliberately hidden from customers** until
+  a redemption policy exists: showing a number nobody can spend advertises
+  a reward the shop doesn't honour. Staff still see balances in Customers →
+  Loyalty ledger. Accrual continues so the history is already there the day
+  redemption is decided — to switch it back on, restore the stat pill in
+  `renderOrders()` (cart.js) and the toast in `finishOrder()`.
 - Verified-email / password reset, live deployment, PWA. See README.
