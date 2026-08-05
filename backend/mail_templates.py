@@ -39,6 +39,15 @@ BORDER   = "#e2e5d8"
 SURFACE  = "#ffffff"
 PAGE_BG  = "#f4f5ef"
 
+# Email cannot load web fonts: Gmail strips @font-face and <link> outright,
+# and only Apple Mail honours them — so the site's Inter/Archivo Narrow are
+# unreachable here and Arial is what everyone would actually get. A system
+# stack instead resolves to San Francisco on Apple, Segoe UI on Windows and
+# Roboto on Android: real, modern typefaces with nothing to download.
+# Inter leads the stack purely so it wins on the machines that have it.
+FONT = ("'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,"
+        "'Helvetica Neue',Arial,sans-serif")
+
 # Dark-mode counterparts. Deliberately NOT a straight inversion: the lime
 # fill stays exactly as it is because that's the brand, and its ink stays
 # dark because dark-on-lime is the readable pairing in either mode.
@@ -96,18 +105,18 @@ def _shell(title, body, preheader=""):
   <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0"
          style="max-width:560px;">
    <tr><td style="padding:0 4px 16px;">
-     <span class="em-brand" style="font-family:Arial,Helvetica,sans-serif;font-weight:900;
+     <span class="em-brand" style="font-family:%(font)s;font-weight:900;
                   font-size:20px;letter-spacing:-.5px;color:%(ink)s;">PRINT</span><span
-           style="font-family:Arial,Helvetica,sans-serif;font-weight:900;
+           style="font-family:%(font)s;font-weight:900;
                   font-size:20px;letter-spacing:-.5px;color:%(limeink)s;">&nbsp;ENGINE</span>
    </td></tr>
    <tr><td class="em-card" style="background:%(surface)s;border:1px solid %(border)s;
                   border-radius:12px;padding:28px 26px;
-                  font-family:Arial,Helvetica,sans-serif;
+                  font-family:%(font)s;
                   font-size:15px;line-height:1.55;">
 %(body)s
    </td></tr>
-   <tr><td style="padding:18px 4px 0;font-family:Arial,Helvetica,sans-serif;
+   <tr><td style="padding:18px 4px 0;font-family:%(font)s;
                   font-size:12px;line-height:1.7;">
      <p class="em-muted" style="margin:0 0 10px;color:%(muted)s;">
        <a href="%(base)s/" style="color:%(limeink)s;text-decoration:none;">Shop</a>
@@ -131,35 +140,44 @@ def _shell(title, body, preheader=""):
 </body></html>""" % {
         "title": e(title), "pre": e(preheader), "body": body, "style": _STYLE,
         "page": PAGE_BG, "surface": SURFACE, "border": BORDER,
-        "ink": INK, "muted": MUTED, "limeink": LIME_INK,
+        "ink": INK, "muted": MUTED, "limeink": LIME_INK, "font": FONT,
         "base": PUBLIC_BASE_URL, "reply": e(MAIL_REPLY_TO),
     }
 
 
 def _h1(text):
-    return ('<h1 class="em-h1 em-ink" style="margin:0 0 14px;font-size:21px;'
-            'line-height:1.3;font-weight:800;color:%s;">%s</h1>' % (INK, e(text)))
+    # Negative tracking at this size is what stops a system-UI heading
+    # looking like a default browser <h1>.
+    return ('<h1 class="em-h1 em-ink" style="margin:0 0 12px;font-size:20px;'
+            'line-height:1.35;font-weight:700;letter-spacing:-.01em;'
+            'color:%s;">%s</h1>' % (INK, e(text)))
 
 
 def _p(html):
     """Body paragraph. Takes HTML — callers escape their own values."""
-    return ('<p class="em-ink" style="margin:0 0 14px;font-size:15px;'
-            'line-height:1.55;color:%s;">%s</p>' % (INK, html))
+    return ('<p class="em-ink" style="margin:0 0 13px;font-size:14.5px;'
+            'line-height:1.6;color:%s;">%s</p>' % (INK, html))
 
 
 def _muted(html):
-    return ('<p class="em-muted" style="margin:0 0 12px;font-size:13px;'
-            'line-height:1.5;color:%s;">%s</p>' % (MUTED, html))
+    return ('<p class="em-muted" style="margin:0 0 10px;font-size:12.5px;'
+            'line-height:1.55;color:%s;">%s</p>' % (MUTED, html))
 
 
 def _button(label, url):
     """Padded <a> rather than a styled table — simpler, and it degrades to a
-    plain link anywhere the background is stripped."""
-    return ('<p style="margin:0 0 18px;"><a href="%s" '
+    plain link anywhere the background is stripped.
+
+    Deliberately not the storefront's full pill: at 999px radius a short
+    label like "Sign in" renders as an oversized lozenge with more padding
+    than text. A modest radius reads as a button rather than a bubble.
+    """
+    return ('<p style="margin:0 0 16px;"><a href="%s" '
             'style="display:inline-block;background:%s;color:%s;'
-            'text-decoration:none;font-weight:800;font-size:15px;'
-            'padding:12px 22px;border-radius:999px;">%s</a></p>'
-            % (e(url), LIME, INK, e(label)))
+            'font-family:%s;text-decoration:none;font-weight:700;'
+            'font-size:14px;line-height:1;letter-spacing:.01em;'
+            'padding:13px 20px;border-radius:8px;">%s</a></p>'
+            % (e(url), LIME, INK, FONT, e(label)))
 
 
 def _rule():
@@ -168,13 +186,22 @@ def _rule():
 
 
 def _kv_table(rows):
-    """Label/value rows — order id, courier, AWB and friends."""
+    """Label/value rows — order id, courier, AWB and friends.
+
+    The label column is deliberately narrow (34%, was 44%): at nearly half
+    the width the value floated far from its label with a lake of white
+    between them, which is what made these blocks read as unfinished.
+    """
     out = ['<table role="presentation" cellpadding="0" cellspacing="0" border="0" '
-           'width="100%" style="margin:0 0 18px;font-size:14px;">']
+           'width="100%" style="margin:0 0 16px;">']
     for k, v in rows:
         out.append(
-            '<tr><td class="em-muted" style="padding:6px 0;color:%s;width:44%%;">%s</td>'
-            '<td class="em-ink" style="padding:6px 0;color:%s;font-weight:700;">%s</td></tr>'
+            '<tr>'
+            '<td class="em-muted" style="padding:5px 12px 5px 0;color:%s;'
+            'width:34%%;font-size:12px;letter-spacing:.04em;'
+            'text-transform:uppercase;vertical-align:top;">%s</td>'
+            '<td class="em-ink" style="padding:5px 0;color:%s;font-size:14px;'
+            'font-weight:600;vertical-align:top;">%s</td></tr>'
             % (MUTED, e(k), INK, e(str(v))))
     out.append("</table>")
     return "".join(out)
