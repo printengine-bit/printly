@@ -26,6 +26,10 @@ MAIL_DOMAIN    = os.environ.get("MAIL_DOMAIN") or "printengine.in"
 MAIL_REPLY_TO  = os.environ.get("MAIL_REPLY_TO") or "printengine.in@gmail.com"
 # Emails need absolute URLs; the frontend only ever builds relative ones.
 PUBLIC_BASE_URL = (os.environ.get("PUBLIC_BASE_URL") or "https://printengine.in").rstrip("/")
+# The admin panel's own host — derived, not a second env var, so the two
+# can never point at different environments (a staging PUBLIC_BASE_URL
+# would otherwise still email out production admin links).
+ADMIN_BASE_URL = PUBLIC_BASE_URL.replace("://", "://admin.", 1)
 
 API_URL = "https://api.resend.com/emails"
 

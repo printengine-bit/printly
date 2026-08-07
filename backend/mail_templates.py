@@ -26,7 +26,7 @@
 from html import escape as e
 
 from documents import _rupees
-from mailer import PUBLIC_BASE_URL, MAIL_REPLY_TO
+from mailer import PUBLIC_BASE_URL, ADMIN_BASE_URL, MAIL_REPLY_TO
 
 # Brand tokens, hardcoded rather than read from the stylesheet: an email is
 # rendered by someone else's client, which has no access to our CSS
@@ -469,7 +469,7 @@ def staff_invite(name, email_addr, password, role):
            "panel.") +
         _kv_table([("Email", email_addr), ("Role", role),
                    ("Temporary password", password)]) +
-        _button("Sign in", "%s/admin" % PUBLIC_BASE_URL) +
+        _button("Sign in", ADMIN_BASE_URL) +
         _muted("You'll be asked to replace this password the first time you "
                "sign in. Don't forward this email — it contains a working "
                "password until you change it.")
@@ -484,7 +484,7 @@ def staff_password_reset(name, email_addr, password):
         _p("An owner has reset the password on your Print Engine staff "
            "account.") +
         _kv_table([("Email", email_addr), ("Temporary password", password)]) +
-        _button("Sign in", "%s/admin" % PUBLIC_BASE_URL) +
+        _button("Sign in", ADMIN_BASE_URL) +
         _muted("You'll be asked to choose a new password when you sign in. "
                "If you weren't expecting this, tell the owner immediately — "
                "it may mean someone else has access to the panel.")

@@ -105,11 +105,22 @@ def _asset_version():
 
 _ASSET_V = _asset_version()
 
+# admin.<domain> is a second hostname pointed at this same service (one
+# Railway app, two DNS records) — not a second deploy. Host-based, not
+# path-based, because Host is the one thing Werkzeug's routing can't see;
+# everything downstream (session cookie, /api/*, ADMIN_DIR) needs no
+# change at all, since the browser still just sees "this origin".
+def _is_admin_host():
+    return (request.host or "").split(":")[0].lower().startswith("admin.")
+
+
 # Serve the frontend from the same origin as the API — lets index.html call
 # the backend with a relative path (no hardcoded host), so the same build
 # works unchanged on localhost, an ngrok tunnel, or a real deployed domain.
 @app.route("/")
 def frontend():
+    if _is_admin_host():
+        return _render_admin_shell()
     # Recompute per request in dev so edits show up on reload; in production
     # the files never change between deploys, so compute it once at import.
     v = _ASSET_V if os.environ.get("FLASK_ENV") == "production" else _asset_version()
@@ -132,21 +143,28 @@ def frontend():
 # ── Admin panel ──────────────────────────────────────────────────
 # A separate app, not a section of the storefront: its own markup, CSS and
 # JS under frontend/admin/, so admin code never ships to a customer and
-# storefront code never ships to staff. Same process and same session
-# cookie — being same-origin is what makes one login work for both.
+# storefront code never ships to staff. Same process — the panel has always
+# had its own login form (posts to the same /api/auth/login) rather than
+# borrowing a storefront session, so it never depended on being same-origin
+# with the storefront and moving it to admin.<domain> changes nothing here.
+# A session cookie is host-only by default (no SESSION_COOKIE_DOMAIN is
+# set), so a staff login on the admin host and a customer session on the
+# storefront host are already isolated from each other — which is the
+# right shape regardless of which hostname serves this route.
 #
-# These rules are declared before the storefront catch-all for readability;
+# `/admin` is declared before the storefront catch-all for readability;
 # Werkzeug actually orders by specificity, not source order, so `/admin`
 # beats `/<path:filename>` regardless. That's load-bearing and tested.
+# Kept working (not redirected) after the admin.<domain> host was added,
+# so old bookmarks and the emailed sign-in links below don't break.
 ADMIN_DIR = os.path.join(FRONTEND_DIR, "admin")
 
 
-@app.route("/admin")
-@app.route("/admin/")
-def admin_shell():
+def _render_admin_shell():
+    from mailer import PUBLIC_BASE_URL
     v = _ASSET_V if os.environ.get("FLASK_ENV") == "production" else _asset_version()
     with open(os.path.join(ADMIN_DIR, "index.html"), encoding="utf-8") as f:
-        html = f.read().replace("{{V}}", v)
+        html = f.read().replace("{{V}}", v).replace("{{STOREFRONT}}", PUBLIC_BASE_URL + "/")
     resp = app.make_response(html)
     resp.headers["Content-Type"] = "text/html; charset=utf-8"
     resp.headers["Cache-Control"] = "no-cache"
@@ -154,6 +172,12 @@ def admin_shell():
     resp.headers["X-Robots-Tag"] = "noindex, nofollow"
     resp.headers["X-Frame-Options"] = "DENY"
     return resp
+
+
+@app.route("/admin")
+@app.route("/admin/")
+def admin_shell():
+    return _render_admin_shell()
 
 
 @app.route("/admin/<path:filename>")
