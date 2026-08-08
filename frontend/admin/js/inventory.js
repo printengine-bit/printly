@@ -439,7 +439,7 @@ async function renderPromoCodes(el){
       <p class="tiny muted">Validated and applied server-side at checkout — a code
         here is the only thing that can ever discount an order.</p>
       ${d.promos.length ? `<table>
-        <thead><tr><th>Code</th><th>Discount</th><th>Limits</th><th>Redeemed</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Code</th><th>Discount</th><th>Limits</th><th>Redeemed</th><th>Status</th><th>Homepage</th><th></th></tr></thead>
         <tbody>${d.promos.map(p=>`<tr>
           <td data-label="Code"><b>${esc(p.code)}</b>
             ${p.expires?`<br><span class="tiny dim">Expires ${esc(fmtDate(p.expires))}</span>`:''}</td>
@@ -453,8 +453,15 @@ async function renderPromoCodes(el){
           <td data-label="Status">${p.active
             ? '<span class="badge badge-lime">Active</span>'
             : '<span class="badge badge-quiet">Disabled</span>'}</td>
-          <td data-label=""><button class="btn btn-quiet btn-sm"
-            onclick="togglePromo(${p.id},${p.active?0:1})">${p.active?'Disable':'Enable'}</button></td>
+          <td data-label="Homepage">${p.featured
+            ? '<span class="badge badge-lime">Featured</span>'
+            : '<span class="badge badge-quiet">Hidden</span>'}</td>
+          <td data-label="">
+            <button class="btn btn-quiet btn-sm"
+              onclick="togglePromo(${p.id},${p.active?0:1})">${p.active?'Disable':'Enable'}</button>
+            <button class="btn btn-quiet btn-sm"
+              onclick="toggleFeaturedPromo(${p.id},${p.featured?0:1})">${p.featured?'Unfeature':'Feature'}</button>
+          </td>
         </tr>`).join('')}</tbody></table>`
         : '<div class="empty">No promo codes yet.</div>'}
     </div>
@@ -481,6 +488,9 @@ async function renderPromoCodes(el){
           <input id="pc_per_user" type="text" value="1"></label>
         <label class="field"><span>Expires (optional)</span>
           <input id="pc_expires" type="date"></label>
+        <label class="field" style="flex-direction:row;align-items:center;gap:8px">
+          <input id="pc_featured" type="checkbox">
+          <span>Show on the homepage deals strip</span></label>
       </div>
       <button class="btn btn-primary" onclick="createPromo()">Create code</button>
     </div>`;
@@ -497,6 +507,7 @@ async function createPromo(){
     max_uses: num('pc_max_uses'),
     per_user_limit: num('pc_per_user') || 1,
     expires: document.getElementById('pc_expires').value || null,
+    featured: document.getElementById('pc_featured').checked,
   });
   if(!d.ok){ toast(d.error); return; }
   toast(d.promo.code + ' created');
@@ -506,5 +517,11 @@ async function togglePromo(id, active){
   const d = await api('/api/admin/promo/' + id, {active: !!active});
   if(!d.ok){ toast(d.error); return; }
   toast(active ? 'Code enabled' : 'Code disabled');
+  renderPromoCodes(document.getElementById('invBody'));
+}
+async function toggleFeaturedPromo(id, featured){
+  const d = await api('/api/admin/promo/' + id, {featured: !!featured});
+  if(!d.ok){ toast(d.error); return; }
+  toast(featured ? 'Now shown on the homepage' : 'Removed from the homepage');
   renderPromoCodes(document.getElementById('invBody'));
 }

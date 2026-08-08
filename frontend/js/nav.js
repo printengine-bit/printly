@@ -1,4 +1,15 @@
 /* ═══════════════ NAV ═══════════════ */
+/* Reads the real free-shipping threshold off TAX (data.js), which is the
+   same company row checkout prices against — never a separate hardcoded
+   figure that could say one thing here and charge another at the cart. */
+function renderPromoBar(){
+  const el=document.getElementById('promoBar'); if(!el) return;
+  const over=TAX.free_shipping_over;
+  el.textContent = over
+    ? `Free shipping on orders over ₹${over.toLocaleString('en-IN')} · No minimum order quantity`
+    : `No minimum order quantity — single pieces welcome`;
+}
+
 function go(v){
   /* There is no Studio *destination* any more — the editor is mounted into
      the PDP, so designing always starts from picking a product. Nothing in
@@ -19,6 +30,7 @@ function go(v){
   if(v==='orders') renderOrders();
   if(v==='designs') renderDesigns();
   if(v==='wishlist') renderWishlistPage();
+  if(v==='account') renderAccount();
   if(v==='pdp') renderPdp();
   document.getElementById('navLinks').classList.remove('open');
   window.scrollTo({top:0});
@@ -80,5 +92,9 @@ document.addEventListener('click',e=>{
      && !e.target.closest('#searchBtn')){
     closeHeaderSearch();
   }
+  const menu=document.getElementById('userMenu');
+  if(menu && !menu.contains(e.target)) closeUserMenu();
 });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeHeaderSearch(); });
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ closeHeaderSearch(); closeUserMenu(); }
+});

@@ -23,13 +23,28 @@ changed is that they're now *separate* files instead of one 311KB
   is the three-column studio, `css/pages.css` the rest.
 - `js/` loads in order and shares global scope (classic scripts, not
   modules): `mockup-data.js` → `data.js` → `mockups.js` → `nav.js` →
-  `auth.js` → `products.js` → `studio.js` → `ai.js` → `cart.js` →
-  `designs.js` → `pdp.js` → `support.js` → `scrollstack.js` →
-  `cursorgrid.js` → `theme.js` → `init.js`. Order matters for top-level
-  side effects; `esc()` lives in `data.js` because it loads first. The
-  initial `data-theme` is set by an inline script in `<head>`, before the
-  stylesheets — moving that into `theme.js` reintroduces a colour flash
-  on every load.
+  `auth.js` → `products.js` → `wishlist.js` → `studio.js` → `ai.js` →
+  `cart.js` → `designs.js` → `pdp.js` → `support.js` → `account.js` →
+  `scrollstack.js` → `cursorgrid.js` → `theme.js` → `init.js`. Order
+  matters for top-level side effects; `esc()` lives in `data.js` because
+  it loads first. The initial `data-theme` is set by an inline script in
+  `<head>`, before the stylesheets — moving that into `theme.js`
+  reintroduces a colour flash on every load.
+- `_productCardHtml(p)` (`data.js`) is the **one** product-card renderer —
+  the products page, wishlist, and every home rail (best sellers, new
+  arrivals, the full collection) all call it. Used to be three
+  near-identical inline templates that had to be hand-kept in sync; a
+  swatch or pricing change now only needs to happen here. Lives in
+  `data.js` rather than `wishlist.js` (where it used to live) only because
+  `products.js` needs it too — load order doesn't actually matter for
+  this, since it's just a function reference resolved at call time, long
+  after every script has finished loading.
+- `account.js` — the account hub (`v-account`): Profile, Addresses,
+  Settings. Orders, My Designs, Wishlist and Support deliberately stay on
+  their own pre-existing views rather than being folded in here — each
+  already has DOM ids (`#ordersBody` etc.) that can only exist once per
+  page. The header's `.user-dropdown` (`index.html`) links straight to
+  those; only Profile/Addresses/Settings route through `openAccount()`.
 - **The catalogue is not in the code.** Products, prices, fabric text,
   care lists and size charts live in the database and are inlined into
   `index.html` as `window.PRINTLY_CATALOG` by the `/` route. `data.js`
@@ -45,9 +60,13 @@ changed is that they're now *separate* files instead of one 311KB
 sharing no file with the storefront: `index.html`, `css/admin.css`,
 `js/{api,theme,dashboard,settings,inventory,orders,production,dispatch,customers,support,content,reports,app}.js`. Staff never download studio
 code and customers never download admin code. It reuses the storefront's
-session cookie (same origin), so there is only one login. The palette
-tokens are deliberately duplicated rather than imported — same design
-language, independent files, so neither app can break the other.
+session cookie. That cookie is host-only (no `SESSION_COOKIE_DOMAIN`),
+so a staff login on `admin.<domain>` and a customer session on the
+storefront host are isolated from each other — deliberate, not a gap;
+the panel has always had its own login form rather than borrowing a
+storefront session. The palette tokens are deliberately duplicated
+rather than imported — same design language, independent files, so
+neither app can break the other.
 
 **Backend** (`backend/`)
 - `printly_backend.py` — Flask entry point (port 5001): serves the
@@ -121,6 +140,16 @@ language, independent files, so neither app can break the other.
   `apply_stock()` deliberately never blocks a sale — stock starts at zero
   because nobody has counted the blanks, so refusing orders on a zero count
   would take the shop offline. Negative stock is surfaced as an alert.
+  `best_sellers()` walks `items_json` across paid, non-cancelled orders —
+  same reason `reports.py` does it in Python, the quantity isn't a column
+  GROUP BY can reach. A shop with no paid orders yet has no real signal,
+  so the frontend (`renderHomeBestSellers()`, `products.js`) falls back to
+  catalogue order rather than render a rail that's lying about what's
+  popular. `new_arrivals()` is just `products.created DESC`. Per-product
+  `colors` in `catalog_payload()` (via `_colors_for()`) is card-only,
+  capped at 6 — the studio's colour picker still reads the catalogue-wide
+  `colors` list, since a customer can print on a blank the shop hasn't
+  stocked *this* product in yet.
 - `orders.py` — place/list orders, admin pipeline, loyalty award. Order
   IDs (`PL-1001`) are computed from the integer PK, never stored — don't
   reintroduce a string primary key, it raced under concurrent inserts.
@@ -137,6 +166,15 @@ language, independent files, so neither app can break the other.
   call — a cancelled order in the selection legitimately can't move.
 - `designs.py` — saved designs + templates. `reviews.py` — verified-
   purchase-gated reviews. `shipping.py` — pincode delivery estimate.
+- `addresses.py` — the customer's own saved address book
+  (`/api/account/addresses`), separate from `orders.ship_*`: those columns
+  freeze what a specific parcel was actually addressed to (same reasoning
+  as `tax_json`, never rewritten after the fact); this table is the live,
+  editable list checkout can prefill from. Validated through
+  `orders._clean_shipping()` — imported, not redeclared, so the two can't
+  drift into accepting different addresses. A user's first address is the
+  default whether they ticked the box or not; deleting the default
+  promotes the next most recent one rather than leaving nothing set.
 - `artwork.py` — print-ready files written to `ART_DIR` (defaults next
   to the DB; point it at the Railway volume in production). The cart's
   `stripImg()` deliberately drops image data from the order, so **this

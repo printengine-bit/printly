@@ -286,6 +286,23 @@ def init_db():
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_wishlist_user_product ON wishlist(user_id, product_id)")
     c.execute("CREATE INDEX IF NOT EXISTS ix_wishlist_user ON wishlist(user_id)")
+    # A saved address book, separate from orders.ship_* — those freeze what
+    # was actually shipped to (never rewritten after the fact, same reason
+    # tax_json is frozen); this is what checkout offers to prefill next time.
+    c.execute("""CREATE TABLE IF NOT EXISTS addresses(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        label TEXT NOT NULL DEFAULT '',
+        name TEXT NOT NULL DEFAULT '',
+        phone TEXT NOT NULL DEFAULT '',
+        line1 TEXT NOT NULL DEFAULT '',
+        line2 TEXT NOT NULL DEFAULT '',
+        city TEXT NOT NULL DEFAULT '',
+        state TEXT NOT NULL DEFAULT '',
+        pincode TEXT NOT NULL DEFAULT '',
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_addresses_user ON addresses(user_id)")
     # Promo codes. `code` is always stored upper-cased (promo.py normalises
     # on both write and read) so lookups never need a case-insensitive
     # comparison. Redemptions are a ledger, not a counter on promo_codes
@@ -312,6 +329,10 @@ def init_db():
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")
     c.execute("CREATE INDEX IF NOT EXISTS ix_promo_redemptions_promo ON promo_redemptions(promo_id)")
     c.execute("CREATE INDEX IF NOT EXISTS ix_promo_redemptions_user ON promo_redemptions(user_id)")
+    # Opt-in, not "every active code": a code emailed to one customer or
+    # handed to a corporate buyer is still active but was never meant for
+    # the homepage. Only a code an admin has explicitly featured is public.
+    _add_column(c, "promo_codes", "featured", "INTEGER NOT NULL DEFAULT 0")
     # Frozen on the order alongside tax_json, same reasoning as total_inr:
     # a real column so admin lists/reports can filter without parsing JSON.
     _add_column(c, "orders", "promo_code", "TEXT")
@@ -320,6 +341,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         created TEXT DEFAULT CURRENT_TIMESTAMP)""")
     _add_column(c, "users", "loyalty_points", "INTEGER NOT NULL DEFAULT 0")
+    _add_column(c, "users", "phone", "TEXT NOT NULL DEFAULT ''")
     # Delivery address. Added after the fact, so existing rows get "" — the
     # admin UI labels those "no address recorded" rather than showing blanks.
     for col in ("ship_name", "ship_phone", "ship_line1", "ship_line2",

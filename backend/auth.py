@@ -77,6 +77,10 @@ def _user_public(row):
         d["loyalty_points"] = row["loyalty_points"]
     except (IndexError, KeyError):
         d["loyalty_points"] = 0
+    try:
+        d["phone"] = row["phone"]
+    except (IndexError, KeyError):
+        d["phone"] = ""
     return d
 
 
@@ -186,6 +190,29 @@ def change_password():
     )
     db.commit()
     return jsonify(ok=True)
+
+
+@auth_bp.route("/profile", methods=["POST"])
+@login_required
+def update_profile():
+    """Name and phone only. Email is deliberately not editable here — it's
+    the login identity and (once real verification exists) the reset-link
+    destination, so changing it needs its own re-verification flow rather
+    than a bare text field that could hand the account to a typo or an
+    attacker with a stolen session."""
+    d = request.get_json(force=True, silent=True) or {}
+    name = (d.get("name") or "").strip()[:120]
+    if not name:
+        return jsonify(ok=False, error="Enter your name."), 400
+    phone = (d.get("phone") or "").strip()
+    if phone and not re.match(r"^[6-9]\d{9}$", phone):
+        return jsonify(ok=False, error="Enter a 10-digit Indian mobile number, or leave it blank."), 400
+    db = get_db()
+    db.execute("UPDATE users SET name=?, phone=? WHERE id=?",
+              (name, phone, session["user_id"]))
+    db.commit()
+    row = db.execute("SELECT * FROM users WHERE id=?", (session["user_id"],)).fetchone()
+    return jsonify(ok=True, user=_user_public(row))
 
 
 @auth_bp.route("/forgot", methods=["POST"])

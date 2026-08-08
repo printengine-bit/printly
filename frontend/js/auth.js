@@ -11,18 +11,39 @@ function toggleAuthMode(){
   document.getElementById('authToggleText').textContent = isSignup ? 'Already have an account?' : 'New to Print Engine?';
   document.getElementById('authToggleLink').textContent = isSignup ? 'Sign in' : 'Create an account';
 }
+function _initials(name){
+  return (name||'').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+}
 function applyAuthUI(){
   const pill=document.getElementById('userPill');
   if(state.user){
-    pill.textContent='👤 '+state.user.name.split(' ')[0];
-    pill.onclick=userPillClick;
+    pill.innerHTML=esc(state.user.name.split(' ')[0])+
+      ' <span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px">expand_more</span>';
+    pill.onclick=toggleUserMenu;
+    document.getElementById('userAvatar').textContent=_initials(state.user.name);
+    document.getElementById('userDdName').textContent=state.user.name;
+    document.getElementById('userDdEmail').textContent=state.user.email;
   } else {
     pill.textContent='Sign in';
     pill.onclick=openLogin;
+    closeUserMenu();
   }
 }
-function userPillClick(){
-  if(confirm('Sign out of Print Engine?')) doLogout();
+function toggleUserMenu(){
+  document.getElementById('userDropdown').classList.toggle('on');
+}
+function closeUserMenu(){
+  document.getElementById('userDropdown').classList.remove('on');
+}
+/* Opens the account hub on a specific tab — the dropdown's Profile,
+   Addresses and Settings items all route here, since those three are the
+   only genuinely new pages; Orders/Wishlist/My designs stay on their
+   existing top-level views (see v-account's comment in index.html). */
+function openAccount(tab){
+  closeUserMenu();
+  if(!state.user){ openLogin(); return; }
+  go('account');
+  setAccountTab(tab);
 }
 async function doLogin(){
   const email=document.getElementById('authEmail').value.trim();

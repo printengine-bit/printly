@@ -24,6 +24,11 @@
 </head>
 <body>
 
+<!-- ══════════════ PROMO BAR ══════════════
+     Text is set by renderPromoBar() (nav.js) from TAX.free_shipping_over —
+     never hardcoded, so it can't drift from what checkout actually honours. -->
+<div class="promo-bar" id="promoBar"></div>
+
 <!-- ══════════════ HEADER ══════════════ -->
 <header class="hdr">
   <div class="hdr-inner">
@@ -54,7 +59,27 @@
         <span class="material-symbols-outlined">shopping_cart</span>
         <span class="cart-count" id="cartCount" data-count="0">0</span>
       </button>
-      <button class="btn btn-primary btn-sm" id="userPill" onclick="openLogin()">Sign in</button>
+      <div class="user-menu" id="userMenu">
+        <button class="btn btn-primary btn-sm" id="userPill" onclick="openLogin()">Sign in</button>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="user-dd-head">
+            <span class="user-avatar" id="userAvatar"></span>
+            <span class="user-dd-who">
+              <span class="user-dd-name" id="userDdName"></span>
+              <span class="user-dd-email t-dim" id="userDdEmail"></span>
+            </span>
+          </div>
+          <button onclick="openAccount('profile')"><span class="material-symbols-outlined">person</span>Profile</button>
+          <button onclick="go('orders');closeUserMenu()"><span class="material-symbols-outlined">inventory_2</span>Orders</button>
+          <button onclick="openAccount('addresses')"><span class="material-symbols-outlined">location_on</span>Addresses</button>
+          <button onclick="go('wishlist');closeUserMenu()"><span class="material-symbols-outlined">favorite</span>Wishlist</button>
+          <button onclick="go('designs');closeUserMenu()"><span class="material-symbols-outlined">brush</span>My designs</button>
+          <button onclick="go('orders');closeUserMenu()"><span class="material-symbols-outlined">support_agent</span>Support</button>
+          <button onclick="openAccount('settings')"><span class="material-symbols-outlined">settings</span>Settings</button>
+          <div class="user-dd-sep"></div>
+          <button class="user-dd-danger" onclick="closeUserMenu();doLogout()"><span class="material-symbols-outlined">logout</span>Logout</button>
+        </div>
+      </div>
       <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
         <span class="material-symbols-outlined">menu</span>
       </button>
@@ -115,11 +140,39 @@
 
   <div class="proof wrap" id="homeProof"></div>
 
+  <div class="wrap section">
+    <div class="row" style="justify-content:space-between;align-items:flex-end;margin-bottom:24px">
+      <div>
+        <h2 class="t-h2">Best <span class="t-lime">sellers</span></h2>
+        <p class="t-mut" style="margin:8px 0 0">Ranked by what actually ships, not what's newest in the catalogue.</p>
+      </div>
+      <button class="btn btn-ghost" onclick="go('products')">View all products →</button>
+    </div>
+    <div class="grid grid-4" id="homeBestSellers"></div>
+  </div>
+
+  <!-- Hidden by renderHomeDeals() (products.js) when no promo code has been
+       marked featured — see promo_codes.featured. Most shops most of the
+       time have zero, so this is not "display:none if empty grid" filler,
+       it's the normal state. -->
+  <div class="wrap section" id="homeDealsSection" style="display:none">
+    <h2 class="t-h2">Current <span class="t-lime">deals</span></h2>
+    <div class="stack" id="homeDealsStrip" style="margin-top:16px"></div>
+  </div>
+
   <div class="wrap section home-category-section">
     <h2 class="t-h2">Shop by <span class="t-lime">category</span></h2>
     <p class="t-mut" style="margin:8px 0 24px">Who it's for, and what it is — pick either to start browsing.</p>
     <div class="grid audience-grid" id="homeAudienceTiles"></div>
     <div class="grid category-grid" id="homeCategoryTiles"></div>
+  </div>
+
+  <!-- Hidden by renderHomeNewArrivals() when the catalogue has nothing to
+       show yet (a fresh install with no products.created spread). -->
+  <div class="wrap section" id="homeNewArrivalsSection">
+    <h2 class="t-h2">New <span class="t-lime">arrivals</span></h2>
+    <p class="t-mut" style="margin:8px 0 24px">Just added to the catalogue.</p>
+    <div class="grid grid-4" id="homeNewArrivals"></div>
   </div>
 
   <div class="wrap section">
@@ -556,6 +609,37 @@
   </div>
 </section>
 
+<!-- ══════════════ ACCOUNT ══════════════
+     Profile, address book and settings — the three pieces that had no home
+     before (a customer could not see or edit any of them). Orders, My
+     Designs, Wishlist and Support deliberately stay on their own existing
+     views rather than being re-plumbed into this shell — those already
+     work, have their own DOM ids (#ordersBody etc.) that can only exist
+     once per page, and re-hosting them here would risk breaking working
+     code for no real gain. The dropdown (see .user-dropdown above) links
+     straight to them; only Profile/Addresses/Settings route here. -->
+<section class="view" id="v-account">
+  <div class="wrap section">
+    <div class="dash-head">
+      <div>
+        <h1 class="t-h1">My <span class="t-lime">account</span></h1>
+        <p class="t-mut" style="margin-top:8px">Profile, saved addresses and account settings.</p>
+      </div>
+    </div>
+    <div class="account-layout">
+      <nav class="account-nav">
+        <button data-tab="profile" onclick="setAccountTab('profile')">
+          <span class="material-symbols-outlined">person</span>Profile</button>
+        <button data-tab="addresses" onclick="setAccountTab('addresses')">
+          <span class="material-symbols-outlined">location_on</span>Addresses</button>
+        <button data-tab="settings" onclick="setAccountTab('settings')">
+          <span class="material-symbols-outlined">settings</span>Settings</button>
+      </nav>
+      <div class="account-body" id="accountBody"></div>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════════ POLICY PAGES ══════════════
      Static content, no render function needed — go() just toggles .view.on
      like any other page. Numbers that live in the database (shipping cost,
@@ -836,6 +920,7 @@
 <script src="js/designs.js?v={{V}}"></script>
 <script src="js/pdp.js?v={{V}}"></script>
 <script src="js/support.js?v={{V}}"></script>
+<script src="js/account.js?v={{V}}"></script>
 <script src="js/scrollstack.js?v={{V}}"></script>
 <script src="js/theme.js?v={{V}}"></script>
 <script src="js/init.js?v={{V}}"></script>

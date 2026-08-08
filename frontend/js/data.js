@@ -16,6 +16,14 @@ const TAX = CATALOG.tax || {gst_percent:5, gst_percent_high:12, gst_threshold:10
 const PRODUCTS = CATALOG.products;
 const SHIRT_COLORS = CATALOG.colors.map(c => c.hex);
 const COLOR_NAMES = Object.fromEntries(CATALOG.colors.map(c => [c.hex, c.name]));
+/* Merchandising rails on the home page — slugs only, ranked server-side.
+   Empty on a fresh shop with no paid orders yet; renderHomeBestSellers()
+   falls back to catalogue order rather than show a blank rail. */
+const BEST_SELLERS = CATALOG.best_sellers || [];
+const NEW_ARRIVALS = CATALOG.new_arrivals || [];
+/* Only codes an admin explicitly featured — see promo_codes.featured on
+   the backend. Never every active code. */
+const DEALS = CATALOG.deals || [];
 
 /* Shared helper — every render function interpolates user-supplied strings
    (layer text, product names, order ids) into innerHTML, so escape them.
@@ -84,4 +92,39 @@ function sizeSummary(sizes){
   if(!sizes) return '';
   return Object.entries(sizes).filter(([,n])=>+n>0)
     .map(([k,n])=>`${n}×${k}`).join(' · ');
+}
+
+/* ── Shared product card ─────────────────────────────────────────
+   One renderer for every grid that shows a product: the products page,
+   the wishlist, and every home page rail (best sellers, new arrivals,
+   the full collection). Used to be three near-identical inline templates
+   that had to be kept in sync by hand — swatches or a pricing change now
+   only need to happen here. Lives in data.js, not wishlist.js, because
+   products.js (loaded earlier) calls it too; classic scripts share one
+   global scope, so the only requirement is that this exists by the time
+   a render function actually runs, not by parse order. */
+function _swatchesFor(p){
+  if(!p.colors || !p.colors.length) return '';
+  return `<div class="pcard-swatches">${p.colors.map(hex=>
+    `<span class="swatch-dot" style="background:${esc(hex)}"></span>`).join('')}</div>`;
+}
+function _productCardHtml(p){
+  return `
+    <div class="card card-hover card-lift pcard">
+      <div class="pcard-img" style="cursor:pointer" onclick="openProduct('${p.id}')">
+        <canvas class="pthumb" data-p="${p.id}" width="300" height="320"></canvas>
+        ${wishHeart(p.id)}
+      </div>
+      <div class="pcard-body">
+        <h3 class="pcard-name" style="cursor:pointer" onclick="openProduct('${p.id}')">${esc(p.name)}</h3>
+        ${starsFor(p.id)}
+        ${_swatchesFor(p)}
+        <div class="pcard-price">From <span class="t-lime">₹${p.tiers[3][1].toLocaleString('en-IN')}</span>
+          <span class="t-label t-dim" style="font-weight:400"> at 100+</span></div>
+        <div class="pcard-tiers">1pc ₹${p.tiers[0][1]} · 10+ ₹${p.tiers[1][1]} · 50+ ₹${p.tiers[2][1]}</div>
+        <button class="btn btn-primary btn-sm btn-block" onclick="pickProduct('${p.id}')">
+          Design this <span class="material-symbols-outlined" style="font-size:18px">arrow_forward</span>
+        </button>
+      </div>
+    </div>`;
 }

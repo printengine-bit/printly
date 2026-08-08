@@ -97,7 +97,8 @@ async function loadReviewSummary(){
   try{
     const res=await fetch(BACKEND+'/api/reviews/summary');
     const d=await res.json();
-    if(d.ok){ reviewSummary=d.summary; renderProducts(); renderHomeProducts(); renderProof(); }
+    if(d.ok){ reviewSummary=d.summary; renderProducts(); renderHomeProducts();
+      renderHomeBestSellers(); renderHomeNewArrivals(); renderProof(); }
   }catch(err){ /* ratings are additive — the grid works without them */ }
 }
 
@@ -165,23 +166,7 @@ function renderProducts(){
     return;
   }
 
-  g.innerHTML=list.map(p=>`
-    <div class="card card-hover card-lift pcard">
-      <div class="pcard-img" style="cursor:pointer" onclick="openProduct('${p.id}')">
-        <canvas class="pthumb" data-p="${p.id}" width="300" height="320"></canvas>
-        ${wishHeart(p.id)}
-      </div>
-      <div class="pcard-body">
-        <h3 class="pcard-name" style="cursor:pointer" onclick="openProduct('${p.id}')">${esc(p.name)}</h3>
-        ${starsFor(p.id)}
-        <div class="pcard-price">From <span class="t-lime">₹${p.tiers[3][1].toLocaleString('en-IN')}</span>
-          <span class="t-label t-dim" style="font-weight:400"> at 100+</span></div>
-        <div class="pcard-tiers">1pc ₹${p.tiers[0][1]} · 10+ ₹${p.tiers[1][1]} · 50+ ₹${p.tiers[2][1]}</div>
-        <button class="btn btn-primary btn-sm btn-block" onclick="pickProduct('${p.id}')">
-          Design this <span class="material-symbols-outlined" style="font-size:18px">arrow_forward</span>
-        </button>
-      </div>
-    </div>`).join('');
+  g.innerHTML=list.map(_productCardHtml).join('');
   document.querySelectorAll('.pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
 }
 /* ── Home page merchandising ──────────────────────────────────────
@@ -199,14 +184,26 @@ function browseCategory(audience,category){
   go('products');
 }
 
+/* A representative product per audience/category, for the photo tiles
+   below — the first active product in that cut, same ordering the
+   catalogue already uses (products.sort). Falls back to null (icon-only
+   tile) rather than breaking if a category is momentarily empty. */
+function _repProduct(filterFn){
+  return PRODUCTS.find(filterFn) || null;
+}
+
 function renderHomeCategories(){
   const aBar=document.getElementById('homeAudienceTiles');
   if(aBar) aBar.innerHTML=AUDIENCES.filter(a=>a.key!=='all').map(a=>{
     const count=PRODUCTS.filter(p=>p.audience===a.key).length;
+    const rep=_repProduct(p=>p.audience===a.key);
     return `
     <button class="card aud" onclick="browseCategory('${a.key}','all')" aria-label="Shop ${esc(a.label)}">
       <span class="aud-top">
-        <span class="aud-symbol material-symbols-outlined">${AUDIENCE_ICON[a.key]||'person'}</span>
+        <span class="aud-symbol">
+          ${rep ? `<canvas class="pthumb" data-p="${rep.id}" width="96" height="96"></canvas>`
+                : `<span class="material-symbols-outlined">${AUDIENCE_ICON[a.key]||'person'}</span>`}
+        </span>
         <span class="aud-arrow material-symbols-outlined">arrow_outward</span>
       </span>
       <span class="aud-copy">
@@ -215,38 +212,75 @@ function renderHomeCategories(){
         <p>${count} styles ready to customise, from one piece to bulk orders.</p>
       </span>
     </button>`}).join('');
+  document.querySelectorAll('#homeAudienceTiles .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
 
   const cBar=document.getElementById('homeCategoryTiles');
   if(cBar) cBar.innerHTML=CATEGORIES.filter(c=>c.key!=='all').map(c=>{
     const count=PRODUCTS.filter(p=>p.category===c.key).length;
+    const rep=_repProduct(p=>p.category===c.key);
     return `
     <button class="card cat-tile" onclick="browseCategory('all','${c.key}')"
       aria-label="Browse ${esc(c.label)}">
-      <span class="cat-icon material-symbols-outlined">${CATEGORY_ICON[c.key]||'checkroom'}</span>
+      <span class="cat-icon">
+        ${rep ? `<canvas class="pthumb" data-p="${rep.id}" width="84" height="84"></canvas>`
+              : `<span class="material-symbols-outlined">${CATEGORY_ICON[c.key]||'checkroom'}</span>`}
+      </span>
       <span class="cat-copy"><b>${esc(c.label)}</b><small>${count} ${count===1?'style':'styles'}</small></span>
       <span class="cat-arrow material-symbols-outlined">arrow_forward</span>
     </button>`}).join('');
+  document.querySelectorAll('#homeCategoryTiles .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
+}
+
+/* ── Home merchandising rails ──────────────────────────────────────
+   Three rails, one shared card (_productCardHtml, data.js):
+   Best sellers (real order counts), New arrivals (most recently added),
+   and the full collection (first 4, a browse-everything bridge — not a
+   ranking claim, unlike the other two). */
+function renderHomeBestSellers(){
+  const g=document.getElementById('homeBestSellers'); if(!g || !PRODUCTS.length) return;
+  const bySlug=Object.fromEntries(PRODUCTS.map(p=>[p.id,p]));
+  // No paid orders yet ⇒ no real signal — fall back to catalogue order
+  // rather than render a rail that's lying about what's popular.
+  const ranked=BEST_SELLERS.map(id=>bySlug[id]).filter(Boolean);
+  const list=(ranked.length ? ranked : PRODUCTS).slice(0,4);
+  g.innerHTML=list.map(_productCardHtml).join('');
+  document.querySelectorAll('#homeBestSellers .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
+}
+
+function renderHomeNewArrivals(){
+  const g=document.getElementById('homeNewArrivals'); const section=document.getElementById('homeNewArrivalsSection');
+  if(!g || !PRODUCTS.length) return;
+  const bySlug=Object.fromEntries(PRODUCTS.map(p=>[p.id,p]));
+  const list=NEW_ARRIVALS.map(id=>bySlug[id]).filter(Boolean).slice(0,4);
+  if(section) section.style.display = list.length ? '' : 'none';
+  g.innerHTML=list.map(_productCardHtml).join('');
+  document.querySelectorAll('#homeNewArrivals .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
+}
+
+function renderHomeDeals(){
+  const section=document.getElementById('homeDealsSection'); if(!section) return;
+  // Hidden, not an empty "Deals" heading, when nothing's featured — see
+  // promo_codes.featured. Most shops most of the time have zero.
+  section.style.display = DEALS.length ? '' : 'none';
+  if(!DEALS.length) return;
+  document.getElementById('homeDealsStrip').innerHTML=DEALS.map(d=>{
+    const off = d.kind==='percent' ? `${d.value}% off` : `₹${d.value} off`;
+    const min = d.min_subtotal ? ` on orders over ₹${d.min_subtotal.toLocaleString('en-IN')}` : '';
+    return `
+    <div class="card deal-card">
+      <span class="material-symbols-outlined">sell</span>
+      <div>
+        <b>${off}${esc(min)}</b>
+        <div class="t-mut" style="font-size:12.5px">Use code <span class="t-lime" style="font-weight:700">${esc(d.code)}</span> at checkout</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderHomeProducts(){
   const g=document.getElementById('homeProductGrid'); if(!g || !PRODUCTS.length) return;
   const list=PRODUCTS.slice(0,4);
-  g.innerHTML=list.map(p=>`
-    <div class="card card-hover card-lift pcard">
-      <div class="pcard-img" style="cursor:pointer" onclick="openProduct('${p.id}')">
-        <canvas class="pthumb" data-p="${p.id}" width="300" height="320"></canvas>
-        ${wishHeart(p.id)}
-      </div>
-      <div class="pcard-body">
-        <h3 class="pcard-name" style="cursor:pointer" onclick="openProduct('${p.id}')">${esc(p.name)}</h3>
-        ${starsFor(p.id)}
-        <div class="pcard-price">From <span class="t-lime">₹${p.tiers[3][1].toLocaleString('en-IN')}</span>
-          <span class="t-label t-dim" style="font-weight:400"> at 100+</span></div>
-        <button class="btn btn-primary btn-sm btn-block" onclick="pickProduct('${p.id}')">
-          Design this <span class="material-symbols-outlined" style="font-size:18px">arrow_forward</span>
-        </button>
-      </div>
-    </div>`).join('');
+  g.innerHTML=list.map(_productCardHtml).join('');
   document.querySelectorAll('#homeProductGrid .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
 }
 

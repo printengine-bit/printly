@@ -33,6 +33,55 @@ def _print_views_for(db, product_id):
            WHERE product_id=? AND active=1 ORDER BY sort,id""", (product_id,))]
 
 
+def _colors_for(db, product_id):
+    """Distinct swatch colours this product actually has variants in —
+    capped, so a product with every colour and every size doesn't turn a
+    homepage card into a colour wall. Card-only; the studio's own colour
+    picker still reads the catalogue-wide `colors` list below, since a
+    customer can be asking to print on a blank the shop hasn't stocked
+    this exact product in yet."""
+    return [r["color_hex"] for r in db.execute(
+        """SELECT DISTINCT color_hex FROM variants
+           WHERE product_id=? AND active=1 ORDER BY id LIMIT 6""", (product_id,))]
+
+
+def best_sellers(db, limit=8):
+    """Product slugs ranked by pieces actually sold, most first.
+
+    Walked in Python for the same reason reports.py does it: the quantity
+    lives inside items_json, not a column GROUP BY can reach. Excludes
+    pending (unpaid) and cancelled orders — a piece that was never paid for
+    or was cancelled didn't sell. On a shop with no paid orders yet (or a
+    fresh install), there is no real signal, so callers should fall back to
+    catalogue order rather than show an empty rail.
+    """
+    counts = {}
+    rows = db.execute(
+        """SELECT items_json FROM orders
+           WHERE cancelled=0 AND payment_status!='pending'""").fetchall()
+    for r in rows:
+        try:
+            items = json.loads(r["items_json"]) or []
+        except (ValueError, TypeError):
+            continue
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            pid = it.get("pid")
+            if not pid:
+                continue
+            counts[pid] = counts.get(pid, 0) + line_qty(it)
+    ranked = sorted(counts, key=lambda pid: counts[pid], reverse=True)
+    return ranked[:limit]
+
+
+def new_arrivals(db, limit=8):
+    """Most recently added active product slugs."""
+    return [r["slug"] for r in db.execute(
+        "SELECT slug FROM products WHERE active=1 ORDER BY created DESC, id DESC LIMIT ?",
+        (limit,))]
+
+
 def catalog_payload(db=None):
     """The catalogue in exactly the shape frontend/js/data.js used to
     declare by hand — same keys, same types — so every render function
@@ -63,6 +112,8 @@ def catalog_payload(db=None):
             # shared list" — sizeKeys() in data.js falls back accordingly.
             "sizes": json.loads(p["size_labels_json"]) if p["size_labels_json"] else None,
             "print_views": _print_views_for(db, p["id"]),
+            # Card-only swatches — see _colors_for().
+            "colors": _colors_for(db, p["id"]),
         })
     rows = db.execute(
         "SELECT DISTINCT color_hex,color_name FROM variants WHERE active=1"
@@ -90,6 +141,7 @@ def catalog_payload(db=None):
     # It is still only a preview: quote() recomputes every figure from these
     # same rows at checkout and a mismatch is refused.
     from content import zones_payload
+    from promo import featured_promos
     return {"products": products, "colors": colors, "sizes": sizes,
             "oneSizeKey": ONE_SIZE_KEY, "tax": tax_settings(db),
             # Print zones are admin-editable now. mockups.js merges these
@@ -99,7 +151,14 @@ def catalog_payload(db=None):
             # Whether the cart may offer online payment at all. The key id is
             # public by design — Checkout needs it client-side; the secret
             # never leaves the server.
-            "payments": _payments_payload()}
+            "payments": _payments_payload(),
+            # Slugs only — the frontend already has every product's full
+            # record in `products` above, so this is just a display order.
+            "best_sellers": best_sellers(db),
+            "new_arrivals": new_arrivals(db),
+            # Only codes an admin explicitly marked featured — see
+            # promo_codes.featured. Never every active code.
+            "deals": featured_promos(db)}
 
 
 def _payments_payload():

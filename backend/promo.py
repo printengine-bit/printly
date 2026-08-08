@@ -88,7 +88,21 @@ def _public(r):
     return {"id": r["id"], "code": r["code"], "kind": r["kind"], "value": r["value"],
             "min_subtotal": r["min_subtotal"], "max_discount": r["max_discount"],
             "max_uses": r["max_uses"], "per_user_limit": r["per_user_limit"],
-            "active": bool(r["active"]), "expires": r["expires"], "created": r["created"]}
+            "active": bool(r["active"]), "expires": r["expires"], "created": r["created"],
+            "featured": bool(r["featured"])}
+
+
+def featured_promos(db):
+    """Codes an admin explicitly opted into showing on the storefront —
+    active, not expired, and flagged. Never every active code: a code
+    emailed to one customer or handed to a corporate buyer is still
+    'active' but was never meant to be public. See promo_codes.featured."""
+    rows = db.execute(
+        """SELECT code,kind,value,min_subtotal FROM promo_codes
+           WHERE featured=1 AND active=1
+             AND (expires IS NULL OR expires > ?)""", (_now_iso(),)).fetchall()
+    return [{"code": r["code"], "kind": r["kind"], "value": r["value"],
+             "min_subtotal": r["min_subtotal"]} for r in rows]
 
 
 @promo_bp.route("/admin/promo")
@@ -133,12 +147,13 @@ def create_promo():
 
     cur = db.execute(
         """INSERT INTO promo_codes(code,kind,value,min_subtotal,max_discount,
-                                   max_uses,per_user_limit,expires)
-           VALUES(?,?,?,?,?,?,?,?)""",
+                                   max_uses,per_user_limit,expires,featured)
+           VALUES(?,?,?,?,?,?,?,?,?)""",
         (code, kind, float(d["value"]),
          float(d.get("min_subtotal") or 0), num_or_none("max_discount"),
          int_or_none("max_uses"), int(d.get("per_user_limit") or 1),
-         (d.get("expires") or "").strip() or None),
+         (d.get("expires") or "").strip() or None,
+         1 if d.get("featured") else 0),
     )
     db.commit()
     row = db.execute("SELECT * FROM promo_codes WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -155,6 +170,10 @@ def update_promo(promo_id):
     if d.get("active") is not None:
         db.execute("UPDATE promo_codes SET active=? WHERE id=?",
                    (1 if d["active"] else 0, promo_id))
+        db.commit()
+    if d.get("featured") is not None:
+        db.execute("UPDATE promo_codes SET featured=? WHERE id=?",
+                   (1 if d["featured"] else 0, promo_id))
         db.commit()
     row = db.execute("SELECT * FROM promo_codes WHERE id=?", (promo_id,)).fetchone()
     return jsonify(ok=True, promo=_public(row))
