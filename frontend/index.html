@@ -59,6 +59,7 @@
     <div class="hdr-search-inline">
       <span class="material-symbols-outlined">search</span>
       <input type="search" id="hdrSearchInput" placeholder="Search tees, hoodies, jerseys…"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
         oninput="onHeaderSearchInput(this.value)"
         onfocus="onHeaderSearchInput(this.value)"
         onkeydown="if(event.key==='Enter') submitHeaderSearch(this.value)">
