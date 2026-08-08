@@ -26,77 +26,84 @@
 
 <!-- ══════════════ PROMO BAR ══════════════
      Text is set by renderPromoBar() (nav.js) from TAX.free_shipping_over —
-     never hardcoded, so it can't drift from what checkout actually honours. -->
+     never hardcoded, so it can't drift from what checkout actually honours.
+     Scrolls away with the page — only .hdr below stays sticky. -->
 <div class="promo-bar" id="promoBar"></div>
 
-<!-- ══════════════ HEADER ══════════════ -->
+<!-- ══════════════ UTILITY STRIP ══════════════
+     Both links point at real, existing pages — not a copy of a competitor's
+     retail-specific row (no store locator, no sample kit: neither exists
+     here). Also scrolls away, same as the promo bar. -->
+<div class="util-strip">
+  <div class="util-strip-inner">
+    <a href="#" onclick="go('orders');return false">
+      <span class="material-symbols-outlined">local_shipping</span>Track your order</a>
+    <a href="#" onclick="go('products');return false">
+      <span class="material-symbols-outlined">groups</span>Bulk &amp; corporate pricing</a>
+  </div>
+</div>
+
+<!-- ══════════════ HEADER ══════════════
+     One sticky row: logo, an always-visible search bar (no more
+     click-to-reveal panel), and account/cart. Page navigation — Home,
+     Products, My Orders, My Designs, Wishlist — lives in the account
+     dropdown and the category nav row below, not as text links here. -->
 <header class="hdr">
   <div class="hdr-inner">
-    <div class="logo" onclick="go('home')">PRINT <b>ENGINE</b></div>
-    <nav class="nav" id="navLinks">
-      <div class="nav-search">
-        <span class="material-symbols-outlined">search</span>
-        <input type="search" id="navSearchInput" placeholder="Search products…"
-          oninput="onHeaderSearchInput(this.value,'nav')"
-          onkeydown="if(event.key==='Enter') submitHeaderSearch(this.value)">
-      </div>
-      <div class="hdr-search-results" id="navSearchResults"></div>
-      <button class="nav-btn on" data-v="home" onclick="go('home')">Home</button>
-      <button class="nav-btn" data-v="products" onclick="go('products')">Products</button>
-      <button class="nav-btn" data-v="cart" onclick="go('cart')">Cart</button>
-      <button class="nav-btn" data-v="orders" onclick="go('orders')">My Orders</button>
-      <button class="nav-btn" data-v="designs" onclick="go('designs')">My Designs</button>
-      <button class="nav-btn" data-v="wishlist" onclick="go('wishlist')">Wishlist</button>
-    </nav>
-    <div class="hdr-right">
-      <button class="cart-btn" id="searchBtn" onclick="toggleHeaderSearch()" aria-label="Search">
-        <span class="material-symbols-outlined">search</span>
-      </button>
-      <button class="cart-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Switch theme">
-        <span class="material-symbols-outlined">light_mode</span>
-      </button>
-      <button class="cart-btn" onclick="go('cart')" aria-label="Cart">
-        <span class="material-symbols-outlined">shopping_cart</span>
-        <span class="cart-count" id="cartCount" data-count="0">0</span>
-      </button>
-      <div class="user-menu" id="userMenu">
-        <button class="btn btn-primary btn-sm" id="userPill" onclick="openLogin()">Sign in</button>
-        <div class="user-dropdown" id="userDropdown">
-          <div class="user-dd-head">
-            <span class="user-avatar" id="userAvatar"></span>
-            <span class="user-dd-who">
-              <span class="user-dd-name" id="userDdName"></span>
-              <span class="user-dd-email t-dim" id="userDdEmail"></span>
-            </span>
+    <div class="hdr-top">
+      <div class="logo" onclick="go('home')">PRINT <b>ENGINE</b></div>
+      <div class="hdr-right">
+        <a class="hdr-help" href="mailto:hello@printengine.in">
+          <span class="material-symbols-outlined">support_agent</span>Help</a>
+        <button class="cart-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Switch theme">
+          <span class="material-symbols-outlined">light_mode</span>
+        </button>
+        <div class="user-menu" id="userMenu">
+          <button class="btn btn-primary btn-sm" id="userPill" onclick="openLogin()">Sign in</button>
+          <div class="user-dropdown" id="userDropdown">
+            <div class="user-dd-head">
+              <span class="user-avatar" id="userAvatar"></span>
+              <span class="user-dd-who">
+                <span class="user-dd-name" id="userDdName"></span>
+                <span class="user-dd-email t-dim" id="userDdEmail"></span>
+              </span>
+            </div>
+            <button onclick="openAccount('profile')"><span class="material-symbols-outlined">person</span>Profile</button>
+            <button onclick="go('orders');closeUserMenu()"><span class="material-symbols-outlined">inventory_2</span>Orders</button>
+            <button onclick="openAccount('addresses')"><span class="material-symbols-outlined">location_on</span>Addresses</button>
+            <button onclick="go('wishlist');closeUserMenu()"><span class="material-symbols-outlined">favorite</span>Wishlist</button>
+            <button onclick="go('designs');closeUserMenu()"><span class="material-symbols-outlined">brush</span>My designs</button>
+            <button onclick="go('orders');closeUserMenu()"><span class="material-symbols-outlined">support_agent</span>Support</button>
+            <button onclick="openAccount('settings')"><span class="material-symbols-outlined">settings</span>Settings</button>
+            <div class="user-dd-sep"></div>
+            <button class="user-dd-danger" onclick="closeUserMenu();doLogout()"><span class="material-symbols-outlined">logout</span>Logout</button>
           </div>
-          <button onclick="openAccount('profile')"><span class="material-symbols-outlined">person</span>Profile</button>
-          <button onclick="go('orders');closeUserMenu()"><span class="material-symbols-outlined">inventory_2</span>Orders</button>
-          <button onclick="openAccount('addresses')"><span class="material-symbols-outlined">location_on</span>Addresses</button>
-          <button onclick="go('wishlist');closeUserMenu()"><span class="material-symbols-outlined">favorite</span>Wishlist</button>
-          <button onclick="go('designs');closeUserMenu()"><span class="material-symbols-outlined">brush</span>My designs</button>
-          <button onclick="go('orders');closeUserMenu()"><span class="material-symbols-outlined">support_agent</span>Support</button>
-          <button onclick="openAccount('settings')"><span class="material-symbols-outlined">settings</span>Settings</button>
-          <div class="user-dd-sep"></div>
-          <button class="user-dd-danger" onclick="closeUserMenu();doLogout()"><span class="material-symbols-outlined">logout</span>Logout</button>
         </div>
+        <button class="cart-btn" onclick="go('cart')" aria-label="Cart">
+          <span class="material-symbols-outlined">shopping_cart</span>
+          <span class="cart-count" id="cartCount" data-count="0">0</span>
+        </button>
       </div>
-      <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
-        <span class="material-symbols-outlined">menu</span>
-      </button>
     </div>
-  </div>
-  <div class="hdr-search-panel" id="hdrSearchPanel">
-    <div class="wrap">
-      <div class="hdr-search-box">
-        <span class="material-symbols-outlined">search</span>
-        <input type="search" id="hdrSearchInput" placeholder="Search tees, hoodies, jerseys…"
-          oninput="onHeaderSearchInput(this.value,'hdr')"
-          onkeydown="if(event.key==='Enter') submitHeaderSearch(this.value)">
-      </div>
+    <div class="hdr-search-inline">
+      <span class="material-symbols-outlined">search</span>
+      <input type="search" id="hdrSearchInput" placeholder="Search tees, hoodies, jerseys…"
+        oninput="onHeaderSearchInput(this.value)"
+        onfocus="onHeaderSearchInput(this.value)"
+        onkeydown="if(event.key==='Enter') submitHeaderSearch(this.value)">
       <div class="hdr-search-results" id="hdrSearchResults"></div>
     </div>
   </div>
 </header>
+
+<!-- ══════════════ CATEGORY NAV ══════════════
+     Filled by renderHeaderCatNav() (products.js) from the same CATEGORIES
+     list the products page filters with — one list, not two that can
+     drift. Scrolls away with the page, same as the promo bar and utility
+     strip; only .hdr stays fixed. -->
+<nav class="cat-nav">
+  <div class="cat-nav-inner" id="headerCatNav"></div>
+</nav>
 
 <!-- ══════════════ HOME ══════════════ -->
 <section class="view on" id="v-home">

@@ -24,7 +24,6 @@ function go(v){
   document.body.classList.toggle('pdp-active',v==='pdp');
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('v-'+v).classList.add('on');
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   if(v==='products') renderProducts();
   if(v==='cart') renderCart();
   if(v==='orders') renderOrders();
@@ -32,11 +31,8 @@ function go(v){
   if(v==='wishlist') renderWishlistPage();
   if(v==='account') renderAccount();
   if(v==='pdp') renderPdp();
-  document.getElementById('navLinks').classList.remove('open');
+  closeHeaderSearch();
   window.scrollTo({top:0});
-}
-function toggleMenu(){
-  document.getElementById('navLinks').classList.toggle('open');
 }
 function toast(m){
   const t=document.getElementById('toast'); t.textContent=m; t.classList.add('on');
@@ -44,17 +40,8 @@ function toast(m){
 }
 
 /* ── Header search ─────────────────────────────────────────────
-   One dataset (PRODUCTS, already in memory from the inlined catalogue),
-   two entry points: the desktop dropdown panel (#hdrSearchPanel) and the
-   mobile drawer's inline box (.nav-search) — see printly.css for why
-   they're not the same element. Both call the same render/submit logic. */
-function toggleHeaderSearch(){
-  const panel=document.getElementById('hdrSearchPanel');
-  const opening=!panel.classList.contains('on');
-  panel.classList.toggle('on',opening);
-  if(opening) setTimeout(()=>document.getElementById('hdrSearchInput').focus(),10);
-  else document.getElementById('hdrSearchResults').innerHTML='';
-}
+   One always-visible box in the header (no more click-to-reveal panel) —
+   results drop down below it as you type and hide on blur/Escape/navigate. */
 function _searchResultsHtml(term){
   const t=term.trim().toLowerCase();
   if(!t) return '';
@@ -66,9 +53,8 @@ function _searchResultsHtml(term){
       <span class="t-lime t-label">From ₹${p.tiers[3][1].toLocaleString('en-IN')}</span>
     </div>`).join('');
 }
-function onHeaderSearchInput(term,ctx){
-  const box=document.getElementById(ctx==='nav'?'navSearchResults':'hdrSearchResults');
-  box.innerHTML=_searchResultsHtml(term);
+function onHeaderSearchInput(term){
+  document.getElementById('hdrSearchResults').innerHTML=_searchResultsHtml(term);
 }
 function submitHeaderSearch(term){
   if(!term.trim()) return;
@@ -78,20 +64,12 @@ function submitHeaderSearch(term){
   closeHeaderSearch();
 }
 function closeHeaderSearch(){
-  document.getElementById('hdrSearchPanel').classList.remove('on');
-  document.getElementById('hdrSearchResults').innerHTML='';
-  document.getElementById('navSearchResults').innerHTML='';
-  const nav=document.getElementById('navSearchInput'); if(nav) nav.value='';
-  const hdr=document.getElementById('hdrSearchInput'); if(hdr) hdr.value='';
-  document.getElementById('navLinks').classList.remove('open');
+  const results=document.getElementById('hdrSearchResults');
+  if(results) results.innerHTML='';
 }
 document.addEventListener('click',e=>{
-  const panel=document.getElementById('hdrSearchPanel');
-  if(panel && panel.classList.contains('on')
-     && !panel.contains(e.target) && e.target.id!=='searchBtn'
-     && !e.target.closest('#searchBtn')){
-    closeHeaderSearch();
-  }
+  const box=document.querySelector('.hdr-search-inline');
+  if(box && !box.contains(e.target)) closeHeaderSearch();
   const menu=document.getElementById('userMenu');
   if(menu && !menu.contains(e.target)) closeUserMenu();
 });

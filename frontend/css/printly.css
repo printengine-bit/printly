@@ -213,7 +213,11 @@ a{color:inherit;text-decoration:none}
   backdrop-filter:blur(12px);
   border-bottom:1px solid var(--outline-variant);
 }
-.hdr-inner{display:flex;align-items:center;gap:28px;padding:10px var(--container-margin);max-width:1280px;margin:0 auto}
+.hdr-inner{
+  display:flex;align-items:center;gap:24px;
+  padding:12px var(--container-margin);max-width:1280px;margin:0 auto;
+}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-shrink:0}
 /* nowrap because the wordmark is two words — without it "PRINT ENGINE"
    breaks across two lines in the narrow mobile header and doubles the
    header's height. */
@@ -223,16 +227,15 @@ a{color:inherit;text-decoration:none}
   white-space:nowrap;
 }
 .logo b{color:var(--lime-ink);font-weight:900}
-.nav{display:flex;gap:22px;flex:1}
-.nav-btn{
-  font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
-  color:var(--on-surface-variant);padding:4px 0;
-  border-bottom:2px solid transparent;transition:color .18s,border-color .18s;
+.hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.hdr-help{
+  display:flex;align-items:center;gap:6px;padding:0 10px;height:44px;
+  border-radius:var(--r-sm);color:var(--on-surface-variant);font-size:13px;font-weight:600;
+  transition:background .18s,color .18s;
 }
-.nav-btn:hover{color:var(--lime-ink)}
-.nav-btn.on{color:var(--lime-ink);border-bottom-color:var(--lime)}
-.hdr-right{display:flex;align-items:center;gap:8px}
-.cart-btn{position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:var(--r-sm);color:var(--on-surface);transition:background .18s,color .18s}
+.hdr-help .material-symbols-outlined{font-size:19px}
+.hdr-help:hover{background:var(--surface-container-high);color:var(--lime-ink)}
+.cart-btn{position:relative;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--r-sm);color:var(--on-surface);transition:background .18s,color .18s;flex-shrink:0}
 .cart-btn:hover{background:var(--surface-container-high);color:var(--lime-ink)}
 .cart-count{
   position:absolute;top:4px;right:2px;min-width:18px;height:18px;padding:0 5px;
@@ -240,7 +243,6 @@ a{color:inherit;text-decoration:none}
   font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;
 }
 .cart-count[data-count="0"]{display:none}
-.hamburger{display:none;width:44px;height:44px;align-items:center;justify-content:center;border-radius:var(--r-sm);color:var(--on-surface)}
 
 /* ── Account dropdown ─────────────────────────────────────────── */
 .user-menu{position:relative}
@@ -272,45 +274,55 @@ a{color:inherit;text-decoration:none}
 .user-dd-danger .material-symbols-outlined{color:var(--pink-ink)}
 
 /* ── Header search ────────────────────────────────────────────── */
-/* Desktop: an icon in hdr-right opens a dropdown panel below the header.
-   Mobile: hdr-right is already at capacity (four 44px controls exactly
-   filling 375px, see the @media(max-width:980px) note below), so there the
-   search box lives inline at the top of the hamburger drawer instead of a
-   fifth icon competing for the same row. */
-.nav-search{display:none}
-.hdr-search-panel{
-  display:none;position:absolute;top:100%;left:0;right:0;
-  background:var(--surface);border-bottom:1px solid var(--outline-variant);
-  box-shadow:0 16px 32px rgba(0,0,0,.18);
+/* Always visible now — no more click-to-reveal icon/panel. Results drop
+   down below the box itself, positioned relative to .hdr-search-inline. */
+.hdr-search-inline{
+  position:relative;flex:1;max-width:560px;
+  display:flex;align-items:center;gap:10px;height:44px;padding:0 16px;
+  background:var(--surface-container-low);border:1px solid var(--outline-variant);
+  border-radius:var(--r-full);
 }
-.hdr-search-panel.on{display:block}
-.hdr-search-box{
-  display:flex;align-items:center;gap:12px;
-  padding:22px 0 14px;border-bottom:1px solid var(--outline-variant);
+.hdr-search-inline .material-symbols-outlined{color:var(--on-surface-variant);font-size:20px;flex-shrink:0}
+.hdr-search-inline input{flex:1;background:none;border:none;color:var(--on-surface);font-size:14px;height:100%}
+.hdr-search-inline input:focus{outline:none}
+.hdr-search-results{
+  position:absolute;top:calc(100% + 8px);left:0;right:0;
 }
-.hdr-search-box input{flex:1;background:none;border:none;color:var(--on-surface);font-size:17px}
-.hdr-search-box input:focus{outline:none}
-.hdr-search-box .material-symbols-outlined{color:var(--on-surface-variant);font-size:24px}
-.hdr-search-results{padding:8px 0 16px}
+.hdr-search-results:empty{display:none}
+.hdr-search-results .sr-item,.hdr-search-results .sr-empty{
+  background:var(--surface-container-lowest);border:1px solid var(--outline-variant);
+  border-radius:var(--r-sm);box-shadow:var(--shadow-card);
+}
 .hdr-search-results .sr-item{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:10px 8px;border-radius:var(--r-sm);cursor:pointer;min-height:44px;
+  padding:10px 12px;cursor:pointer;min-height:44px;margin-bottom:4px;
 }
 .hdr-search-results .sr-item:hover{background:var(--surface-container-low)}
-.hdr-search-results .sr-empty{padding:14px 8px;color:var(--on-surface-variant);font-size:13.5px}
-@media(max-width:980px){
-  #searchBtn{display:none}
-  .nav-search{
-    display:flex;align-items:center;gap:10px;
-    background:var(--surface-container-low);border:1px solid var(--outline-variant);
-    border-radius:var(--r-sm);padding:0 14px;height:44px;margin-bottom:8px;
-  }
-  .nav-search input{flex:1;height:100%;background:none;border:none;color:var(--on-surface);font-size:15px}
-  .nav-search input:focus{outline:none}
-  .nav-search .material-symbols-outlined{color:var(--on-surface-variant);font-size:20px}
-  #navSearchResults:empty{display:none}
-  #navSearchResults{margin-bottom:8px}
+.hdr-search-results .sr-empty{padding:14px 12px;color:var(--on-surface-variant);font-size:13.5px}
+
+/* ── Utility strip ────────────────────────────────────────────── */
+.util-strip{background:var(--surface-container-low);border-bottom:1px solid var(--outline-variant)}
+.util-strip-inner{
+  max-width:1280px;margin:0 auto;padding:7px var(--container-margin);
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
 }
+.util-strip a{display:flex;align-items:center;gap:6px;color:var(--on-surface-variant);font-size:12px;font-weight:600}
+.util-strip a:hover{color:var(--lime-ink)}
+.util-strip a .material-symbols-outlined{font-size:16px}
+
+/* ── Category nav ─────────────────────────────────────────────── */
+.cat-nav{background:var(--surface-container-lowest);border-bottom:1px solid var(--outline-variant)}
+.cat-nav-inner{
+  max-width:1280px;margin:0 auto;padding:0 var(--container-margin);
+  display:flex;gap:30px;overflow-x:auto;scrollbar-width:none;
+}
+.cat-nav-inner::-webkit-scrollbar{display:none}
+.cat-nav-link{
+  flex-shrink:0;padding:12px 1px;min-height:44px;display:flex;align-items:center;
+  font-size:13px;font-weight:600;color:var(--on-surface-variant);white-space:nowrap;
+  border-bottom:2px solid transparent;transition:color .18s,border-color .18s;
+}
+.cat-nav-link:hover{color:var(--lime-ink);border-bottom-color:var(--lime)}
 
 /* ── Trust strip ──────────────────────────────────────────────── */
 body.pdp-active #pdpBody{padding-top:10px;padding-bottom:32px}
@@ -563,32 +575,22 @@ input:-webkit-autofill:focus{
   .grid-4,.grid-5{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ftr-grid{grid-template-columns:1fr 1fr;gap:32px}
 }
-/* Nav collapses at 980px, not 768 — seven uppercase items (Wishlist added
-   alongside the rest) get cramped and start wrapping well before the usual
-   tablet breakpoint. Bumped from 900px when Wishlist became the 7th item —
-   re-check this number if another top-level nav item is ever added. */
+/* Header wraps to two rows below 860px — logo+icons stay one line
+   (.hdr-top), the search bar takes the full width of its own row below,
+   rather than the icons shrinking under the 44px touch floor to make
+   room for it inline. */
+@media(max-width:860px){
+  .hdr-inner{flex-direction:column;align-items:stretch;gap:10px;padding:10px var(--container-margin)}
+  .hdr-search-inline{max-width:none}
+  /* Mailto link, low-frequency — reachable via the account dropdown's
+     Support item too. Cut first when the row is tight, not the icons
+     that act (theme, cart, account). */
+  .hdr-help{display:none}
+  .util-strip-inner{font-size:11px;gap:10px}
+  .util-strip a{min-height:44px;padding:4px 0}
+}
 @media(max-width:980px){
-  .hamburger{display:flex}
-  /* Four controls in the header at 375px exactly filled the row, so the
-     icon buttons were flex-shrinking to 42px — under the 44px touch floor.
-     Tighten the gap and stop them shrinking; the Sign-in pill gives instead. */
-  .hdr-right{gap:8px}
-  .cart-btn,.hamburger{flex-shrink:0}
-  .nav{
-    position:fixed;top:64px;left:0;right:0;bottom:0;
-    flex-direction:column;gap:0;
-    background:var(--surface);
-    padding:16px var(--container-margin);
-    display:none;overflow-y:auto;z-index:60;
-  }
-  .nav.open{display:flex}
-  .nav-btn{
-    width:100%;text-align:left;font-size:16px;padding:18px 0;
-    border-bottom:1px solid var(--outline-variant);
-  }
-  .nav-btn.on{border-bottom-color:var(--lime)}
   .grid-3,.grid-4,.grid-5{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .hdr-inner{gap:12px}
 }
 @media(max-width:768px){
   :root{--container-margin:16px;--section-gap:48px}

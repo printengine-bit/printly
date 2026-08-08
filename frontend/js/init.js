@@ -1,7 +1,7 @@
 /* ═══════════════ INIT ═══════════════ */
 initStudio(); renderSizeGrid(); draw(); renderProducts(); applyAuthUI(); checkSession();
 renderHomeCategories(); renderHomeProducts(); renderHomeBestSellers(); renderHomeNewArrivals(); renderHomeDeals();
-renderPromoBar();
+renderPromoBar(); renderHeaderCatNav();
 enhancePasswordFields();
 initReset();                 // opens the reset form if the URL carries ?reset=
 applyTheme();

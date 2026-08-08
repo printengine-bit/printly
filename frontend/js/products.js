@@ -261,6 +261,15 @@ function scrollCatRow(dir){
   row.scrollBy({left: dir*260, behavior:'smooth'});
 }
 
+/* Persistent category nav under the header — same CATEGORIES list the
+   products page filters with, so there's one list, not two that drift. */
+function renderHeaderCatNav(){
+  const el=document.getElementById('headerCatNav'); if(!el) return;
+  const items=[{key:'all',label:'All products'}, ...CATEGORIES.filter(c=>c.key!=='all')];
+  el.innerHTML=items.map(c=>`
+    <button class="cat-nav-link" onclick="browseCategory('all','${c.key}')">${esc(c.label)}</button>`).join('');
+}
+
 /* ── Home merchandising rails ──────────────────────────────────────
    Three rails, one shared card (_productCardHtml, data.js):
    Best sellers (real order counts), New arrivals (most recently added),
