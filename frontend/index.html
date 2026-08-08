@@ -44,47 +44,18 @@
 </div>
 
 <!-- ══════════════ HEADER ══════════════
-     One sticky row: logo, an always-visible search bar (no more
-     click-to-reveal panel), and account/cart. Page navigation — Home,
-     Products, My Orders, My Designs, Wishlist — lives in the account
-     dropdown and the category nav row below, not as text links here. -->
+     One sticky row: logo, then the search bar right after it (not after
+     the icons), then account/cart. Page navigation — Home, Products, My
+     Orders, My Designs, Wishlist — lives in the account dropdown and the
+     category nav row below, not as text links here.
+     Three flex siblings in source order (logo, search, hdr-right) so
+     desktop reads left-to-right exactly that way with no CSS `order`
+     trickery. Mobile regroups logo+hdr-right onto one line via `order`
+     — see the media query in printly.css — with search wrapping to its
+     own full-width line below. -->
 <header class="hdr">
   <div class="hdr-inner">
-    <div class="hdr-top">
-      <div class="logo" onclick="go('home')">PRINT <b>ENGINE</b></div>
-      <div class="hdr-right">
-        <a class="hdr-help" href="mailto:hello@printengine.in">
-          <span class="material-symbols-outlined">support_agent</span>Help</a>
-        <button class="cart-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Switch theme">
-          <span class="material-symbols-outlined">light_mode</span>
-        </button>
-        <div class="user-menu" id="userMenu">
-          <button class="btn btn-primary btn-sm" id="userPill" onclick="openLogin()">Sign in</button>
-          <div class="user-dropdown" id="userDropdown">
-            <div class="user-dd-head">
-              <span class="user-avatar" id="userAvatar"></span>
-              <span class="user-dd-who">
-                <span class="user-dd-name" id="userDdName"></span>
-                <span class="user-dd-email t-dim" id="userDdEmail"></span>
-              </span>
-            </div>
-            <button onclick="openAccount('profile')"><span class="material-symbols-outlined">person</span>Profile</button>
-            <button onclick="go('orders');closeUserMenu()"><span class="material-symbols-outlined">inventory_2</span>Orders</button>
-            <button onclick="openAccount('addresses')"><span class="material-symbols-outlined">location_on</span>Addresses</button>
-            <button onclick="go('wishlist');closeUserMenu()"><span class="material-symbols-outlined">favorite</span>Wishlist</button>
-            <button onclick="go('designs');closeUserMenu()"><span class="material-symbols-outlined">brush</span>My designs</button>
-            <button onclick="go('orders');closeUserMenu()"><span class="material-symbols-outlined">support_agent</span>Support</button>
-            <button onclick="openAccount('settings')"><span class="material-symbols-outlined">settings</span>Settings</button>
-            <div class="user-dd-sep"></div>
-            <button class="user-dd-danger" onclick="closeUserMenu();doLogout()"><span class="material-symbols-outlined">logout</span>Logout</button>
-          </div>
-        </div>
-        <button class="cart-btn" onclick="go('cart')" aria-label="Cart">
-          <span class="material-symbols-outlined">shopping_cart</span>
-          <span class="cart-count" id="cartCount" data-count="0">0</span>
-        </button>
-      </div>
-    </div>
+    <div class="logo" onclick="go('home')">PRINT <b>ENGINE</b></div>
     <div class="hdr-search-inline">
       <span class="material-symbols-outlined">search</span>
       <input type="search" id="hdrSearchInput" placeholder="Search tees, hoodies, jerseys…"
@@ -92,6 +63,38 @@
         onfocus="onHeaderSearchInput(this.value)"
         onkeydown="if(event.key==='Enter') submitHeaderSearch(this.value)">
       <div class="hdr-search-results" id="hdrSearchResults"></div>
+    </div>
+    <div class="hdr-right">
+      <a class="hdr-help" href="mailto:hello@printengine.in">
+        <span class="material-symbols-outlined">support_agent</span>Help</a>
+      <button class="cart-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Switch theme">
+        <span class="material-symbols-outlined">light_mode</span>
+      </button>
+      <div class="user-menu" id="userMenu">
+        <button class="btn btn-primary btn-sm" id="userPill" onclick="openLogin()">Sign in</button>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="user-dd-head">
+            <span class="user-avatar" id="userAvatar"></span>
+            <span class="user-dd-who">
+              <span class="user-dd-name" id="userDdName"></span>
+              <span class="user-dd-email t-dim" id="userDdEmail"></span>
+            </span>
+          </div>
+          <button onclick="openAccount('profile')"><span class="material-symbols-outlined">person</span>Profile</button>
+          <button onclick="go('orders');closeUserMenu()"><span class="material-symbols-outlined">inventory_2</span>Orders</button>
+          <button onclick="openAccount('addresses')"><span class="material-symbols-outlined">location_on</span>Addresses</button>
+          <button onclick="go('wishlist');closeUserMenu()"><span class="material-symbols-outlined">favorite</span>Wishlist</button>
+          <button onclick="go('designs');closeUserMenu()"><span class="material-symbols-outlined">brush</span>My designs</button>
+          <button onclick="go('orders');closeUserMenu()"><span class="material-symbols-outlined">support_agent</span>Support</button>
+          <button onclick="openAccount('settings')"><span class="material-symbols-outlined">settings</span>Settings</button>
+          <div class="user-dd-sep"></div>
+          <button class="user-dd-danger" onclick="closeUserMenu();doLogout()"><span class="material-symbols-outlined">logout</span>Logout</button>
+        </div>
+      </div>
+      <button class="cart-btn" onclick="go('cart')" aria-label="Cart">
+        <span class="material-symbols-outlined">shopping_cart</span>
+        <span class="cart-count" id="cartCount" data-count="0">0</span>
+      </button>
     </div>
   </div>
 </header>

@@ -217,14 +217,13 @@ a{color:inherit;text-decoration:none}
   display:flex;align-items:center;gap:24px;
   padding:12px var(--container-margin);max-width:1280px;margin:0 auto;
 }
-.hdr-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-shrink:0}
 /* nowrap because the wordmark is two words — without it "PRINT ENGINE"
    breaks across two lines in the narrow mobile header and doubles the
    header's height. */
 .logo{
   font-family:var(--ff-display);font-weight:900;font-size:24px;
   letter-spacing:-.03em;text-transform:uppercase;color:var(--primary);cursor:pointer;
-  white-space:nowrap;
+  white-space:nowrap;flex-shrink:0;
 }
 .logo b{color:var(--lime-ink);font-weight:900}
 .hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
@@ -575,13 +574,16 @@ input:-webkit-autofill:focus{
   .grid-4,.grid-5{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ftr-grid{grid-template-columns:1fr 1fr;gap:32px}
 }
-/* Header wraps to two rows below 860px — logo+icons stay one line
-   (.hdr-top), the search bar takes the full width of its own row below,
-   rather than the icons shrinking under the 44px touch floor to make
-   room for it inline. */
+/* Header wraps to two rows below 860px — logo and the icon cluster
+   regroup onto one line via `order` (source order is logo, search,
+   hdr-right, which is what desktop wants left-to-right), and the search
+   bar wraps to its own full-width line below rather than the icons
+   shrinking under the 44px touch floor to make room for it inline. */
 @media(max-width:860px){
-  .hdr-inner{flex-direction:column;align-items:stretch;gap:10px;padding:10px var(--container-margin)}
-  .hdr-search-inline{max-width:none}
+  .hdr-inner{flex-wrap:wrap;gap:6px 10px;padding:10px var(--container-margin)}
+  .logo{order:1;font-size:21px}
+  .hdr-right{order:2;margin-left:auto;gap:4px}
+  .hdr-search-inline{order:3;flex-basis:100%;max-width:none}
   /* Mailto link, low-frequency — reachable via the account dropdown's
      Support item too. Cut first when the row is tight, not the icons
      that act (theme, cart, account). */
