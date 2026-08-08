@@ -214,21 +214,51 @@ function renderHomeCategories(){
     </button>`}).join('');
   document.querySelectorAll('#homeAudienceTiles .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
 
-  const cBar=document.getElementById('homeCategoryTiles');
-  if(cBar) cBar.innerHTML=CATEGORIES.filter(c=>c.key!=='all').map(c=>{
-    const count=PRODUCTS.filter(p=>p.category===c.key).length;
+  renderCategoryScrollRow();
+}
+
+/* Coming soon, not a real category yet — no product line, no print
+   method wired up behind it. Shown so the merchandising row reads
+   complete now, without pretending a click would go anywhere real. */
+const COMING_SOON_CATEGORIES = [
+  {key:'embroidery', label:'Embroidery', icon:'auto_awesome'},
+];
+
+/* Circular photo strip, one tile per real category (using the same
+   canvas-rendered garment thumb as everywhere else — never a raw <img>,
+   see mockups.js) plus any not-yet-real categories above. Placeholder
+   art until real category photos are supplied; swapping in a photo later
+   is a `rep` lookup change here, not a markup change. */
+function renderCategoryScrollRow(){
+  const cBar=document.getElementById('homeCategoryTiles'); if(!cBar) return;
+  const real=CATEGORIES.filter(c=>c.key!=='all').map(c=>{
     const rep=_repProduct(p=>p.category===c.key);
     return `
-    <button class="card cat-tile" onclick="browseCategory('all','${c.key}')"
+    <button class="cat-circle-tile" onclick="browseCategory('all','${c.key}')"
       aria-label="Browse ${esc(c.label)}">
-      <span class="cat-icon">
-        ${rep ? `<canvas class="pthumb" data-p="${rep.id}" width="84" height="84"></canvas>`
+      <span class="cat-circle-photo">
+        ${rep ? `<canvas class="pthumb" data-p="${rep.id}" width="120" height="120"></canvas>`
               : `<span class="material-symbols-outlined">${CATEGORY_ICON[c.key]||'checkroom'}</span>`}
       </span>
-      <span class="cat-copy"><b>${esc(c.label)}</b><small>${count} ${count===1?'style':'styles'}</small></span>
-      <span class="cat-arrow material-symbols-outlined">arrow_forward</span>
-    </button>`}).join('');
+      <b>${esc(c.label)}</b>
+    </button>`;
+  }).join('');
+  const soon=COMING_SOON_CATEGORIES.map(c=>`
+    <button class="cat-circle-tile" onclick="toast('${esc(c.label)} is coming soon — check back shortly.')"
+      aria-label="${esc(c.label)} — coming soon">
+      <span class="cat-circle-photo cat-circle-soon">
+        <span class="material-symbols-outlined">${c.icon}</span>
+      </span>
+      <b>${esc(c.label)}</b>
+      <span class="t-label t-dim" style="font-size:10px">Coming soon</span>
+    </button>`).join('');
+  cBar.innerHTML = real + soon;
   document.querySelectorAll('#homeCategoryTiles .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
+}
+
+function scrollCatRow(dir){
+  const row=document.getElementById('homeCategoryTiles'); if(!row) return;
+  row.scrollBy({left: dir*260, behavior:'smooth'});
 }
 
 /* ── Home merchandising rails ──────────────────────────────────────

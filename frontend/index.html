@@ -164,7 +164,16 @@
     <h2 class="t-h2">Shop by <span class="t-lime">category</span></h2>
     <p class="t-mut" style="margin:8px 0 24px">Who it's for, and what it is — pick either to start browsing.</p>
     <div class="grid audience-grid" id="homeAudienceTiles"></div>
-    <div class="grid category-grid" id="homeCategoryTiles"></div>
+    <!-- Placeholder art until real category photos are supplied — see
+         renderHomeCategories() (products.js). Circular photo strip,
+         horizontal scroll + arrow, same pattern as most print-on-demand
+         storefronts use for "shop by product type". -->
+    <div class="cat-scroll-wrap">
+      <div class="cat-scroll-row" id="homeCategoryTiles"></div>
+      <button class="cat-scroll-arrow" onclick="scrollCatRow(1)" aria-label="Show more categories">
+        <span class="material-symbols-outlined">arrow_forward</span>
+      </button>
+    </div>
   </div>
 
   <!-- Hidden by renderHomeNewArrivals() when the catalogue has nothing to
@@ -184,25 +193,6 @@
       <button class="btn btn-ghost" onclick="go('products')">View all products →</button>
     </div>
     <div class="grid grid-4" id="homeProductGrid"></div>
-  </div>
-
-  <div class="wrap section">
-    <h2 class="t-h2">How Print Engine <span class="t-lime">works</span></h2>
-    <p class="t-mut" style="margin:8px 0 32px">From concept to closet in four steps.</p>
-    <div class="grid grid-4 scroll-stack" id="stepsStack">
-      <div class="card step stack-card"><span class="step-n">01</span>
-        <span class="material-symbols-outlined">checkroom</span>
-        <h3>Pick a product</h3><p>Tees, polos, hoodies and jerseys. 8 colours, no minimums.</p></div>
-      <div class="card step stack-card"><span class="step-n">02</span>
-        <span class="material-symbols-outlined">draw</span>
-        <h3>Design it live</h3><p>Upload your logo, add text, or let the AI draft the art for you.</p></div>
-      <div class="card step stack-card"><span class="step-n">03</span>
-        <span class="material-symbols-outlined">task_alt</span>
-        <h3>Approve the proof</h3><p>We send a digital proof in 2 hours. You approve with one tap.</p></div>
-      <div class="card step stack-card"><span class="step-n">04</span>
-        <span class="material-symbols-outlined">local_shipping</span>
-        <h3>Printed &amp; shipped</h3><p>Quality-checked, packed and tracked to your door.</p></div>
-    </div>
   </div>
 
   <div class="wrap section">
@@ -921,7 +911,6 @@
 <script src="js/pdp.js?v={{V}}"></script>
 <script src="js/support.js?v={{V}}"></script>
 <script src="js/account.js?v={{V}}"></script>
-<script src="js/scrollstack.js?v={{V}}"></script>
 <script src="js/theme.js?v={{V}}"></script>
 <script src="js/init.js?v={{V}}"></script>
 </body>

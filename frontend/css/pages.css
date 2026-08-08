@@ -65,52 +65,9 @@
 }
 .stars{color:var(--lime-ink);letter-spacing:2px;font-size:14px}
 
-.step{position:relative;padding:26px;overflow:hidden}
-.step-n{
-  position:absolute;top:14px;right:18px;
-  font-family:var(--ff-display);font-size:46px;font-weight:900;
-  color:var(--surface-container-highest);line-height:1;
-}
-.step h3{font-family:var(--ff-display);font-size:18px;font-weight:800;text-transform:uppercase;margin:14px 0 8px}
-.step p{font-size:14px;color:var(--on-surface-variant)}
-.step .material-symbols-outlined{color:var(--lime-ink)}
-
-/* Scroll stack — the 4-up grid becomes a pile of full-width cards that
-   pin as you scroll. `is-stacked` is added by js/scrollstack.js, so
-   no-JS and prefers-reduced-motion visitors keep the grid above. */
-.scroll-stack.is-stacked{display:block}
-.scroll-stack.is-stacked .stack-card{
-  min-height:clamp(170px,22vh,220px);
-  /* Full-bleed cards read as banners, not cards — and a line of body copy
-     that wide is unreadable anyway. */
-  max-width:880px;margin-left:auto;margin-right:auto;
-  display:flex;flex-direction:column;justify-content:center;
-  padding:clamp(24px,3vw,40px);
-  background:var(--surface-container);
-  border-radius:var(--r-lg);
-  box-shadow:var(--shadow-card);
-  transform-origin:top center;
-  backface-visibility:hidden;
-  will-change:transform;
-}
-.scroll-stack.is-stacked .stack-card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--lime);
-}
-.scroll-stack.is-stacked .stack-card:nth-child(even)::before{background:var(--pink)}
-.scroll-stack.is-stacked .step-n{
-  font-size:clamp(58px,9vw,108px);top:clamp(16px,3vw,28px);right:clamp(18px,3vw,34px);
-}
-.scroll-stack.is-stacked .step h3{font-size:clamp(20px,2.4vw,26px);margin:14px 0 8px}
-.scroll-stack.is-stacked .step p{font-size:clamp(14px,1.3vw,16px);max-width:46ch}
-.scroll-stack.is-stacked .step .material-symbols-outlined{font-size:30px}
-/* Height is set by scrollstack.js from the real card geometry — a fixed
-   value here either leaves dead space or lets the pile overlap what
-   follows, depending on the viewport. */
-.stack-end{height:0}
 
 .home-category-section{padding-top:64px;padding-bottom:64px}
 .audience-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.category-grid{grid-template-columns:repeat(6,minmax(0,1fr));margin-top:16px}
 .aud{
   position:relative;overflow:hidden;min-height:190px;padding:24px;
   display:flex;flex-direction:column;justify-content:space-between;gap:24px;
@@ -126,7 +83,7 @@
   background:var(--surface-container-low);box-shadow:var(--shadow-card);
 }
 .aud:hover::before,.aud:focus-visible::before{transform:scale(1.22)}
-.aud:focus-visible,.cat-tile:focus-visible{outline:3px solid var(--lime);outline-offset:3px}
+.aud:focus-visible{outline:3px solid var(--lime);outline-offset:3px}
 .aud-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
 .aud-symbol{
   width:48px;height:48px;border-radius:14px;display:grid;place-items:center;
@@ -141,32 +98,37 @@
 .aud h3{font-family:var(--ff-display);font-size:22px;font-weight:800;text-transform:uppercase;margin-bottom:6px}
 .aud p{font-size:13.5px;color:var(--on-surface-variant);margin:0}
 
-/* Compact, icon-forward category buttons with visible navigation feedback. */
-.cat-tile{
-  cursor:pointer;text-align:left;padding:18px;
-  display:grid;grid-template-columns:42px minmax(0,1fr) 24px;align-items:center;gap:10px;
-  font:inherit;color:inherit;width:100%;min-height:94px;
-  transition:transform .2s ease,border-color .2s ease,background .2s ease,box-shadow .2s ease;
+/* Circular photo strip — "shop by product type", horizontal scroll +
+   arrow, same pattern most print-on-demand storefronts use. */
+.cat-scroll-wrap{display:flex;align-items:center;gap:12px}
+.cat-scroll-row{
+  display:flex;gap:22px;overflow-x:auto;scroll-behavior:smooth;
+  padding:4px 2px 10px;flex:1;min-width:0;
+  scrollbar-width:none;
 }
-.cat-tile:hover,.cat-tile:focus-visible{
-  transform:translateY(-3px);border-color:var(--lime);
-  background:var(--surface-container-low);box-shadow:var(--shadow-card);
+.cat-scroll-row::-webkit-scrollbar{display:none}
+.cat-circle-tile{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  flex:0 0 auto;width:100px;text-align:center;cursor:pointer;
 }
-.cat-icon{
-  width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
-  background:var(--tint-lime);color:var(--lime-ink);font-size:24px;
-  transition:transform .2s ease,background .2s ease;
-  overflow:hidden;
+.cat-circle-photo{
+  width:88px;height:88px;border-radius:50%;overflow:hidden;
+  background:var(--surface-container-lowest);border:1px solid var(--outline-variant);
+  display:grid;place-items:center;font-size:30px;color:var(--lime-ink);
+  transition:border-color .2s ease,transform .2s ease;
 }
-.cat-icon canvas{width:100%;height:100%;object-fit:contain}
-.cat-tile:hover .cat-icon,.cat-tile:focus-visible .cat-icon{
-  transform:rotate(-5deg) scale(1.06);background:var(--lime);color:var(--on-lime);
+.cat-circle-photo canvas{width:100%;height:100%;object-fit:contain}
+.cat-circle-tile:hover .cat-circle-photo,.cat-circle-tile:focus-visible .cat-circle-photo{
+  border-color:var(--lime);transform:scale(1.05);
 }
-.cat-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
-.cat-copy b{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.02em}
-.cat-copy small{font-size:11px;color:var(--on-surface-variant)}
-.cat-arrow{font-size:19px;color:var(--outline);transition:transform .2s ease,color .2s ease}
-.cat-tile:hover .cat-arrow,.cat-tile:focus-visible .cat-arrow{transform:translateX(4px);color:var(--lime-ink)}
+.cat-circle-soon{color:var(--on-surface-variant)}
+.cat-circle-tile b{font-size:12.5px;font-weight:700}
+.cat-scroll-arrow{
+  flex-shrink:0;width:44px;height:44px;border-radius:50%;
+  background:var(--surface-container-lowest);border:1px solid var(--outline-variant);
+  display:grid;place-items:center;color:var(--on-surface);
+}
+.cat-scroll-arrow:hover{border-color:var(--lime);color:var(--lime-ink)}
 
 .deal-card{
   display:flex;align-items:center;gap:14px;padding:16px 18px;
@@ -376,7 +338,6 @@ details.acc.tk summary{text-transform:none;letter-spacing:0;font-size:14px;gap:1
   .cart-grid{grid-template-columns:1fr}
   .summary-card{position:static}
   .ai-cta{grid-template-columns:1fr;gap:32px;padding:32px}
-  .category-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media(max-width:760px){
   /* The admin table has 5 columns and can't shrink below ~540px, forcing the
@@ -426,17 +387,12 @@ details.acc.tk summary{text-transform:none;letter-spacing:0;font-size:14px;gap:1
   .hero-stats{gap:24px;margin-top:28px;padding-top:24px}
   .home-category-section{padding-top:44px;padding-bottom:44px}
   .audience-grid{grid-template-columns:1fr}
-  .category-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .aud{min-height:174px;padding:20px}
-  .cat-tile{grid-template-columns:38px minmax(0,1fr) 20px;padding:14px;min-height:82px}
-  .cat-icon{width:38px;height:38px}
   .dash-head{flex-direction:column;align-items:flex-start}
 }
-@media(max-width:390px){
-  .category-grid{grid-template-columns:1fr}
-}
 @media(prefers-reduced-motion:reduce){
-  .aud,.aud::before,.aud-arrow,.cat-tile,.cat-icon,.cat-arrow{transition:none}
+  .aud,.aud::before,.aud-arrow,.cat-circle-tile,.cat-circle-photo{transition:none}
+  .cat-scroll-row{scroll-behavior:auto}
 }
 
 /* ── Checkout: delivery address ───────────────────────────────── */

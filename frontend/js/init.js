@@ -4,7 +4,7 @@ renderHomeCategories(); renderHomeProducts(); renderHomeBestSellers(); renderHom
 renderPromoBar();
 enhancePasswordFields();
 initReset();                 // opens the reset form if the URL carries ?reset=
-initScrollStack('#stepsStack'); applyTheme();
+applyTheme();
 loadReviewSummary();
 loadMocks(()=>{ draw(); renderProducts(); renderHomeProducts(); renderHomeBestSellers(); renderHomeNewArrivals();
   renderHomeCategories(); drawHeroHoodie(); drawAiPreview(); });

@@ -25,7 +25,7 @@ changed is that they're now *separate* files instead of one 311KB
   modules): `mockup-data.js` → `data.js` → `mockups.js` → `nav.js` →
   `auth.js` → `products.js` → `wishlist.js` → `studio.js` → `ai.js` →
   `cart.js` → `designs.js` → `pdp.js` → `support.js` → `account.js` →
-  `scrollstack.js` → `cursorgrid.js` → `theme.js` → `init.js`. Order
+  `cursorgrid.js` → `theme.js` → `init.js`. Order
   matters for top-level side effects; `esc()` lives in `data.js` because
   it loads first. The initial `data-theme` is set by an inline script in
   `<head>`, before the stylesheets — moving that into `theme.js`
@@ -271,15 +271,11 @@ once and an edited stylesheet silently kept serving the cached copy.
   are admin-editable, so an invoice reprinted later must not restate what
   the customer paid. NULL on pre-existing orders; the drawer says so rather
   than showing today's rates as if they were billed.
-- **Decorative motion is progressive enhancement.** `scrollstack.js`
-  only adds its `is-stacked` class once JS runs and reduced motion isn't
-  requested, so the CSS in the stylesheet must stand on its own as the
-  no-JS layout. It writes transforms only — never anything that changes
-  layout — because it measures each card's `offsetTop` once and reuses
-  it every frame. `cursorgrid.js` injects its own `<canvas>` behind the
-  hero and bails on `prefers-reduced-motion` or a coarse pointer, so
-  phones never run it. Both loops **sleep** when there's nothing to
-  animate — don't convert either to an unconditional rAF loop.
+- **Decorative motion is progressive enhancement.** `cursorgrid.js`
+  injects its own `<canvas>` behind the hero and bails on
+  `prefers-reduced-motion` or a coarse pointer, so phones never run it.
+  Its loop **sleeps** when there's nothing to animate — don't convert it
+  to an unconditional rAF loop.
 - **Thumbnails use `captureThumb()`, never `cv.toDataURL()` directly.**
   `draw()` paints the print-area guide and selection chrome, and a raw
   capture bakes that editor UI into cart/design/order thumbnails.

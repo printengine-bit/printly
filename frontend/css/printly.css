@@ -195,13 +195,14 @@ a{color:inherit;text-decoration:none}
 .grid-5{grid-template-columns:repeat(5,minmax(0,1fr))}
 
 /* ── Promo bar ────────────────────────────────────────────────── */
-/* Same lime-fill/dark-text pairing as .badge-lime — a fill, not text on a
-   surface, so it stays identical in both themes rather than needing its
-   own light/dark override. */
+/* Solid saturated fill + white text — same pairing as .badge-pink, and
+   the same "announcement strip at the very top" pattern most storefronts
+   use. A fill, not text on a surface, so it stays identical in both
+   themes rather than needing its own light/dark override. */
 .promo-bar{
-  background:var(--lime);color:var(--on-lime);
+  background:var(--pink);color:#fff;
   text-align:center;font-size:12.5px;font-weight:700;letter-spacing:.02em;
-  padding:8px var(--container-margin);
+  padding:9px var(--container-margin);
 }
 .promo-bar:empty{display:none}
 
