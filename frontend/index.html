@@ -259,18 +259,27 @@
     <h1 class="t-h1">Products &amp; <span class="t-lime">live pricing</span></h1>
     <p class="t-mut" style="margin:8px 0 24px">Prices drop automatically as quantity rises. Pick one to start designing.</p>
 
-    <div class="search-row">
-      <input type="search" class="inp" id="prodSearch" placeholder="Search tees, hoodies, jerseys…" oninput="renderProducts()">
-      <select id="prodSort" onchange="renderProducts()" style="max-width:200px">
-        <option value="popular">Sort: Popular</option>
-        <option value="low">Price: low to high</option>
-        <option value="high">Price: high to low</option>
-        <option value="rated">Best rated</option>
-      </select>
+    <div class="products-layout">
+      <!-- Built once by renderProductFilterSidebar() (products.js); checkbox
+           checked-state is kept in sync with prodCategories/prodAudiences/
+           prodColors by syncProductFilterCheckboxes() rather than rebuilding
+           this markup, so an open <details> section doesn't snap shut every
+           time a filter changes. -->
+      <aside class="filter-sidebar card card-pad" id="prodFilterSidebar"></aside>
+
+      <div class="products-main">
+        <div class="search-row">
+          <input type="search" class="inp" id="prodSearch" placeholder="Search tees, hoodies, jerseys…" oninput="renderProducts()">
+          <select id="prodSort" onchange="renderProducts()" style="max-width:200px">
+            <option value="popular">Sort: Popular</option>
+            <option value="low">Price: low to high</option>
+            <option value="high">Price: high to low</option>
+            <option value="rated">Best rated</option>
+          </select>
+        </div>
+        <div class="grid grid-3" id="productGrid"></div>
+      </div>
     </div>
-    <div class="filters" id="prodAudienceFilters"></div>
-    <div class="filters" id="prodFilters"></div>
-    <div class="grid grid-4" id="productGrid"></div>
   </div>
 </section>
 

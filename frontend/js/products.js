@@ -86,12 +86,79 @@ const AUDIENCES=[
   {key:'women', label:'Women'},
   {key:'kids',  label:'Kids'},
 ];
-let prodCategory='all';
-let prodAudience='all';
+/* Checkbox facets, not single-select pills — empty Set means "no filter
+   on this facet", not "nothing matches". A checked box means "include
+   this", so multiple checked boxes in one facet are OR'd together
+   (checking Tees and Polos shows both), while separate facets AND
+   together (Tees + Men shows only men's tees). */
+let prodCategories=new Set();
+let prodAudiences=new Set();
+let prodColors=new Set();
 let reviewSummary={};   // filled by loadReviewSummary()
 
-function setCategory(k){ prodCategory=k; renderProducts(); }
-function setAudience(k){ prodAudience=k; renderProducts(); }
+/* Flips one checkbox's value in the right Set and re-renders just the
+   grid — the sidebar markup itself never needs rebuilding for this, so
+   an open <details> section and scroll position survive every click. */
+function onProdFilterChange(el){
+  const set = el.dataset.group==='category' ? prodCategories
+            : el.dataset.group==='audience' ? prodAudiences : prodColors;
+  if(el.checked) set.add(el.value); else set.delete(el.value);
+  renderProducts();
+}
+
+function clearProductFilters(){
+  prodCategories=new Set(); prodAudiences=new Set(); prodColors=new Set();
+  const s=document.getElementById('prodSearch'); if(s) s.value='';
+  syncProductFilterCheckboxes();
+  renderProducts();
+}
+
+/* Reflects the three Sets onto the checkboxes already in the DOM —
+   used after browseCategory()/clearProductFilters() change the Sets
+   programmatically, since a user click already updates its own checkbox
+   natively and doesn't need this. */
+function syncProductFilterCheckboxes(){
+  document.querySelectorAll('#prodFilterSidebar input[type=checkbox]').forEach(el=>{
+    const set = el.dataset.group==='category' ? prodCategories
+              : el.dataset.group==='audience' ? prodAudiences : prodColors;
+    el.checked = set.has(el.value);
+  });
+}
+
+function renderProductFilterSidebar(){
+  const el=document.getElementById('prodFilterSidebar'); if(!el) return;
+  const checkRow=(group,value,label,extra)=>`
+    <label class="filter-check">
+      <input type="checkbox" data-group="${group}" value="${esc(value)}" onchange="onProdFilterChange(this)">
+      ${extra||''}<span>${esc(label)}</span>
+    </label>`;
+  el.innerHTML=`
+    <details class="acc" open><summary>Category</summary>
+      <div class="filter-check-list">
+        ${CATEGORIES.filter(c=>c.key!=='all').map(c=>{
+          const n=PRODUCTS.filter(p=>p.category===c.key).length;
+          return checkRow('category',c.key,`${c.label} (${n})`);
+        }).join('')}
+      </div>
+    </details>
+    <details class="acc" open><summary>Shop for</summary>
+      <div class="filter-check-list">
+        ${AUDIENCES.filter(a=>a.key!=='all').map(a=>{
+          const n=PRODUCTS.filter(p=>p.audience===a.key).length;
+          return checkRow('audience',a.key,`${a.label} (${n})`);
+        }).join('')}
+      </div>
+    </details>
+    <details class="acc" open><summary>Colour</summary>
+      <div class="filter-check-list">
+        ${CATALOG.colors.map(c=>
+          checkRow('color',c.hex,c.name,
+            `<span class="swatch-dot" style="background:${esc(c.hex)}"></span>`)
+        ).join('')}
+      </div>
+    </details>
+    <button class="btn btn-quiet btn-sm btn-block" onclick="clearProductFilters()">Clear filters</button>`;
+}
 
 async function loadReviewSummary(){
   try{
@@ -133,23 +200,19 @@ function starsFor(pid){
 
 function renderProducts(){
   const g=document.getElementById('productGrid'); if(!g) return;
-
-  const abar=document.getElementById('prodAudienceFilters');
-  if(abar) abar.innerHTML=AUDIENCES.map(a=>
-    `<button class="pill${a.key===prodAudience?' on':''}" onclick="setAudience('${a.key}')">${a.label}</button>`).join('');
-
-  const fbar=document.getElementById('prodFilters');
-  if(fbar) fbar.innerHTML=CATEGORIES.map(c=>
-    `<button class="pill${c.key===prodCategory?' on':''}" onclick="setCategory('${c.key}')">${c.label}</button>`).join('');
+  if(!document.getElementById('prodFilterSidebar').innerHTML) renderProductFilterSidebar();
 
   const term=(document.getElementById('prodSearch')?.value||'').trim().toLowerCase();
   const sort=document.getElementById('prodSort')?.value||'popular';
 
   let list=PRODUCTS.filter(p=>{
-    if(prodCategory!=='all' && p.category!==prodCategory) return false;
-    // Audience tabs show the exact cut requested. Unisex products remain
-    // under Everyone instead of leaking jerseys and bags into Women/Kids.
-    if(prodAudience!=='all' && p.audience!==prodAudience) return false;
+    if(prodCategories.size && !prodCategories.has(p.category)) return false;
+    // Unisex products remain visible under no audience filter rather than
+    // leaking jerseys and bags into a checked Men/Women/Kids box — they
+    // simply aren't tagged with any of the three, so the audience facet
+    // correctly excludes them once anything there is checked.
+    if(prodAudiences.size && !prodAudiences.has(p.audience)) return false;
+    if(prodColors.size && !(p.colors||[]).some(hex=>prodColors.has(hex))) return false;
     return !term || p.name.toLowerCase().includes(term);
   });
   const rating=p=>reviewSummary[p.id]?.average||0;
@@ -162,7 +225,7 @@ function renderProducts(){
       <span class="material-symbols-outlined">search_off</span><br>
       Nothing matches that.<br>
       <button class="btn btn-quiet btn-sm" style="margin-top:16px"
-        onclick="document.getElementById('prodSearch').value='';setCategory('all')">Clear filters</button></div>`;
+        onclick="clearProductFilters()">Clear filters</button></div>`;
     return;
   }
 
@@ -180,7 +243,10 @@ const CATEGORY_ICON={tees:'checkroom',polos:'checkroom',hoodies:'dry_cleaning',
 const AUDIENCE_ICON={men:'man',women:'woman',kids:'child_care'};
 
 function browseCategory(audience,category){
-  prodAudience=audience; prodCategory=category;
+  prodAudiences = audience==='all' ? new Set() : new Set([audience]);
+  prodCategories = category==='all' ? new Set() : new Set([category]);
+  prodColors = new Set();
+  syncProductFilterCheckboxes();
   go('products');
 }
 
