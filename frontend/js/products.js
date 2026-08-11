@@ -184,10 +184,10 @@ function renderProof(){
     ? `<div class="row"><span class="stars">${'★'.repeat(Math.round(avg))}${'☆'.repeat(5-Math.round(avg))}</span>
          <b>${avg.toFixed(1)}</b>
          <span class="t-label t-mut">from ${count} verified ${count===1?'review':'reviews'}</span></div>
-       <span class="t-label t-mut">Every review is from a confirmed order</span>`
-    : `<span class="t-label t-mut"><span class="t-lime">✓</span> 48-hour dispatch from Pune</span>
-       <span class="t-label t-mut"><span class="t-lime">✓</span> Digital proof before we print</span>
-       <span class="t-label t-mut"><span class="t-lime">✓</span> Single-piece orders welcome</span>`;
+       <span class="proof-badge"><span class="material-symbols-outlined">verified</span><span>Every review from a confirmed order</span></span>`
+    : `<span class="proof-badge"><span class="material-symbols-outlined">bolt</span><span>48-hour dispatch from Pune</span></span>
+       <span class="proof-badge"><span class="material-symbols-outlined">verified</span><span>Digital proof before we print</span></span>
+       <span class="proof-badge"><span class="material-symbols-outlined">package_2</span><span>Single-piece orders welcome</span></span>`;
 }
 
 function starsFor(pid){

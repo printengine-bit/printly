@@ -59,11 +59,53 @@
 .hero-stage canvas{width:100%;max-width:320px;height:auto;position:relative;z-index:1}
 
 .proof{
-  display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;
-  padding:16px 24px;background:var(--surface-container-lowest);
+  display:flex;align-items:center;justify-content:center;gap:44px;flex-wrap:wrap;
+  padding:20px 24px;background:var(--surface-container-lowest);
   border-top:1px solid var(--outline-variant);border-bottom:1px solid var(--outline-variant);
 }
 .stars{color:var(--lime-ink);letter-spacing:2px;font-size:14px}
+.proof-badge{display:flex;align-items:center;gap:10px}
+.proof-badge .material-symbols-outlined{font-size:20px;color:var(--on-surface-variant)}
+.proof-badge span:last-child{
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--on-surface);
+}
+
+/* Full-bleed editorial lifestyle banner — self-hosted still from the
+   Stitch export (img/marketing/hero-editorial.jpg), not hotlinked, since
+   the source URL is a temporary Google-hosted preview. The image is only
+   512px wide natively, hence the dark scrim: it hides the upscale softness
+   and doubles as text contrast. Swap for real photography when available. */
+.editorial-banner{
+  position:relative;display:block;aspect-ratio:21/9;border-radius:var(--r-lg);
+  overflow:hidden;background:var(--surface-container);
+}
+.editorial-banner img{
+  width:100%;height:100%;object-fit:cover;object-position:center 30%;
+  transition:transform .6s ease;
+}
+.editorial-banner:hover img{transform:scale(1.04)}
+.editorial-banner::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(0deg,rgba(10,10,10,.78) 0%,rgba(10,10,10,.2) 55%,transparent 78%);
+}
+.editorial-banner-copy{
+  position:absolute;left:0;right:0;bottom:0;padding:36px;z-index:1;
+  display:flex;flex-direction:column;gap:10px;align-items:flex-start;
+}
+.editorial-banner-eyebrow{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.78)}
+.editorial-banner-title{font-family:var(--ff-display);font-size:clamp(22px,4vw,36px);font-weight:700;color:#fff;line-height:1.15}
+.editorial-banner-cta{
+  display:inline-flex;align-items:center;gap:6px;margin-top:4px;
+  font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;
+  border-bottom:1px solid rgba(255,255,255,.6);padding-bottom:3px;width:fit-content;
+  transition:border-color .18s;
+}
+.editorial-banner-cta .material-symbols-outlined{font-size:18px}
+.editorial-banner:hover .editorial-banner-cta{border-color:#fff}
+@media(max-width:640px){
+  .editorial-banner{aspect-ratio:4/5}
+  .editorial-banner-copy{padding:22px}
+}
 
 
 .home-category-section{padding-top:64px;padding-bottom:64px}
