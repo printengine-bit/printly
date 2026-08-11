@@ -74,7 +74,7 @@ async function loadAddresses(){
 }
 
 async function renderAddressTab(el){
-  el.innerHTML='<div class="empty">Loading…</div>';
+  el.innerHTML=skeletonListCards(2);
   await loadAddresses();
   if(state.accountTab!=='addresses') return;   // tab changed while awaiting
   if(state._addrEditing!==null){ el.innerHTML=addressFormHtml(); return; }

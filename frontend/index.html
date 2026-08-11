@@ -477,6 +477,7 @@
           <button onclick="openTextTool()"><span class="material-symbols-outlined">title</span>Add text</button>
           <button onclick="openAiTool()"><span class="material-symbols-outlined">auto_awesome</span>AI design</button>
           <button id="btnPreview" onclick="togglePreview()"><span class="material-symbols-outlined">visibility</span>Preview</button>
+          <button onclick="openZoomLightbox()"><span class="material-symbols-outlined">zoom_in</span>Zoom</button>
         </div>
         <div class="print-view-tabs" id="printViewTabs"></div>
         <div class="utility-rail" id="utilityRail" aria-label="Editor utilities">
@@ -826,6 +827,15 @@
     <button class="btn btn-primary btn-block" style="margin-top:8px" id="resetBtn" onclick="doReset()">Save password →</button>
     <p class="t-mut" style="font-size:13px;margin-top:16px;text-align:center" id="resetMsg"></p>
   </div>
+</div>
+
+<!-- ══════════════ PRODUCT ZOOM ══════════════
+     Image is captured from the live canvas via captureThumb() (studio.js)
+     — clean garment + artwork only, no selection chrome or guides — never
+     a raw cv.toDataURL() call, which would bake in whatever's selected. -->
+<div class="modal-bg zoom-lightbox" id="zoomLightbox" onclick="if(event.target===this) closeZoomLightbox()">
+  <button class="modal-x" onclick="closeZoomLightbox()" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
+  <img id="zoomLightboxImg" alt="Zoomed product view">
 </div>
 
 <!-- ══════════════ TEMPLATE PICKER ══════════════ -->

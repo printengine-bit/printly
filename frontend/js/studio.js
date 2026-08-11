@@ -1262,6 +1262,20 @@ function captureThumb(type='image/jpeg', quality=0.7){
   return data;
 }
 
+/* "Inspect closely" for a customer, not a tool for editing — a full-size
+   lossless capture of exactly what's on the garment right now, reusing
+   captureThumb() rather than cv.toDataURL() directly for the same reason
+   every other capture site does: draw() paints selection handles and
+   guides that have no business appearing in what the customer sees. */
+function openZoomLightbox(){
+  const data = captureThumb('image/png', 1);
+  document.getElementById('zoomLightboxImg').src = data;
+  document.getElementById('zoomLightbox').classList.add('on');
+}
+function closeZoomLightbox(){
+  document.getElementById('zoomLightbox').classList.remove('on');
+}
+
 /* ── print-ready export ──────────────────────────────────────────
    captureThumb() gives a picture of a t-shirt; production needs the
    artwork alone, on transparency, at a resolution worth printing. This

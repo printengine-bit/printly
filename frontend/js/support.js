@@ -12,7 +12,7 @@ async function renderHelp(){
   const el = document.getElementById('helpBody');
   if(!el) return;
   if(!state.user){ el.innerHTML=''; return; }
-  el.innerHTML = '<p class="t-dim" style="font-size:13px">Loading…</p>';
+  el.innerHTML = skeletonLines(2);
   let tickets = [];
   try{
     const res = await fetch(BACKEND+'/api/support/tickets', {credentials:'include'});

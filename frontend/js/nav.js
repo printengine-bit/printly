@@ -74,5 +74,5 @@ document.addEventListener('click',e=>{
   if(menu && !menu.contains(e.target)) closeUserMenu();
 });
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){ closeHeaderSearch(); closeUserMenu(); }
+  if(e.key==='Escape'){ closeHeaderSearch(); closeUserMenu(); closeZoomLightbox(); }
 });

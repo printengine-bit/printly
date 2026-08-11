@@ -34,6 +34,35 @@ function esc(s){
   ));
 }
 
+/* ── Skeleton loading states ─────────────────────────────────────
+   Shape-matched placeholders shown while a fetch is in flight, instead
+   of bare "Loading…" text. Not tied to real data, so they're safe to
+   call before anything has been fetched. */
+function skeletonLines(n=3){
+  return `<div>${Array.from({length:n},(_,i)=>
+    `<div class="skeleton" style="height:14px;width:${i===n-1?'55%':'100%'};margin-bottom:10px"></div>`
+  ).join('')}</div>`;
+}
+function skeletonListCards(n=2){
+  return `<div class="stack" style="gap:12px">${Array.from({length:n},()=>`
+    <div class="card skel-card">
+      <div class="row" style="justify-content:space-between;margin-bottom:14px">
+        <div class="skeleton" style="height:16px;width:100px"></div>
+        <div class="skeleton" style="height:22px;width:74px;border-radius:var(--r-full)"></div>
+      </div>
+      <div class="skeleton" style="height:12px;width:75%;margin-bottom:16px"></div>
+      <div class="skeleton" style="height:38px;width:100%"></div>
+    </div>`).join('')}</div>`;
+}
+function skeletonPhotoCards(n=4){
+  return `<div class="grid grid-4">${Array.from({length:n},()=>`
+    <div class="card skel-card">
+      <div class="skeleton skel-photo"></div>
+      <div class="skeleton" style="height:14px;width:80%;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:12px;width:50%"></div>
+    </div>`).join('')}</div>`;
+}
+
 /* ── Sizing ───────────────────────────────────────────────────────
    Whether a product is sized is a property of the product now (a tote is
    one-size, a hoodie isn't), so it comes from the catalogue rather than a

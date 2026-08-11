@@ -463,6 +463,13 @@ input:-webkit-autofill:focus{
 }
 .modal-x:hover{background:var(--surface-container-highest);color:var(--primary)}
 
+/* ── Product zoom ─────────────────────────────────────────────── */
+.zoom-lightbox img{
+  max-width:min(90vw,720px);max-height:86vh;
+  background:#fff;border-radius:var(--r-md);
+  box-shadow:var(--shadow-card);
+}
+
 /* ── Toast ────────────────────────────────────────────────────── */
 .toast{
   position:fixed;bottom:24px;left:50%;z-index:200;
@@ -565,6 +572,27 @@ input:-webkit-autofill:focus{
 
 /* ── Empty state ──────────────────────────────────────────────── */
 .empty{padding:80px 24px;text-align:center;color:var(--on-surface-variant)}
+
+/* ── Skeleton loading states ──────────────────────────────────────
+   Replaces bare "Loading…" text — shapes built from this in data.js
+   (skeletonLines/skeletonPhotoCards/skeletonListCards). */
+.skeleton{
+  background:linear-gradient(90deg,
+    var(--surface-container-low) 25%, var(--surface-container-high) 37%,
+    var(--surface-container-low) 63%);
+  background-size:400% 100%;
+  animation:skeleton-shimmer 1.4s ease infinite;
+  border-radius:var(--r-sm);
+}
+@keyframes skeleton-shimmer{
+  0%{background-position:100% 50%}
+  100%{background-position:0 50%}
+}
+@media(prefers-reduced-motion:reduce){
+  .skeleton{animation:none}
+}
+.skel-card{padding:16px 18px}
+.skel-photo{aspect-ratio:1/1;border-radius:var(--r-sm);margin-bottom:12px}
 .empty .material-symbols-outlined{font-size:56px;color:var(--outline);margin-bottom:16px}
 
 /* ── Scrollbar ────────────────────────────────────────────────── */

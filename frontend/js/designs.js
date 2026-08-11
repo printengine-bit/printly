@@ -124,7 +124,7 @@ async function renderDesigns(){
       <button class="btn btn-primary" onclick="openLogin()">Sign in</button></div>`;
     return;
   }
-  el.innerHTML='<div class="empty">Loading…</div>';
+  el.innerHTML=skeletonPhotoCards(4);
   let designs=[];
   try{
     const res=await fetch(BACKEND+'/api/designs/mine',{credentials:'include'});
@@ -159,7 +159,7 @@ async function openTemplates(){
   const m=document.getElementById('templateModal');
   const body=document.getElementById('templateBody');
   m.classList.add('on');
-  body.innerHTML='<div class="empty">Loading…</div>';
+  body.innerHTML=skeletonPhotoCards(4);
   try{
     const res=await fetch(BACKEND+'/api/designs/templates');
     const d=await res.json();

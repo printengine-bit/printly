@@ -645,7 +645,7 @@ async function renderOrders(){
       <button class="btn btn-primary" onclick="openLogin()">Sign in →</button></div>`;
     return;
   }
-  el.innerHTML='<div class="empty">Loading…</div>';
+  el.innerHTML=skeletonListCards(3);
   let orders=[];
   try{
     const res=await fetch(BACKEND+'/api/orders/mine',{credentials:'include'});
