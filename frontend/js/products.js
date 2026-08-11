@@ -240,6 +240,14 @@ function renderProducts(){
    list of categories, not two that can drift. */
 const CATEGORY_ICON={tees:'checkroom',polos:'checkroom',hoodies:'dry_cleaning',
   sweatshirts:'styler',jerseys:'sports_score',bags:'shopping_bag'};
+/* Real studio photography, one per category — supplied directly, not
+   scraped from any design-tool preview. Falls back to the canvas-rendered
+   garment thumb (see below) for any category without a photo yet. */
+const CATEGORY_PHOTO={
+  tees:'img/category/tees.jpg', polos:'img/category/polos.jpg',
+  hoodies:'img/category/hoodies.jpg', sweatshirts:'img/category/sweatshirts.jpg',
+  jerseys:'img/category/jerseys.jpg',
+};
 const AUDIENCE_ICON={men:'man',women:'woman',kids:'child_care'};
 
 function browseCategory(audience,category){
@@ -291,20 +299,21 @@ const COMING_SOON_CATEGORIES = [
 ];
 
 /* Editorial 4:5 photo cards — "Customize Clothing" pattern from the
-   Industrial Editorial reference. One card per real category (canvas-
-   rendered garment thumb, same technique as everywhere else — never a
-   raw <img>, see mockups.js), plus any not-yet-real categories above.
-   Placeholder art until real category photography is supplied; swapping
-   in a photo later is a `rep` lookup change here, not a markup change. */
+   Industrial Editorial reference. Real studio photo where CATEGORY_PHOTO
+   has one; otherwise the canvas-rendered garment thumb (same technique
+   as everywhere else — never a raw <img> — see mockups.js) as a
+   fallback for categories without photography yet. */
 function renderCategoryScrollRow(){
   const cBar=document.getElementById('homeCategoryTiles'); if(!cBar) return;
   const real=CATEGORIES.filter(c=>c.key!=='all').map(c=>{
-    const rep=_repProduct(p=>p.category===c.key);
+    const photo=CATEGORY_PHOTO[c.key];
+    const rep=photo ? null : _repProduct(p=>p.category===c.key);
     return `
     <a class="cat-editorial-card" href="#" onclick="browseCategory('all','${c.key}');return false"
       aria-label="Browse ${esc(c.label)}">
       <span class="cat-editorial-photo">
-        ${rep ? `<canvas class="pthumb" data-p="${rep.id}" width="320" height="400"></canvas>`
+        ${photo ? `<img src="${photo}" alt="" loading="lazy">`
+        : rep ? `<canvas class="pthumb" data-p="${rep.id}" width="320" height="400"></canvas>`
               : `<span class="material-symbols-outlined">${CATEGORY_ICON[c.key]||'checkroom'}</span>`}
       </span>
       <span class="cat-editorial-title">

@@ -105,42 +105,51 @@
 
 <!-- ══════════════ HOME ══════════════ -->
 <section class="view on" id="v-home">
+  <!-- Stitch "Hero Banner" pattern, replicated exactly: a full-bleed
+       21:9 (24:7 on desktop) image with carousel dots and no text
+       overlay — the export's own hero-banner carries no headline.
+       Page H1 + value prop + the live customizer live in the grid
+       section right below instead, so the page still has real above-
+       the-fold copy and only one H1. -->
   <div class="hero-band" id="heroBand">
-  <div class="wrap">
-    <div class="hero">
-      <div class="hero-copy">
-        <span class="badge badge-outline">Custom printing · Pune → All India</span>
-        <h1 class="t-hero">
-          Design it in minutes.<br><span class="t-lime">Wear it in 48 hours.</span>
-        </h1>
-        <p class="t-body-lg t-mut hero-lede">
-          Your brand. Your story. Printed. The high-velocity drop culture for
-          creators and crews — premium quality at lightning speed.
-        </p>
-        <div class="hero-actions">
-          <button class="btn btn-primary" onclick="go('products')">
-            Start designing <span class="material-symbols-outlined">arrow_forward</span>
-          </button>
-        </div>
-        <div class="hero-stats">
-          <div><b>48 hrs</b><span>Express delivery</span></div>
-          <div><b>40–60%</b><span>Bulk savings</span></div>
-          <div><b>1 pc</b><span>No minimums</span></div>
-        </div>
-      </div>
-      <button class="hero-product" onclick="openProduct('hd')" aria-label="Customise the featured hoodie">
-        <span class="hero-product-top">
-          <span class="badge badge-lime">Custom hoodie</span>
-          <span class="hero-product-link">Make yours <span class="material-symbols-outlined">arrow_outward</span></span>
-        </span>
-        <canvas id="heroHoodie" width="440" height="440" aria-hidden="true"></canvas>
-        <span class="hero-product-caption">
-          <b>Your design, live on the garment.</b>
-          <small>Front, back and sleeve printing available</small>
-        </span>
-      </button>
-    </div>
+    <a class="stitch-hero" href="#" onclick="go('products');return false" aria-label="Shop all products">
+      <img class="stitch-hero-img" src="img/marketing/hero-group.jpg" alt="" loading="eager">
+      <div class="stitch-hero-dots"><span></span><span></span><span></span></div>
+    </a>
   </div>
+
+  <div class="wrap hero">
+    <div class="hero-copy">
+      <span class="badge badge-outline">Custom printing · Pune → All India</span>
+      <h1 class="t-hero">
+        Design it in minutes.<br><span class="t-lime">Wear it in 48 hours.</span>
+      </h1>
+      <p class="t-body-lg t-mut hero-lede">
+        Your brand. Your story. Printed. The high-velocity drop culture for
+        creators and crews — premium quality at lightning speed.
+      </p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" onclick="go('products')">
+          Start designing <span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+      </div>
+      <div class="hero-stats">
+        <div><b>48 hrs</b><span>Express delivery</span></div>
+        <div><b>40–60%</b><span>Bulk savings</span></div>
+        <div><b>1 pc</b><span>No minimums</span></div>
+      </div>
+    </div>
+    <button class="hero-product" onclick="openProduct('hd')" aria-label="Customise the featured hoodie">
+      <span class="hero-product-top">
+        <span class="badge badge-lime">Custom hoodie</span>
+        <span class="hero-product-link">Make yours <span class="material-symbols-outlined">arrow_outward</span></span>
+      </span>
+      <canvas id="heroHoodie" width="440" height="440" aria-hidden="true"></canvas>
+      <span class="hero-product-caption">
+        <b>Your design, live on the garment.</b>
+        <small>Front, back and sleeve printing available</small>
+      </span>
+    </button>
   </div>
 
   <div class="proof wrap" id="homeProof"></div>
@@ -177,17 +186,6 @@
       <a class="label-caps-link" href="#" onclick="go('products');return false">View all categories</a>
     </div>
     <div class="cat-editorial-grid" id="homeCategoryTiles"></div>
-  </div>
-
-  <div class="wrap section" style="padding-top:0">
-    <a class="editorial-banner" href="#" onclick="go('products');return false" aria-label="Shop premium blank apparel">
-      <img src="img/marketing/hero-editorial.jpg" alt="" loading="lazy">
-      <div class="editorial-banner-copy">
-        <span class="editorial-banner-eyebrow">Premium blanks · printed by us</span>
-        <h2 class="editorial-banner-title">Built for the drop.<br>Made to last.</h2>
-        <span class="editorial-banner-cta">Shop the range <span class="material-symbols-outlined">arrow_forward</span></span>
-      </div>
-    </a>
   </div>
 
   <!-- Hidden by renderHomeNewArrivals() when the catalogue has nothing to
