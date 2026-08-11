@@ -1,5 +1,21 @@
 /* ═══════════════ NAV ═══════════════ */
 
+/* Auto-loops the homepage hero slides — each slide's image and copy
+   crossfade together as one unit (see .stitch-hero-slide, pages.css),
+   so text never lags behind or shows over the wrong photo. No dots;
+   the loop itself is the only indicator, matching what was asked for. */
+function initHeroSlideshow(){
+  const slides = document.querySelectorAll('#stitchHero .stitch-hero-slide');
+  if (slides.length < 2) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let i = 0;
+  setInterval(()=>{
+    slides[i].classList.remove('is-active');
+    i = (i + 1) % slides.length;
+    slides[i].classList.add('is-active');
+  }, 5000);
+}
+
 function go(v){
   /* There is no Studio *destination* any more — the editor is mounted into
      the PDP, so designing always starts from picking a product. Nothing in

@@ -2,6 +2,7 @@
 initStudio(); renderSizeGrid(); draw(); renderProducts(); applyAuthUI(); checkSession();
 renderHomeCategories(); renderHomeProducts(); renderHomeBestSellers(); renderHomeNewArrivals(); renderHomeDeals();
 renderHeaderCatNav();
+initHeroSlideshow();
 enhancePasswordFields();
 initReset();                 // opens the reset form if the URL carries ?reset=
 applyTheme();

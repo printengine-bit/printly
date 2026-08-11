@@ -8,23 +8,42 @@
 /* Full-bleed band behind the hero. */
 .hero-band{position:relative;overflow:hidden}
 
-/* Stitch "Hero Banner" pattern, replicated exactly: full-bleed image,
-   carousel dots, no text overlay (the export's own hero carries none —
-   its headline copy lives in the grid section below instead). */
+/* Auto-looping hero slideshow — full-bleed image per slide, crossfaded
+   by initHeroSlideshow() (nav.js). No dot indicators. Each slide carries
+   its own image AND copy together so a crossfade never desyncs text
+   from the wrong photo. */
 .stitch-hero{
-  position:relative;display:block;width:100%;overflow:hidden;
+  position:relative;width:100%;overflow:hidden;
   aspect-ratio:21/9;background:var(--surface-container);
 }
-.stitch-hero-img{
-  width:100%;height:100%;object-fit:cover;object-position:center 30%;
-  transition:transform .7s ease;
+.stitch-hero-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease;pointer-events:none}
+.stitch-hero-slide.is-active{opacity:1;pointer-events:auto;z-index:1}
+.stitch-hero-slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%}
+.stitch-hero-slide::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(8,8,8,.62) 0%,rgba(8,8,8,.2) 34%,transparent 56%);
 }
-.stitch-hero:hover .stitch-hero-img{transform:scale(1.05)}
-.stitch-hero-dots{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);display:flex;gap:10px;z-index:1}
-.stitch-hero-dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4)}
-.stitch-hero-dots span:first-child{background:#fff}
+.stitch-hero-copy{
+  position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center;
+  align-items:flex-start;height:100%;max-width:1280px;margin:0 auto;
+  padding:0 var(--container-margin);
+}
+.stitch-hero-eyebrow{
+  font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(255,255,255,.75);margin-bottom:10px;max-width:340px;
+}
+.stitch-hero-title{
+  font-family:var(--ff-display);font-weight:800;color:#fff;line-height:1.25;
+  font-size:clamp(20px,3vw,32px);margin:0;max-width:340px;
+}
 @media(min-width:768px){.stitch-hero{aspect-ratio:24/7}}
-@media(max-width:640px){.stitch-hero{aspect-ratio:4/5}}
+@media(max-width:640px){
+  .stitch-hero{aspect-ratio:5/6}
+  .stitch-hero-slide img{object-position:center 15%}
+  .stitch-hero-slide::after{background:linear-gradient(0deg,rgba(8,8,8,.8) 0%,rgba(8,8,8,.1) 42%,transparent 60%)}
+  .stitch-hero-copy{justify-content:flex-end;padding-bottom:28px}
+  .stitch-hero-eyebrow,.stitch-hero-title{max-width:none}
+}
 
 .hero{
   display:grid;grid-template-columns:minmax(0,1.08fr) minmax(340px,.72fr);

@@ -105,17 +105,35 @@
 
 <!-- ══════════════ HOME ══════════════ -->
 <section class="view on" id="v-home">
-  <!-- Stitch "Hero Banner" pattern, replicated exactly: a full-bleed
-       21:9 (24:7 on desktop) image with carousel dots and no text
-       overlay — the export's own hero-banner carries no headline.
-       Page H1 + value prop + the live customizer live in the grid
-       section right below instead, so the page still has real above-
-       the-fold copy and only one H1. -->
+  <!-- Auto-looping hero slideshow, no dot indicators. Each slide carries
+       its own left-aligned tagline (crossfades with its image so text
+       and photo never fall out of sync — see initHeroSlideshow() in
+       nav.js). Page H1 + value prop + the live customizer live in the
+       grid section right below, so the page keeps one true H1. -->
   <div class="hero-band" id="heroBand">
-    <a class="stitch-hero" href="#" onclick="go('products');return false" aria-label="Shop all products">
-      <img class="stitch-hero-img" src="img/marketing/hero-group.jpg" alt="" loading="eager">
-      <div class="stitch-hero-dots"><span></span><span></span><span></span></div>
-    </a>
+    <div class="stitch-hero" id="stitchHero">
+      <div class="stitch-hero-slide is-active">
+        <img src="img/marketing/hero-slide-1.jpg" alt="" loading="eager">
+        <a class="stitch-hero-copy" href="#" onclick="go('products');return false" aria-label="Shop all products">
+          <span class="stitch-hero-eyebrow">Custom printing · Pune → All India</span>
+          <p class="stitch-hero-title">Design it in minutes.<br>Wear it in 48 hours.</p>
+        </a>
+      </div>
+      <div class="stitch-hero-slide">
+        <img src="img/marketing/hero-slide-2.jpg" alt="" loading="lazy">
+        <a class="stitch-hero-copy" href="#" onclick="go('products');return false" aria-label="Shop all products">
+          <span class="stitch-hero-eyebrow">The workshop · Pune</span>
+          <p class="stitch-hero-title">Your brand. Your story.<br>Printed, not just worn.</p>
+        </a>
+      </div>
+      <div class="stitch-hero-slide">
+        <img src="img/marketing/hero-slide-3.jpg" alt="" loading="lazy">
+        <a class="stitch-hero-copy" href="#" onclick="go('products');return false" aria-label="Shop all products">
+          <span class="stitch-hero-eyebrow">Print anything</span>
+          <p class="stitch-hero-title">Your logo. Your design.<br>Any garment, 48 hours.</p>
+        </a>
+      </div>
+    </div>
   </div>
 
   <div class="wrap hero">
