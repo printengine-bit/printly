@@ -290,41 +290,43 @@ const COMING_SOON_CATEGORIES = [
   {key:'embroidery', label:'Embroidery', icon:'auto_awesome'},
 ];
 
-/* Circular photo strip, one tile per real category (using the same
-   canvas-rendered garment thumb as everywhere else — never a raw <img>,
-   see mockups.js) plus any not-yet-real categories above. Placeholder
-   art until real category photos are supplied; swapping in a photo later
-   is a `rep` lookup change here, not a markup change. */
+/* Editorial 4:5 photo cards — "Customize Clothing" pattern from the
+   Industrial Editorial reference. One card per real category (canvas-
+   rendered garment thumb, same technique as everywhere else — never a
+   raw <img>, see mockups.js), plus any not-yet-real categories above.
+   Placeholder art until real category photography is supplied; swapping
+   in a photo later is a `rep` lookup change here, not a markup change. */
 function renderCategoryScrollRow(){
   const cBar=document.getElementById('homeCategoryTiles'); if(!cBar) return;
   const real=CATEGORIES.filter(c=>c.key!=='all').map(c=>{
     const rep=_repProduct(p=>p.category===c.key);
     return `
-    <button class="cat-circle-tile" onclick="browseCategory('all','${c.key}')"
+    <a class="cat-editorial-card" href="#" onclick="browseCategory('all','${c.key}');return false"
       aria-label="Browse ${esc(c.label)}">
-      <span class="cat-circle-photo">
-        ${rep ? `<canvas class="pthumb" data-p="${rep.id}" width="120" height="120"></canvas>`
+      <span class="cat-editorial-photo">
+        ${rep ? `<canvas class="pthumb" data-p="${rep.id}" width="320" height="400"></canvas>`
               : `<span class="material-symbols-outlined">${CATEGORY_ICON[c.key]||'checkroom'}</span>`}
       </span>
-      <b>${esc(c.label)}</b>
-    </button>`;
+      <span class="cat-editorial-title">
+        <span>${esc(c.label)}</span>
+        <span class="material-symbols-outlined">arrow_forward</span>
+      </span>
+    </a>`;
   }).join('');
   const soon=COMING_SOON_CATEGORIES.map(c=>`
-    <button class="cat-circle-tile" onclick="toast('${esc(c.label)} is coming soon — check back shortly.')"
+    <a class="cat-editorial-card" href="#"
+      onclick="toast('${esc(c.label)} is coming soon — check back shortly.');return false"
       aria-label="${esc(c.label)} — coming soon">
-      <span class="cat-circle-photo cat-circle-soon">
+      <span class="cat-editorial-photo cat-editorial-soon">
         <span class="material-symbols-outlined">${c.icon}</span>
       </span>
-      <b>${esc(c.label)}</b>
-      <span class="t-label t-dim" style="font-size:10px">Coming soon</span>
-    </button>`).join('');
+      <span class="cat-editorial-title">
+        <span>${esc(c.label)}</span>
+        <span class="t-label t-dim" style="font-size:10px">Coming soon</span>
+      </span>
+    </a>`).join('');
   cBar.innerHTML = real + soon;
   document.querySelectorAll('#homeCategoryTiles .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
-}
-
-function scrollCatRow(dir){
-  const row=document.getElementById('homeCategoryTiles'); if(!row) return;
-  row.scrollBy({left: dir*260, behavior:'smooth'});
 }
 
 /* Persistent category nav under the header — same CATEGORIES list the

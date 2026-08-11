@@ -98,37 +98,33 @@
 .aud h3{font-family:var(--ff-display);font-size:22px;font-weight:800;text-transform:uppercase;margin-bottom:6px}
 .aud p{font-size:13.5px;color:var(--on-surface-variant);margin:0}
 
-/* Circular photo strip — "shop by product type", horizontal scroll +
-   arrow, same pattern most print-on-demand storefronts use. */
-.cat-scroll-wrap{display:flex;align-items:center;gap:12px}
-.cat-scroll-row{
-  display:flex;gap:22px;overflow-x:auto;scroll-behavior:smooth;
-  padding:4px 2px 10px;flex:1;min-width:0;
-  scrollbar-width:none;
+/* Editorial 4:5 photo cards — "Customize Clothing" pattern. No card
+   background or border by default (Industrial Editorial's product-card
+   spec: "just the image and a 14px radius") — the image and the title
+   row below it are the whole card. */
+.cat-editorial-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px}
+.cat-editorial-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--gutter)}
+.cat-editorial-card{display:flex;flex-direction:column;gap:16px}
+.cat-editorial-photo{
+  aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;
+  background:var(--surface-container);
+  display:grid;place-items:center;font-size:40px;color:var(--on-surface-variant);
 }
-.cat-scroll-row::-webkit-scrollbar{display:none}
-.cat-circle-tile{
-  display:flex;flex-direction:column;align-items:center;gap:10px;
-  flex:0 0 auto;width:100px;text-align:center;cursor:pointer;
+.cat-editorial-photo canvas{width:100%;height:100%;object-fit:contain;transition:transform .5s ease}
+.cat-editorial-card:hover .cat-editorial-photo canvas{transform:scale(1.05)}
+.cat-editorial-soon{color:var(--outline)}
+.cat-editorial-title{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  font-family:var(--ff-display);font-size:20px;font-weight:600;color:var(--on-surface);
 }
-.cat-circle-photo{
-  width:88px;height:88px;border-radius:50%;overflow:hidden;
-  background:var(--surface-container-lowest);border:1px solid var(--outline-variant);
-  display:grid;place-items:center;font-size:30px;color:var(--lime-ink);
-  transition:border-color .2s ease,transform .2s ease;
+.cat-editorial-title .material-symbols-outlined{
+  color:var(--on-surface-variant);transition:color .18s;font-size:20px;
 }
-.cat-circle-photo canvas{width:100%;height:100%;object-fit:contain}
-.cat-circle-tile:hover .cat-circle-photo,.cat-circle-tile:focus-visible .cat-circle-photo{
-  border-color:var(--lime);transform:scale(1.05);
+.cat-editorial-card:hover .cat-editorial-title .material-symbols-outlined{color:var(--on-surface)}
+@media(max-width:900px){
+  .cat-editorial-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cat-editorial-card:nth-child(n+5){display:none}
 }
-.cat-circle-soon{color:var(--on-surface-variant)}
-.cat-circle-tile b{font-size:12.5px;font-weight:700}
-.cat-scroll-arrow{
-  flex-shrink:0;width:44px;height:44px;border-radius:50%;
-  background:var(--surface-container-lowest);border:1px solid var(--outline-variant);
-  display:grid;place-items:center;color:var(--on-surface);
-}
-.cat-scroll-arrow:hover{border-color:var(--lime);color:var(--lime-ink)}
 
 .deal-card{
   display:flex;align-items:center;gap:14px;padding:16px 18px;

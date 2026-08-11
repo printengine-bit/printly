@@ -6,7 +6,7 @@
 <title>Print Engine — Design & Order Custom Streetwear</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap" rel="stylesheet">
 <!-- Theme must be on <html> before the first paint, or the page flashes the
      wrong palette. Inline and blocking on purpose; js/theme.js owns
@@ -175,16 +175,14 @@
     <h2 class="t-h2">Shop by <span class="t-lime">category</span></h2>
     <p class="t-mut" style="margin:8px 0 24px">Who it's for, and what it is — pick either to start browsing.</p>
     <div class="grid audience-grid" id="homeAudienceTiles"></div>
-    <!-- Placeholder art until real category photos are supplied — see
-         renderHomeCategories() (products.js). Circular photo strip,
-         horizontal scroll + arrow, same pattern as most print-on-demand
-         storefronts use for "shop by product type". -->
-    <div class="cat-scroll-wrap">
-      <div class="cat-scroll-row" id="homeCategoryTiles"></div>
-      <button class="cat-scroll-arrow" onclick="scrollCatRow(1)" aria-label="Show more categories">
-        <span class="material-symbols-outlined">arrow_forward</span>
-      </button>
+    <!-- Editorial 4:5 photo cards — placeholder art (canvas-rendered
+         garment mockups) until real category photography is supplied;
+         see renderCategoryScrollRow() (products.js). -->
+    <div class="cat-editorial-head">
+      <h3 class="t-h3">Customize clothing</h3>
+      <a class="label-caps-link" href="#" onclick="go('products');return false">View all categories</a>
     </div>
+    <div class="cat-editorial-grid" id="homeCategoryTiles"></div>
   </div>
 
   <!-- Hidden by renderHomeNewArrivals() when the catalogue has nothing to

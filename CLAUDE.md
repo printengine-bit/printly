@@ -18,8 +18,13 @@ changed is that they're now *separate* files instead of one 311KB
   so API calls work unchanged on localhost, a tunnel or a real domain.
   Asset URLs carry `?v={{V}}`, substituted server-side — see the
   caching note below.
-- `css/printly.css` — "Streetwear Black" tokens (surfaces, acid lime
-  `#c8f232`, hot pink `#ce0358`) + shared components. `css/studio.css`
+- `css/printly.css` — design tokens + shared components. Dark theme
+  (the bare `:root` block) is still "Streetwear Black" — near-black
+  surfaces, acid lime, magenta. Light theme (`:root[data-theme="light"]`,
+  the storefront default) is "Industrial Editorial" — a warm off-white
+  canvas, near-black ink, the same lime/magenta accents nudged to
+  `#b8f20a`/`#e50068`, Geist typography, 10px control / 14px container
+  radii, and hover-only shadows instead of shadow-by-default. `css/studio.css`
   is the three-column studio, `css/pages.css` the rest.
 - `js/` loads in order and shares global scope (classic scripts, not
   modules): `mockup-data.js` → `data.js` → `mockups.js` → `nav.js` →
@@ -217,7 +222,7 @@ once and an edited stylesheet silently kept serving the cached copy.
 - **`--lime` is a fill, `--lime-ink` is text.** Same for `--pink` /
   `--pink-ink`. The fills stay identical in both themes (lime pill, dark
   text — that's the brand); the ink tokens darken on the light surface
-  because raw `#c8f232` on white is 1.4:1. Never write
+  because raw `#b8f20a` on white is under 2:1. Never write
   `color:var(--lime)`. Same rule for any new hardcoded colour: put it in
   the token block with a light-theme counterpart, or it will be
   invisible in one of the two themes.

@@ -1,14 +1,24 @@
 /* ═══════════════════════════════════════════════════════════════
    PRINT ENGINE — light-first storefront design system
-   Tokens come from the Stitch export (streetwear_black/DESIGN.md).
+   Tokens come from the Stitch export. Two exports now layer on top of
+   each other: the original "Streetwear Black" (dark theme's base) and
+   "Industrial Editorial" (industrial_editorial/DESIGN.md — a warm
+   off-white, Geist-typeset, photography-led direction requested to
+   replace it as the storefront's primary look).
 
-   NOTE on values: DESIGN.md's prose quotes #111111 / #D4FF3F / #FF3B7A,
-   but the tokens the mockups actually render with are #131313 / #c8f232 /
-   #ce0358. The token values win here — they're what the approved screens
-   look like.
+   Rather than build a second, disconnected theme, Industrial Editorial's
+   palette became the LIGHT theme (it's explicitly light-only in its own
+   spec, and light was already the storefront default — see below), and
+   its lime/magenta accents were carried into the dark theme too, nudged
+   from the old #c8f232/#ce0358 to the new spec's #b8f20a/#e50068. Type
+   scale, radii (10px controls / 14px containers) and shadow softness
+   from the new spec apply to both themes, since neither is theme-specific.
 
    Light mode is the storefront default; dark mode remains user-selectable.
-   Depth comes from restrained tonal layering and clear borders.
+   Depth comes from restrained tonal layering and clear borders, now
+   backed by 1px hairlines rather than shadow by default — shadow is
+   reserved for hover states, per Industrial Editorial's "flat until
+   interactive" elevation rule.
    ═══════════════════════════════════════════════════════════════ */
 
 :root{
@@ -33,19 +43,18 @@
      themes — lime with near-black text on it is the brand. `--lime-ink` is
      lime used as TEXT, which has to darken on a light surface or it's
      unreadable. Same split for pink. Never use --lime for `color:`. */
-  --lime:#c8f232;
-  --lime-ink:#c8f232;
-  --lime-dim:#add500;
-  /* Text on a lime fill. DESIGN.md specifies black text on lime; the
-     export's own on-primary-container (#576c00) only clears ~4.4:1, so use
-     the near-black token instead — same look, ~14:1. */
-  --on-lime:#171e00;
-  --lime-soft:#576c00;
+  --lime:#b8f20a;
+  --lime-ink:#b8f20a;
+  --lime-dim:#9dd100;
+  /* Text on a lime fill — Industrial Editorial's exact "Primary button"
+     spec (#B8F20A bg, #151A10 text), ~14:1 contrast. */
+  --on-lime:#151a10;
+  --lime-soft:#456a0b;
 
-  /* ── Hot pink: reserved for AI features, badges, high-priority alerts ── */
-  --pink:#ce0358;
-  --pink-bright:#ffb1c0;
-  --pink-ink:#ffb1c0;
+  /* ── Magenta: reserved for AI features, badges, high-priority alerts ── */
+  --pink:#e50068;
+  --pink-bright:#ff8fb8;
+  --pink-ink:#ff8fb8;
   --on-pink:#ffe1e5;
 
   /* ── Error ── */
@@ -61,18 +70,26 @@
   --stage:#000;                        /* studio canvas surround */
   --warn-ink:#ffc775;                  /* "early stage" badge */
   --warn-bg:rgba(255,199,117,.15);
-  --tint-lime:rgba(200,242,50,.15);    /* lime wash behind chips/rows */
-  --tint-lime-soft:rgba(200,242,50,.04);
-  --tint-pink:rgba(206,3,88,.18);
+  --tint-lime:rgba(184,242,10,.15);    /* lime wash behind chips/rows */
+  --tint-lime-soft:rgba(184,242,10,.04);
+  --tint-pink:rgba(229,0,104,.18);
   --shadow-card:0 26px 60px rgba(0,0,0,.6);
 
   /* ── Type ── */
-  --ff-display:'Archivo Narrow','Arial Narrow',system-ui,sans-serif;
-  --ff-body:'Inter','Segoe UI',system-ui,sans-serif;
+  /* Geist for both roles — Industrial Editorial is a single-typeface
+     system (its "technical, monospaced-influenced proportions" carry
+     both the display and body role), unlike the old Archivo Narrow +
+     Inter pairing. */
+  --ff-display:'Geist','Inter','Segoe UI',system-ui,sans-serif;
+  --ff-body:'Geist','Inter','Segoe UI',system-ui,sans-serif;
 
   /* ── Radii ── */
-  --r-sm:0.5rem;
-  --r:.75rem;
+  /* --r-sm (10px) is every control (buttons, inputs); --r (14px) is every
+     container (cards) — Industrial Editorial's exact "Soft-Mechanical"
+     numbers. --r-md/lg/xl (bigger panels, modals) are unspecified there
+     and left as they were. */
+  --r-sm:0.625rem;
+  --r:.875rem;
   --r-md:1rem;
   --r-lg:1.5rem;
   --r-xl:2rem;
@@ -84,59 +101,57 @@
   --section-gap:64px;
   --section-gap-sm:32px;
 
-  --glow-lime:0 0 15px rgba(200,242,50,.35);
-  --glow-pink:0 0 15px rgba(206,3,88,.4);
+  --glow-lime:0 0 15px rgba(184,242,10,.35);
+  --glow-pink:0 0 15px rgba(229,0,104,.4);
 }
 
-/* ── Light theme ──────────────────────────────────────────────────
-   Same design, daylight. Only the surface/ink tokens move: lime and pink
-   fills stay exactly as they are, because a lime pill with near-black text
-   is the brand and reads fine on white. What has to change is lime and
-   pink used as *text* (--lime-ink / --pink-ink), and the handful of
-   effects that assumed a dark backdrop — glows become shadows, since a
-   glow on white is invisible.
+/* ── Light theme: Industrial Editorial ──────────────────────────────
+   The storefront default, and where this palette actually lives — the
+   source spec (industrial_editorial/DESIGN.md) is light-only. A warm
+   off-white canvas (not pure white — "more depth, evokes quality paper")
+   with near-black structural text and ink; lime and magenta stay exactly
+   the same fills as the dark theme, because a lime pill with near-black
+   text is the brand regardless of backdrop. What moves is lime/pink used
+   as *text* (--lime-ink / --pink-ink, darkened for contrast on a light
+   surface) and every effect that assumed a dark backdrop — glows become
+   very soft ambient shadows, per Industrial Editorial's "flat until
+   hover" elevation rule (12px blur / 2px Y / 4% opacity).
 
-   `data-theme` is stamped on <html> by js/theme.js before first paint.
-   ────────────────────────────────────────────────────────────────── */
+   `data-theme` is stamped on <html> by js/theme.js before first paint. */
 :root[data-theme="light"]{
-  /* Neutral daylight surfaces keep product photos and buying controls
-     visually dominant. Brand colour is concentrated in active states
-     instead of tinting every square centimetre of the page. */
-  --surface:#f4f5ef;
+  --surface:#fcf9f6;
   --surface-container-lowest:#ffffff;
-  --surface-container-low:#fafbf7;
-  --surface-container:#f6f7f1;
-  --surface-container-high:#eef1e6;
-  --surface-container-highest:#e3e7d8;
+  --surface-container-low:#f6f3f1;
+  --surface-container:#f0edeb;
+  --surface-container-high:#ebe8e5;
+  --surface-container-highest:#e5e2e0;
   --surface-bright:#ffffff;
 
-  --on-surface:#191a14;
-  --on-surface-variant:#4c5142;
-  /* #6f7464 lands at 4.41:1 here — just under AA, and `.t-dim` carries
-     real content (timestamps, hints), so it has to clear it. */
-  --outline:#616655;
-  --outline-variant:#ccd2b8;
-  --primary:#17171a;
+  --on-surface:#1c1c1a;
+  --on-surface-variant:#454841;
+  --outline:#767870;
+  --outline-variant:#c6c7be;
+  --primary:#000000;
 
-  /* ~7:1 on the light surface; the raw #c8f232 manages 1.4:1 and is
-     unreadable as text here. */
-  --lime-ink:#4a6600;
-  --pink-ink:#a10244;
-  --pink-bright:#a10244;
+  /* Secondary green (#456a0b) doubles as lime-text — same number
+     Industrial Editorial uses for secondary buttons/badges, ~7:1 here. */
+  --lime-ink:#456a0b;
+  --pink-ink:#b3004f;
+  --pink-bright:#b3004f;
 
-  --scrim:rgba(23,26,16,.45);
+  --scrim:rgba(28,28,26,.45);
   --hdr-bg:rgba(255,255,255,.92);
   --sheet-bg:rgba(255,255,255,.94);
-  --stage:#eef1e7;
+  --stage:#f0edeb;
   --warn-ink:#7a4b00;
   --warn-bg:rgba(255,199,117,.35);
-  --tint-lime:rgba(139,176,0,.18);
-  --tint-lime-soft:rgba(139,176,0,.07);
-  --tint-pink:rgba(206,3,88,.12);
-  --shadow-card:0 12px 30px rgba(23,23,20,.10);
+  --tint-lime:rgba(69,106,11,.18);
+  --tint-lime-soft:rgba(69,106,11,.07);
+  --tint-pink:rgba(229,0,104,.12);
+  --shadow-card:0 2px 12px rgba(23,23,20,.04);
 
   --glow-lime:0 6px 18px rgba(23,23,20,.12);
-  --glow-pink:0 6px 18px rgba(206,3,88,.18);
+  --glow-pink:0 6px 18px rgba(229,0,104,.18);
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -168,6 +183,14 @@ a{color:inherit;text-decoration:none}
 .t-h3{font-family:var(--ff-display);font-size:24px;font-weight:700;line-height:1.2}
 .t-body-lg{font-size:18px;line-height:1.6}
 .t-label{font-size:12px;font-weight:600;line-height:1;letter-spacing:.05em;text-transform:uppercase}
+/* "VIEW ALL CATEGORIES" pattern — label-caps sitting on an underline,
+   the tertiary/ghost link treatment Industrial Editorial specifies. */
+.label-caps-link{
+  font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--on-surface);border-bottom:1px solid var(--on-surface);padding-bottom:2px;
+  transition:color .18s,border-color .18s;
+}
+.label-caps-link:hover{color:var(--lime-ink);border-color:var(--lime-ink)}
 .t-mut{color:var(--on-surface-variant)}
 .t-dim{color:var(--outline)}
 .t-lime{color:var(--lime-ink)}
@@ -369,13 +392,20 @@ body.pdp-active #pdpBody .crumb{margin-bottom:9px;white-space:nowrap;overflow:hi
   transition:border-color .18s,box-shadow .18s,transform .18s;
 }
 .card-pad{padding:22px}
-.card-hover:hover{border-color:var(--outline);box-shadow:0 8px 22px rgba(23,23,20,.09)}
+/* Hover-only elevation, not shadow-by-default — Industrial Editorial's
+   "flat until interactive" rule. var(--shadow-card), not a hardcoded
+   value, so it's the correct softness in both themes (dark keeps the
+   original deep shadow; light is the new, much subtler one). */
+.card-hover:hover{border-color:var(--outline);box-shadow:var(--shadow-card)}
 .card-lift:hover{transform:translateY(-2px)}
 
 /* ── Badges ───────────────────────────────────────────────────── */
+/* Sharp 2px corners on purpose — deliberately sharper than the 10px
+   buttons/14px cards around them, "Soft-Mechanical" per the design spec:
+   status chips read as mechanical/precise, everything else as tactile. */
 .badge{
   display:inline-flex;align-items:center;gap:6px;
-  padding:5px 12px;border-radius:var(--r-full);
+  padding:5px 12px;border-radius:2px;
   font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1;
 }
 .badge-lime{background:var(--lime);color:var(--on-lime)}
