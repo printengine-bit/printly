@@ -1,14 +1,4 @@
 /* ═══════════════ NAV ═══════════════ */
-/* Reads the real free-shipping threshold off TAX (data.js), which is the
-   same company row checkout prices against — never a separate hardcoded
-   figure that could say one thing here and charge another at the cart. */
-function renderPromoBar(){
-  const el=document.getElementById('promoBar'); if(!el) return;
-  const over=TAX.free_shipping_over;
-  el.textContent = over
-    ? `Free shipping on orders over ₹${over.toLocaleString('en-IN')} · No minimum order quantity`
-    : `No minimum order quantity — single pieces welcome`;
-}
 
 function go(v){
   /* There is no Studio *destination* any more — the editor is mounted into
