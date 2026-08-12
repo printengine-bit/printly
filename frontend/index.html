@@ -54,8 +54,8 @@
       <span class="material-symbols-outlined">search</span>
       <input type="search" id="hdrSearchInput" placeholder="Search tees, hoodies, jerseys…"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        readonly onfocus="this.removeAttribute('readonly'); onHeaderSearchInput(this.value)"
         oninput="onHeaderSearchInput(this.value)"
-        onfocus="onHeaderSearchInput(this.value)"
         onkeydown="if(event.key==='Enter') submitHeaderSearch(this.value)">
       <div class="hdr-search-results" id="hdrSearchResults"></div>
     </div>
@@ -288,7 +288,10 @@
 
       <div class="products-main">
         <div class="search-row">
-          <input type="search" class="inp" id="prodSearch" placeholder="Search tees, hoodies, jerseys…" oninput="renderProducts()">
+          <input type="search" class="inp" id="prodSearch" placeholder="Search tees, hoodies, jerseys…"
+            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+            readonly onfocus="this.removeAttribute('readonly')"
+            oninput="renderProducts()">
           <select id="prodSort" onchange="renderProducts()" style="max-width:200px">
             <option value="popular">Sort: Popular</option>
             <option value="low">Price: low to high</option>
