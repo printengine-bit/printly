@@ -4,6 +4,28 @@ const THUMB_COLORS={rn:'#E05A1E',po:'#0D1F3C',hd:'#1A1A1A',js:'#1A6FB0',tb:'#D9C
   'rn-women':'#CE0358','po-women':'#0D1F3C','hd-women':'#7B3F96',
   'rn-oversized-women':'#E7C9EE','sw-women':'#CE0358',
   'rn-kids':'#2C82C9','hd-kids':'#F07A2B','sw-kids':'#16A36A'};
+/* Real studio photography, one per product id — supplied directly, not
+   scraped. Every id in THUMB_COLORS has a matching photo today; a future
+   product without one falls back to the canvas render in productThumbHtml(). */
+const PRODUCT_PHOTO={
+  rn:'img/products/rn.jpg', po:'img/products/po.jpg', hd:'img/products/hd.jpg',
+  js:'img/products/js.jpg', tb:'img/products/tb.jpg',
+  'rn-women':'img/products/rn-women.jpg', 'po-women':'img/products/po-women.jpg',
+  'hd-women':'img/products/hd-women.jpg', 'rn-oversized-women':'img/products/rn-oversized-women.jpg',
+  'sw-women':'img/products/sw-women.jpg',
+  'rn-kids':'img/products/rn-kids.jpg', 'hd-kids':'img/products/hd-kids.jpg',
+  'sw-kids':'img/products/sw-kids.jpg',
+};
+/* Shared product-card thumbnail markup — a real photo where PRODUCT_PHOTO
+   has one, otherwise the same canvas-rendered garment thumb every other
+   pthumb site already used. Callers that keep the canvas path still need
+   to run drawProductThumb() themselves after inserting this HTML. */
+function productThumbHtml(id,w,h){
+  const photo=PRODUCT_PHOTO[id];
+  return photo
+    ? `<img src="${photo}" alt="" loading="lazy">`
+    : `<canvas class="pthumb" data-p="${id}" width="${w}" height="${h}"></canvas>`;
+}
 function jerseyBackPrint(c){
   c.save();
   // accent side stripes

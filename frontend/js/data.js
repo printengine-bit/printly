@@ -141,7 +141,7 @@ function _productCardHtml(p){
   return `
     <div class="card card-hover card-lift pcard">
       <div class="pcard-img" style="cursor:pointer" onclick="openProduct('${p.id}')">
-        <canvas class="pthumb" data-p="${p.id}" width="300" height="320"></canvas>
+        ${productThumbHtml(p.id,300,320)}
         ${wishHeart(p.id)}
       </div>
       <div class="pcard-body">

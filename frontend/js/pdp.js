@@ -125,7 +125,7 @@ function renderPdp(){
       <div class="grid grid-4">
         ${PRODUCTS.filter(x=>x.id!==p.id).slice(0,4).map(x=>`
           <div class="card card-hover pcard" style="cursor:pointer" onclick="openProduct('${x.id}')">
-            <div class="pcard-img"><canvas class="pthumb" data-p="${x.id}" width="300" height="320"></canvas></div>
+            <div class="pcard-img">${productThumbHtml(x.id,300,320)}</div>
             <div class="pcard-body">
               <h3 class="pcard-name" style="font-size:15px">${esc(x.name)}</h3>
               <div class="pcard-price">From <span class="t-lime">₹${x.tiers[3][1].toLocaleString('en-IN')}</span></div>
