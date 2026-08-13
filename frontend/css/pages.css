@@ -26,7 +26,7 @@
    photo overlays, just inverted since this text wants to be dark. */
 .stitch-hero-slide::after{
   content:"";position:absolute;inset:0;
-  background:linear-gradient(90deg,rgba(252,249,246,.95) 0%,rgba(252,249,246,.62) 34%,rgba(252,249,246,.1) 56%,transparent 72%);
+  background:linear-gradient(90deg,rgba(252,249,246,.86) 0%,rgba(252,249,246,.52) 34%,rgba(252,249,246,.08) 56%,transparent 72%);
 }
 .stitch-hero-copy{
   position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center;
@@ -46,9 +46,13 @@
 @media(min-width:768px){.stitch-hero{aspect-ratio:14/5}}
 @media(max-width:640px){
   .stitch-hero{aspect-ratio:5/6}
-  .stitch-hero-slide img{object-position:center 15%}
-  .stitch-hero-slide::after{background:linear-gradient(0deg,rgba(252,249,246,.95) 0%,rgba(252,249,246,.55) 42%,rgba(252,249,246,.05) 60%,transparent 72%)}
-  .stitch-hero-copy{justify-content:flex-end;padding-bottom:32px}
+  .stitch-hero-slide img{object-position:center 20%}
+  /* Same left-to-right scrim as desktop, not the old bottom-up one —
+     the photos (including the mobile-specific crops) leave their empty
+     space on the left throughout, not at the bottom, so the copy stays
+     vertically centered in that left column (inherits .stitch-hero-copy's
+     base justify-content:center) instead of being pinned to the floor. */
+  .stitch-hero-slide::after{background:linear-gradient(90deg,rgba(252,249,246,.86) 0%,rgba(252,249,246,.55) 42%,rgba(252,249,246,.1) 66%,transparent 82%)}
   .stitch-hero-title.t-hero{font-size:clamp(24px,7vw,34px);max-width:13ch}
   .stitch-hero-eyebrow,.stitch-hero-title{max-width:none}
 }
