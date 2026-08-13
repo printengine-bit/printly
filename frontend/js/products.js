@@ -268,7 +268,7 @@ const CATEGORY_ICON={tees:'checkroom',polos:'checkroom',hoodies:'dry_cleaning',
 const CATEGORY_PHOTO={
   tees:'img/category/tees.jpg', polos:'img/category/polos.jpg',
   hoodies:'img/category/hoodies.jpg', sweatshirts:'img/category/sweatshirts.jpg',
-  jerseys:'img/category/jerseys.jpg',
+  jerseys:'img/category/jerseys.jpg', bags:'img/category/bags.jpg',
 };
 const AUDIENCE_ICON={men:'man',women:'woman',kids:'child_care'};
 
@@ -317,7 +317,7 @@ function renderHomeCategories(){
    method wired up behind it. Shown so the merchandising row reads
    complete now, without pretending a click would go anywhere real. */
 const COMING_SOON_CATEGORIES = [
-  {key:'embroidery', label:'Embroidery', icon:'auto_awesome'},
+  {key:'embroidery', label:'Embroidery', icon:'auto_awesome', photo:'img/category/embroidery.jpg'},
 ];
 
 /* Editorial 4:5 photo cards — "Customize Clothing" pattern from the
@@ -349,7 +349,8 @@ function renderCategoryScrollRow(){
       onclick="toast('${esc(c.label)} is coming soon — check back shortly.');return false"
       aria-label="${esc(c.label)} — coming soon">
       <span class="cat-editorial-photo cat-editorial-soon">
-        <span class="material-symbols-outlined">${c.icon}</span>
+        ${c.photo ? `<img src="${c.photo}" alt="" loading="lazy">`
+                  : `<span class="material-symbols-outlined">${c.icon}</span>`}
       </span>
       <span class="cat-editorial-title">
         <span>${esc(c.label)}</span>
@@ -372,15 +373,20 @@ function renderHeaderCatNav(){
 /* ── Home merchandising rails ──────────────────────────────────────
    Three rails, one shared card (_productCardHtml, data.js):
    Best sellers (real order counts), New arrivals (most recently added),
-   and the full collection (first 4, a browse-everything bridge — not a
-   ranking claim, unlike the other two). */
-function renderHomeBestSellers(){
-  const g=document.getElementById('homeBestSellers'); if(!g || !PRODUCTS.length) return;
+   and the full collection (a browse-everything bridge — not a ranking
+   claim, unlike the other two). */
+function _bestSellerList(){
   const bySlug=Object.fromEntries(PRODUCTS.map(p=>[p.id,p]));
   // No paid orders yet ⇒ no real signal — fall back to catalogue order
-  // rather than render a rail that's lying about what's popular.
+  // rather than render a rail that's lying about what's popular. Reversed
+  // (not the same first 4 as "Shop the collection" below) so the two
+  // rails don't show an identical lineup while there's no real signal.
   const ranked=BEST_SELLERS.map(id=>bySlug[id]).filter(Boolean);
-  const list=(ranked.length ? ranked : PRODUCTS).slice(0,4);
+  return (ranked.length ? ranked : [...PRODUCTS].reverse()).slice(0,4);
+}
+function renderHomeBestSellers(){
+  const g=document.getElementById('homeBestSellers'); if(!g || !PRODUCTS.length) return;
+  const list=_bestSellerList();
   g.innerHTML=list.map(_productCardHtml).join('');
   document.querySelectorAll('#homeBestSellers .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
 }
@@ -417,7 +423,10 @@ function renderHomeDeals(){
 
 function renderHomeProducts(){
   const g=document.getElementById('homeProductGrid'); if(!g || !PRODUCTS.length) return;
-  const list=PRODUCTS.slice(0,4);
+  // Skip whatever Best Sellers is already showing above — otherwise the
+  // two rails can show the same lineup twice, real order data or not.
+  const bestIds=new Set(_bestSellerList().map(p=>p.id));
+  const list=PRODUCTS.filter(p=>!bestIds.has(p.id)).slice(0,4);
   g.innerHTML=list.map(_productCardHtml).join('');
   document.querySelectorAll('#homeProductGrid .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
 }

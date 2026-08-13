@@ -131,6 +131,7 @@
 .cat-editorial-card:hover .cat-editorial-photo canvas,
 .cat-editorial-card:hover .cat-editorial-photo img{transform:scale(1.05)}
 .cat-editorial-soon{color:var(--outline)}
+.cat-editorial-soon img{filter:grayscale(1);opacity:.55}
 .cat-editorial-title{
   display:flex;justify-content:space-between;align-items:flex-end;
   font-family:var(--ff-display);font-size:20px;font-weight:600;color:var(--on-surface);
