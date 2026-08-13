@@ -14,7 +14,7 @@
    from the wrong photo. */
 .stitch-hero{
   position:relative;width:100%;overflow:hidden;
-  aspect-ratio:16/9;background:var(--surface-container);
+  aspect-ratio:21/9;background:var(--surface-container);
 }
 .stitch-hero-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease;pointer-events:none}
 .stitch-hero-slide.is-active{opacity:1;pointer-events:auto;z-index:1}
@@ -38,9 +38,9 @@
   padding:6px 14px;margin-bottom:18px;
 }
 .stitch-hero-title{color:#151310;margin:0;max-width:15ch}
-@media(min-width:768px){.stitch-hero{aspect-ratio:2/1}}
+@media(min-width:768px){.stitch-hero{aspect-ratio:14/5}}
 @media(max-width:640px){
-  .stitch-hero{aspect-ratio:4/5}
+  .stitch-hero{aspect-ratio:5/6}
   .stitch-hero-slide img{object-position:center 15%}
   .stitch-hero-slide::after{background:linear-gradient(0deg,rgba(252,249,246,.95) 0%,rgba(252,249,246,.55) 42%,rgba(252,249,246,.05) 60%,transparent 72%)}
   .stitch-hero-copy{justify-content:flex-end;padding-bottom:32px}
