@@ -105,69 +105,37 @@
 
 <!-- ══════════════ HOME ══════════════ -->
 <section class="view on" id="v-home">
-  <!-- Auto-looping hero slideshow, no dot indicators. Each slide carries
-       its own left-aligned tagline (crossfades with its image so text
-       and photo never fall out of sync — see initHeroSlideshow() in
-       nav.js). Page H1 + value prop + the live customizer live in the
-       grid section right below, so the page keeps one true H1. -->
+  <!-- Auto-looping hero slideshow — the site's one and only hero. No dot
+       indicators. Each slide carries its own left-aligned headline
+       (crossfades with its image so text and photo never fall out of
+       sync — see initHeroSlideshow() in nav.js), styled with the same
+       .t-hero/.t-lime type treatment the rest of the site uses for its
+       big headlines, so it reads as one brand rather than two. Slide 1's
+       heading is the page's real (and only) H1. -->
   <div class="hero-band" id="heroBand">
     <div class="stitch-hero" id="stitchHero">
       <div class="stitch-hero-slide is-active">
         <img src="img/marketing/hero-slide-1.jpg" alt="" loading="eager">
         <a class="stitch-hero-copy" href="#" onclick="go('products');return false" aria-label="Shop all products">
           <span class="stitch-hero-eyebrow">Custom printing · Pune → All India</span>
-          <p class="stitch-hero-title">Design it in minutes.<br>Wear it in 48 hours.</p>
+          <h1 class="stitch-hero-title t-hero">Design it in minutes.<br><span class="t-lime">Wear it in 48 hours.</span></h1>
         </a>
       </div>
       <div class="stitch-hero-slide">
         <img src="img/marketing/hero-slide-2.jpg" alt="" loading="lazy">
         <a class="stitch-hero-copy" href="#" onclick="go('products');return false" aria-label="Shop all products">
           <span class="stitch-hero-eyebrow">The workshop · Pune</span>
-          <p class="stitch-hero-title">Your brand. Your story.<br>Printed, not just worn.</p>
+          <p class="stitch-hero-title t-hero">Your brand.<br><span class="t-lime">Printed, not just worn.</span></p>
         </a>
       </div>
       <div class="stitch-hero-slide">
         <img src="img/marketing/hero-slide-3.jpg" alt="" loading="lazy">
         <a class="stitch-hero-copy" href="#" onclick="go('products');return false" aria-label="Shop all products">
           <span class="stitch-hero-eyebrow">Print anything</span>
-          <p class="stitch-hero-title">Your logo. Your design.<br>Any garment, 48 hours.</p>
+          <p class="stitch-hero-title t-hero">Your logo, your design.<br><span class="t-lime">Any garment, 48 hours.</span></p>
         </a>
       </div>
     </div>
-  </div>
-
-  <div class="wrap hero">
-    <div class="hero-copy">
-      <span class="badge badge-outline">Custom printing · Pune → All India</span>
-      <h1 class="t-hero">
-        Design it in minutes.<br><span class="t-lime">Wear it in 48 hours.</span>
-      </h1>
-      <p class="t-body-lg t-mut hero-lede">
-        Your brand. Your story. Printed. The high-velocity drop culture for
-        creators and crews — premium quality at lightning speed.
-      </p>
-      <div class="hero-actions">
-        <button class="btn btn-primary" onclick="go('products')">
-          Start designing <span class="material-symbols-outlined">arrow_forward</span>
-        </button>
-      </div>
-      <div class="hero-stats">
-        <div><b>48 hrs</b><span>Express delivery</span></div>
-        <div><b>40–60%</b><span>Bulk savings</span></div>
-        <div><b>1 pc</b><span>No minimums</span></div>
-      </div>
-    </div>
-    <button class="hero-product" onclick="openProduct('hd')" aria-label="Customise the featured hoodie">
-      <span class="hero-product-top">
-        <span class="badge badge-lime">Custom hoodie</span>
-        <span class="hero-product-link">Make yours <span class="material-symbols-outlined">arrow_outward</span></span>
-      </span>
-      <canvas id="heroHoodie" width="440" height="440" aria-hidden="true"></canvas>
-      <span class="hero-product-caption">
-        <b>Your design, live on the garment.</b>
-        <small>Front, back and sleeve printing available</small>
-      </span>
-    </button>
   </div>
 
   <div class="proof wrap" id="homeProof"></div>
