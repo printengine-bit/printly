@@ -391,11 +391,18 @@ function renderHomeBestSellers(){
   document.querySelectorAll('#homeBestSellers .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
 }
 
+function _newArrivalsList(excludeIds){
+  const bySlug=Object.fromEntries(PRODUCTS.map(p=>[p.id,p]));
+  return NEW_ARRIVALS.map(id=>bySlug[id]).filter(Boolean)
+    .filter(p=>!excludeIds.has(p.id)).slice(0,4);
+}
 function renderHomeNewArrivals(){
   const g=document.getElementById('homeNewArrivals'); const section=document.getElementById('homeNewArrivalsSection');
   if(!g || !PRODUCTS.length) return;
-  const bySlug=Object.fromEntries(PRODUCTS.map(p=>[p.id,p]));
-  const list=NEW_ARRIVALS.map(id=>bySlug[id]).filter(Boolean).slice(0,4);
+  // Skip whatever Best Sellers (above this rail on the page) is already
+  // showing — same reasoning as renderHomeProducts() below.
+  const bestIds=new Set(_bestSellerList().map(p=>p.id));
+  const list=_newArrivalsList(bestIds);
   if(section) section.style.display = list.length ? '' : 'none';
   g.innerHTML=list.map(_productCardHtml).join('');
   document.querySelectorAll('#homeNewArrivals .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
@@ -423,10 +430,14 @@ function renderHomeDeals(){
 
 function renderHomeProducts(){
   const g=document.getElementById('homeProductGrid'); if(!g || !PRODUCTS.length) return;
-  // Skip whatever Best Sellers is already showing above — otherwise the
-  // two rails can show the same lineup twice, real order data or not.
+  // Skip whatever Best Sellers and New Arrivals (both above this rail on
+  // the page) are already showing — three rails repeating the same 4
+  // products isn't a browse-everything bridge, it's just one rail
+  // rendered three times.
   const bestIds=new Set(_bestSellerList().map(p=>p.id));
-  const list=PRODUCTS.filter(p=>!bestIds.has(p.id)).slice(0,4);
+  const newIds=new Set(_newArrivalsList(bestIds).map(p=>p.id));
+  const excluded=new Set([...bestIds,...newIds]);
+  const list=PRODUCTS.filter(p=>!excluded.has(p.id)).slice(0,4);
   g.innerHTML=list.map(_productCardHtml).join('');
   document.querySelectorAll('#homeProductGrid .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
 }
