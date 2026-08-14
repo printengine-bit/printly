@@ -35,6 +35,26 @@ const PRODUCT_GALLERY={
     {label:'Back', src:'img/products/gallery/po-back.jpg'},
     {label:'Detail', src:'img/products/gallery/po-detail.jpg'},
   ],
+  hd:[
+    {label:'Front', src:'img/products/gallery/hd-front.jpg'},
+    {label:'Back', src:'img/products/gallery/hd-back.jpg'},
+    {label:'Detail', src:'img/products/gallery/hd-detail.jpg'},
+  ],
+  js:[
+    {label:'Front', src:'img/products/gallery/js-front.jpg'},
+    {label:'Back', src:'img/products/gallery/js-back.jpg'},
+    {label:'Detail', src:'img/products/gallery/js-detail.jpg'},
+  ],
+  'sw-kids':[
+    {label:'Front', src:'img/products/gallery/sw-kids-front.jpg'},
+    {label:'Back', src:'img/products/gallery/sw-kids-back.jpg'},
+    {label:'Detail', src:'img/products/gallery/sw-kids-detail.jpg'},
+  ],
+  'hd-kids':[
+    {label:'Front', src:'img/products/gallery/hd-kids-front.jpg'},
+    {label:'Back', src:'img/products/gallery/hd-kids-back.jpg'},
+    {label:'Detail', src:'img/products/gallery/hd-kids-detail.jpg'},
+  ],
 };
 /* Shared product-card thumbnail markup — a real photo where PRODUCT_PHOTO
    has one, otherwise the same canvas-rendered garment thumb every other
