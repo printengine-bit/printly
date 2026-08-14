@@ -55,6 +55,31 @@ const PRODUCT_GALLERY={
     {label:'Back', src:'img/products/gallery/hd-kids-back.jpg'},
     {label:'Detail', src:'img/products/gallery/hd-kids-detail.jpg'},
   ],
+  'rn-kids':[
+    {label:'Front', src:'img/products/gallery/rn-kids-front.jpg'},
+    {label:'Back', src:'img/products/gallery/rn-kids-back.jpg'},
+    {label:'Detail', src:'img/products/gallery/rn-kids-detail.jpg'},
+  ],
+  'sw-women':[
+    {label:'Front', src:'img/products/gallery/sw-women-front.jpg'},
+    {label:'Back', src:'img/products/gallery/sw-women-back.jpg'},
+    {label:'Detail', src:'img/products/gallery/sw-women-detail.jpg'},
+  ],
+  'po-women':[
+    {label:'Front', src:'img/products/gallery/po-women-front.jpg'},
+    {label:'Back', src:'img/products/gallery/po-women-back.jpg'},
+    {label:'Detail', src:'img/products/gallery/po-women-detail.jpg'},
+  ],
+  'rn-women':[
+    {label:'Front', src:'img/products/gallery/rn-women-front.jpg'},
+    {label:'Back', src:'img/products/gallery/rn-women-back.jpg'},
+    {label:'Detail', src:'img/products/gallery/rn-women-detail.jpg'},
+  ],
+  'hd-women':[
+    {label:'Front', src:'img/products/gallery/hd-women-front.jpg'},
+    {label:'Back', src:'img/products/gallery/hd-women-back.jpg'},
+    {label:'Detail', src:'img/products/gallery/hd-women-detail.jpg'},
+  ],
 };
 /* Shared product-card thumbnail markup — a real photo where PRODUCT_PHOTO
    has one, otherwise the same canvas-rendered garment thumb every other
