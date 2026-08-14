@@ -442,6 +442,3 @@ function renderHomeProducts(){
   document.querySelectorAll('#homeProductGrid .pthumb').forEach(cnv=>drawProductThumb(cnv,cnv.dataset.p));
 }
 
-function pickProduct(id){
-  openProduct(id);
-}

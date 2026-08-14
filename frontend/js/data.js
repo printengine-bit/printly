@@ -139,21 +139,18 @@ function _swatchesFor(p){
 }
 function _productCardHtml(p){
   return `
-    <div class="card card-hover card-lift pcard">
-      <div class="pcard-img" style="cursor:pointer" onclick="openProduct('${p.id}')">
+    <div class="card card-hover card-lift pcard" style="cursor:pointer" onclick="openProduct('${p.id}')">
+      <div class="pcard-img">
         ${productThumbHtml(p.id,300,320)}
         ${wishHeart(p.id)}
       </div>
       <div class="pcard-body">
-        <h3 class="pcard-name" style="cursor:pointer" onclick="openProduct('${p.id}')">${esc(p.name)}</h3>
+        <h3 class="pcard-name">${esc(p.name)}</h3>
         ${starsFor(p.id)}
         ${_swatchesFor(p)}
         <div class="pcard-price">From <span class="t-lime">₹${p.tiers[3][1].toLocaleString('en-IN')}</span>
           <span class="t-label t-dim" style="font-weight:400"> at 100+</span></div>
         <div class="pcard-tiers">1pc ₹${p.tiers[0][1]} · 10+ ₹${p.tiers[1][1]} · 50+ ₹${p.tiers[2][1]}</div>
-        <button class="btn btn-primary btn-sm btn-block" onclick="pickProduct('${p.id}')">
-          Design this <span class="material-symbols-outlined" style="font-size:18px">arrow_forward</span>
-        </button>
       </div>
     </div>`;
 }

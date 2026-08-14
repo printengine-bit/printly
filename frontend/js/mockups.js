@@ -218,6 +218,11 @@ let state = {
   user:null,
   view:'home',
   product:PRODUCTS[0],
+  // Which half of the merged PDP+studio page is showing: 'view' is the
+  // plain product page (photos, price, colours, a Start designing button);
+  // 'design' mounts the editor. openProduct() always opens on 'view';
+  // openPdp() (resuming a saved design, a fresh canvas) opens on 'design'.
+  pdpStage:'view',
   shirtColor:'#FFFFFF',
   side:'front',
   layers:{front:[],back:[],left_sleeve:[],right_sleeve:[]},

@@ -33,9 +33,27 @@ function openProduct(pid){
     resetSizesForProduct();
     updateProductSub();
   }
+  // Browsing from the catalogue always lands on the plain product page
+  // first — photos, price, colours — never straight into the editor.
+  state.pdpStage='view';
   go('pdp');
 }
-function openPdp(pid){ openProduct(pid); }
+/* Used to (re-)enter the design editor once the caller has already set up
+   product/colour/layers itself — resuming a saved design, starting a fresh
+   canvas. Deliberately does NOT run openProduct()'s reset-to-defaults
+   (colour, print views), since that would clobber what the caller just
+   configured; it only resets the things a new editing session should
+   always start clean on (sizes, plain-item), same as before. */
+function openPdp(pid){
+  parkStudio();
+  const p=product(pid);
+  if(p) state.product=p;
+  state.plainItem=false;
+  resetSizesForProduct();
+  updateProductSub();
+  state.pdpStage='design';
+  go('pdp');
+}
 
 function parkStudio(){
   const studio=document.querySelector('.studio');
@@ -49,7 +67,10 @@ function setGarmentColor(c){
   state.shirtColor=c;
   document.querySelectorAll('#pdpSwatches .sw,#swatches .sw')
     .forEach(el=>el.classList.toggle('on',el.title===c));
+  document.querySelectorAll('#pdpViewSwatchGrid .pdp-view-swatch-item')
+    .forEach(el=>el.classList.toggle('on',el.dataset.color===c));
   updatePdpColorName();
+  redrawPdpGalleryCanvases();
   draw();
 }
 function updatePdpColorName(){
@@ -121,7 +142,39 @@ function renderPdp(){
       <span>${esc(p.name)}</span>
     </div>
 
-    <div id="pdpCustomizerMount" class="pdp-customizer-mount"></div>
+    <div id="pdpView" class="pdp">
+      <div class="pdp-gallery">
+        <div class="pdp-main">
+          <canvas id="pdpViewCanvas" width="520" height="560"></canvas>
+        </div>
+        <div class="pdp-thumbs" id="pdpViewThumbs"></div>
+      </div>
+      <div class="pdp-info">
+        <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
+          <div>
+            <h1 class="pdp-view-title">${esc(p.name)}</h1>
+            <div id="pdpViewRating"></div>
+          </div>
+          <div id="pdpViewWish"></div>
+        </div>
+        <div id="pdpViewPrice"></div>
+        <div class="pdp-view-trust">
+          <span><span class="material-symbols-outlined">verified</span>Premium fabric</span>
+          <span><span class="material-symbols-outlined">encrypted</span>Secure payment</span>
+          <span><span class="material-symbols-outlined">local_shipping</span>48-hr dispatch</span>
+        </div>
+        <div class="pdp-view-colors">
+          <div class="spread"><span class="st-lbl">Colour</span><span class="t-label t-dim" id="pdpViewColorCount"></span></div>
+          <div class="pdp-view-swatch-grid" id="pdpViewSwatchGrid"></div>
+        </div>
+        <button class="btn btn-primary btn-block pdp-view-cta" onclick="startDesigning()">
+          Start designing now <span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+        <div class="pdp-view-fabric" id="pdpViewFabric"></div>
+      </div>
+    </div>
+
+    <div id="pdpCustomizerMount" class="pdp-customizer-mount" hidden></div>
 
     <div class="section-sm" style="margin-top:24px">
       <div class="spread" style="margin-bottom:24px">
@@ -145,9 +198,106 @@ function renderPdp(){
       </div>
     </div>`;
 
-  mountPdpCustomizer(p);
+  if(state.pdpStage==='design'){
+    document.getElementById('pdpView').hidden=true;
+    document.getElementById('pdpCustomizerMount').hidden=false;
+    mountPdpCustomizer(p);
+  }else{
+    renderPdpView(p);
+  }
   document.querySelectorAll('.pthumb').forEach(c=>drawProductThumb(c,c.dataset.p));
   loadReviews(p.id);
+}
+
+/* ── Product view stage — shown before the customer commits to designing.
+   Reuses the studio's own recolour engine (getRecoloredMock) rather than
+   shipping separate per-colour photos, so every swatch here is a live,
+   accurate preview of what the studio canvas will actually open on. Real
+   per-angle product photography can replace drawPdpGalleryFrame's canvas
+   draw later without touching the surrounding layout. */
+let pdpViewSide='front';
+function pdpGalleryViews(pid){
+  return printViews(pid).filter(v=>v.key==='front'||v.key==='back');
+}
+function galleryMockKey(pid,viewKey){
+  const v=printView(pid,viewKey);
+  const mock=v&&v.mock ? v.mock : (viewKey==='front'?pid:pid+'_'+viewKey);
+  return MOCK.mocks[mock] ? mock : photoMockKey(pid);
+}
+function drawPdpGalleryFrame(cnv,pid,viewKey){
+  if(!cnv) return;
+  const c=cnv.getContext('2d');
+  c.clearRect(0,0,cnv.width,cnv.height);
+  const img=getRecoloredMock(galleryMockKey(pid,viewKey), state.shirtColor);
+  if(!img) return;
+  const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
+  const sc=Math.min(cnv.width/iw,cnv.height/ih);
+  const dw=iw*sc, dh=ih*sc;
+  drawStage(c,state.shirtColor,0,0,cnv.width,cnv.height,cnv.id==='pdpViewCanvas'?18:8);
+  drawMockup(c,img,(cnv.width-dw)/2,(cnv.height-dh)/2,dw,dh);
+}
+function redrawPdpGalleryCanvases(){
+  if(!document.getElementById('pdpViewCanvas')) return;
+  const pid=state.product.id;
+  document.querySelectorAll('#pdpViewThumbs .pdp-thumb').forEach(btn=>
+    drawPdpGalleryFrame(btn.querySelector('canvas'), pid, btn.dataset.side));
+  drawPdpGalleryFrame(document.getElementById('pdpViewCanvas'), pid, pdpViewSide);
+}
+function setPdpViewSide(side){
+  pdpViewSide=side;
+  document.querySelectorAll('#pdpViewThumbs .pdp-thumb').forEach(b=>b.classList.toggle('on',b.dataset.side===side));
+  redrawPdpGalleryCanvases();
+}
+function renderPdpViewSwatches(p){
+  const grid=document.getElementById('pdpViewSwatchGrid');
+  const count=document.getElementById('pdpViewColorCount');
+  if(!grid) return;
+  // Real stocked colours for this product (same list the card's swatch
+  // dots come from) — falls back to the full catalogue only if this
+  // product has no active variants yet.
+  const colors=(p.colors&&p.colors.length)?p.colors:SHIRT_COLORS;
+  if(count) count.textContent=colors.length+' colour'+(colors.length===1?'':'s')+' available';
+  grid.innerHTML=colors.map(c=>`
+    <button class="pdp-view-swatch-item${c===state.shirtColor?' on':''}" data-color="${esc(c)}"
+      onclick="setGarmentColor('${c}')" aria-label="${esc(COLOR_NAMES[c]||c)}">
+      <span class="pdp-view-swatch-dot" style="background:${esc(c)}"></span>
+      <span class="pdp-view-swatch-label">${esc(COLOR_NAMES[c]||c)}</span>
+    </button>`).join('');
+}
+function renderPdpView(p){
+  document.getElementById('pdpViewRating').innerHTML=starsFor(p.id);
+  document.getElementById('pdpViewWish').innerHTML=wishHeart(p.id,'lg');
+  document.getElementById('pdpViewPrice').innerHTML=`
+    <div class="pcard-price pdp-view-price">From <span class="t-lime">₹${p.tiers[3][1].toLocaleString('en-IN')}</span>
+      <span class="t-label t-dim" style="font-weight:400"> at 100+</span></div>
+    <div class="pcard-tiers">1pc ₹${p.tiers[0][1]} · 10+ ₹${p.tiers[1][1]} · 50+ ₹${p.tiers[2][1]}</div>`;
+  document.getElementById('pdpViewFabric').innerHTML=
+    `<b>${esc(p.fit||'Custom fit')}</b><span>${esc(p.fabric||'Premium fabric')}</span>`;
+  renderPdpViewSwatches(p);
+
+  pdpViewSide='front';
+  const views=pdpGalleryViews(p.id);
+  const thumbs=document.getElementById('pdpViewThumbs');
+  thumbs.innerHTML = views.length>1 ? views.map(v=>`
+    <button class="pdp-thumb${v.key==='front'?' on':''}" data-side="${v.key}" onclick="setPdpViewSide('${v.key}')">
+      <canvas width="120" height="130"></canvas><span>${esc(v.label)}</span>
+    </button>`).join('') : '';
+  redrawPdpGalleryCanvases();
+}
+function startDesigning(){
+  state.pdpStage='design';
+  document.getElementById('pdpView').hidden=true;
+  document.getElementById('pdpCustomizerMount').hidden=false;
+  mountPdpCustomizer(PRODUCTS.find(x=>x.id===state.product.id));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function backToPdpView(){
+  state.pdpStage='view';
+  parkStudio();
+  document.getElementById('pdpCustomizerMount').hidden=true;
+  document.getElementById('pdpView').hidden=false;
+  renderPdpView(PRODUCTS.find(x=>x.id===state.product.id));
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 async function checkPincode(){

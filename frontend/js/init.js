@@ -8,4 +8,4 @@ initReset();                 // opens the reset form if the URL carries ?reset=
 applyTheme();
 loadReviewSummary();
 loadMocks(()=>{ draw(); renderProducts(); renderHomeProducts(); renderHomeBestSellers(); renderHomeNewArrivals();
-  renderHomeCategories(); drawHeroHoodie(); drawAiPreview(); });
+  renderHomeCategories(); drawHeroHoodie(); drawAiPreview(); redrawPdpGalleryCanvases(); });
