@@ -144,9 +144,7 @@ function renderPdp(){
 
     <div id="pdpView" class="pdp">
       <div class="pdp-gallery">
-        <div class="pdp-main">
-          <canvas id="pdpViewCanvas" width="520" height="560"></canvas>
-        </div>
+        <div class="pdp-main" id="pdpMain"></div>
         <div class="pdp-thumbs" id="pdpViewThumbs"></div>
       </div>
       <div class="pdp-info">
@@ -248,6 +246,34 @@ function setPdpViewSide(side){
   document.querySelectorAll('#pdpViewThumbs .pdp-thumb').forEach(b=>b.classList.toggle('on',b.dataset.side===side));
   redrawPdpGalleryCanvases();
 }
+function setPdpViewPhoto(btn,src){
+  const img=document.getElementById('pdpViewStage'); if(!img) return;
+  img.src=src;
+  document.querySelectorAll('#pdpViewThumbs .pdp-thumb').forEach(b=>b.classList.toggle('on',b===btn));
+}
+/* Real photography, where PRODUCT_GALLERY has it, else the live
+   canvas-recolor gallery keyed to the currently picked colour. */
+function renderPdpGallery(p){
+  const main=document.getElementById('pdpMain');
+  const thumbsEl=document.getElementById('pdpViewThumbs');
+  const photos=PRODUCT_GALLERY[p.id];
+  if(photos && photos.length){
+    main.innerHTML=`<img id="pdpViewStage" src="${esc(photos[0].src)}" alt="${esc(p.name)}">`;
+    thumbsEl.innerHTML = photos.length>1 ? photos.map((v,i)=>`
+      <button class="pdp-thumb${i===0?' on':''}" onclick="setPdpViewPhoto(this,'${esc(v.src)}')">
+        <img src="${esc(v.src)}" alt=""><span>${esc(v.label)}</span>
+      </button>`).join('') : '';
+    return;
+  }
+  main.innerHTML=`<canvas id="pdpViewCanvas" width="520" height="560"></canvas>`;
+  pdpViewSide='front';
+  const views=pdpGalleryViews(p.id);
+  thumbsEl.innerHTML = views.length>1 ? views.map(v=>`
+    <button class="pdp-thumb${v.key==='front'?' on':''}" data-side="${v.key}" onclick="setPdpViewSide('${v.key}')">
+      <canvas width="120" height="130"></canvas><span>${esc(v.label)}</span>
+    </button>`).join('') : '';
+  redrawPdpGalleryCanvases();
+}
 function renderPdpViewSwatches(p){
   const grid=document.getElementById('pdpViewSwatchGrid');
   const count=document.getElementById('pdpViewColorCount');
@@ -274,15 +300,7 @@ function renderPdpView(p){
   document.getElementById('pdpViewFabric').innerHTML=
     `<b>${esc(p.fit||'Custom fit')}</b><span>${esc(p.fabric||'Premium fabric')}</span>`;
   renderPdpViewSwatches(p);
-
-  pdpViewSide='front';
-  const views=pdpGalleryViews(p.id);
-  const thumbs=document.getElementById('pdpViewThumbs');
-  thumbs.innerHTML = views.length>1 ? views.map(v=>`
-    <button class="pdp-thumb${v.key==='front'?' on':''}" data-side="${v.key}" onclick="setPdpViewSide('${v.key}')">
-      <canvas width="120" height="130"></canvas><span>${esc(v.label)}</span>
-    </button>`).join('') : '';
-  redrawPdpGalleryCanvases();
+  renderPdpGallery(p);
 }
 function startDesigning(){
   state.pdpStage='design';

@@ -16,6 +16,26 @@ const PRODUCT_PHOTO={
   'rn-kids':'img/products/rn-kids.jpg', 'hd-kids':'img/products/hd-kids.jpg',
   'sw-kids':'img/products/sw-kids.jpg',
 };
+/* Real per-angle photography for the PDP gallery — a product listed here
+   shows these actual photos (in this order) instead of the studio's
+   canvas-recolored mockup. Deliberately separate from PRODUCT_PHOTO: that
+   map is one fixed card thumbnail regardless of garment colour picked,
+   and this is the same trade-off applied to the bigger product-page
+   gallery — a real photoshoot for the colour it was shot in, not a
+   recolor that tracks the swatch grid. Products without an entry here
+   keep the live canvas gallery in pdp.js, which does track colour. */
+const PRODUCT_GALLERY={
+  rn:[
+    {label:'Front', src:'img/products/gallery/rn-front.jpg'},
+    {label:'Back', src:'img/products/gallery/rn-back.jpg'},
+    {label:'Detail', src:'img/products/gallery/rn-detail.jpg'},
+  ],
+  po:[
+    {label:'Front', src:'img/products/gallery/po-front.jpg'},
+    {label:'Back', src:'img/products/gallery/po-back.jpg'},
+    {label:'Detail', src:'img/products/gallery/po-detail.jpg'},
+  ],
+};
 /* Shared product-card thumbnail markup — a real photo where PRODUCT_PHOTO
    has one, otherwise the same canvas-rendered garment thumb every other
    pthumb site already used. Callers that keep the canvas path still need
