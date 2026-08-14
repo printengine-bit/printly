@@ -68,6 +68,17 @@
   pointer-events:none;
 }
 .hero-stage canvas{width:100%;max-width:320px;height:auto;position:relative;z-index:1}
+/* Makes the "type a few words, get this" mechanic legible at a glance —
+   without it the hoodie preview alone doesn't read as AI-generated,
+   it just looks like a product photo with a graphic on it. */
+.ai-prompt-tag{
+  position:relative;z-index:1;display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border:1px dashed var(--outline);border-radius:var(--r-full);
+  background:var(--surface-container-lowest);
+  font-size:12.5px;font-style:italic;color:var(--on-surface-variant);
+  max-width:100%;text-align:center;
+}
+.ai-prompt-tag .material-symbols-outlined{font-size:16px;color:var(--pink-ink);flex-shrink:0}
 
 .proof{
   display:flex;align-items:center;justify-content:center;gap:44px;flex-wrap:wrap;

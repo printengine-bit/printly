@@ -1099,7 +1099,12 @@ function pointInLayer(p,L){
 }
 
 /* Home's "AI designer" callout — a static hoodie still, drawn with the same
-   engine rather than shipped as a separate marketing image. */
+   engine rather than shipped as a separate marketing image. The art on the
+   chest is a real output of this project's own /api/generate-image (prompt:
+   "a fierce roaring tiger head, bold streetwear graphic", style: graphic),
+   background-removed and saved to img/marketing/ai-demo-tiger.png — not a
+   mockup of what the generator does, an actual example of it. */
+let aiPreviewArt=null;
 function drawAiPreview(){
   const c=document.getElementById('aiPreview'); if(!c) return;
   const x=c.getContext('2d');
@@ -1112,11 +1117,15 @@ function drawAiPreview(){
     drawStage(x,'#111111',ox,oy,iw*s,ih*s,14);
     drawMockup(x,mock,ox,oy,iw*s,ih*s);
   }
-  x.textAlign='center';
-  x.fillStyle='#c8f232'; x.font='800 30px "Archivo Narrow"';
-  x.fillText('GEN-AI', c.width/2, c.height*0.47);
-  x.fillStyle='#ce0358'; x.font='800 22px "Archivo Narrow"';
-  x.fillText('DROP 01', c.width/2, c.height*0.55);
+  if(!aiPreviewArt){
+    aiPreviewArt=new Image();
+    aiPreviewArt.onload=drawAiPreview;
+    aiPreviewArt.src='img/marketing/ai-demo-tiger.png';
+    return;
+  }
+  if(!aiPreviewArt.complete || !aiPreviewArt.naturalWidth) return;
+  const artW=c.width*0.36, artH=artW;
+  x.drawImage(aiPreviewArt, c.width/2-artW/2, c.height*0.33, artW, artH);
 }
 
 /* ═══════════════ STUDIO: add elements ═══════════════ */
