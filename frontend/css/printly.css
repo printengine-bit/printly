@@ -541,7 +541,7 @@ input:-webkit-autofill:focus{
   position:relative;
   background:var(--surface-container-lowest);
   display:flex;align-items:center;justify-content:center;
-  padding:12px;aspect-ratio:1/1;
+  aspect-ratio:1/1;overflow:hidden;
 }
 /* Wishlist heart — floats on the product thumbnail, same corner on every
    card (grid, home, PDP-sized via .wish-lg). Unfilled by default; state
@@ -559,18 +559,25 @@ input:-webkit-autofill:focus{
 .wish-btn.on{color:var(--pink)}
 .wish-btn .material-symbols-outlined{font-size:20px}
 .wish-lg{position:static}
-.pcard-img canvas{width:100%;height:100%;object-fit:contain}
-.pcard-body{padding:18px;display:flex;flex-direction:column;gap:6px;flex:1}
-.pcard-name{font-family:var(--ff-display);font-size:18px;font-weight:800;letter-spacing:-.01em;text-transform:uppercase}
-.pcard-swatches{display:flex;gap:5px}
+/* Canvas fallback (a product with no real photo yet) keeps the old
+   contain-with-padding look, since it's an isolated garment cutout, not
+   full studio photography — see productThumbHtml(), products.js. */
+.pcard-img canvas{width:calc(100% - 24px);height:calc(100% - 24px);margin:12px;object-fit:contain}
+/* Real photos fill the frame edge-to-edge like the reference cards did —
+   object-fit:contain plus the old 12px padding left them looking small
+   and floating inside an empty square. */
+.pcard-img img{width:100%;height:100%;object-fit:cover;object-position:center 12%;transition:transform .4s ease}
+.pcard:hover .pcard-img img{transform:scale(1.04)}
+.pcard-body{padding:14px;display:flex;flex-direction:column;gap:5px;flex:1}
+.pcard-name{font-family:var(--ff-display);font-size:14.5px;font-weight:800;letter-spacing:-.01em;text-transform:uppercase;line-height:1.25}
+.pcard-swatches{display:flex;align-items:center;gap:5px}
 .swatch-dot{
-  width:14px;height:14px;border-radius:50%;
+  width:13px;height:13px;border-radius:50%;
   border:1px solid var(--outline-variant);flex-shrink:0;
 }
-.pcard-price{font-size:15px;font-weight:700}
-.pcard-tiers{font-size:11px;color:var(--on-surface-variant);margin-bottom:12px}
+.pcard-price{font-size:14px;font-weight:700}
+.pcard-tiers{font-size:10.5px;color:var(--on-surface-variant);margin-bottom:10px}
 .pcard-body .btn{margin-top:auto}
-.pcard-img img{width:100%;height:100%;object-fit:contain}
 
 /* "Start new design" tile in the My Designs grid */
 .new-design-tile{
@@ -674,8 +681,18 @@ input:-webkit-autofill:focus{
   .aud a,.t-label[href],a.t-lime{display:inline-block;padding:10px 0}
 }
 @media(max-width:560px){
-  .grid-2,.grid-3,.grid-4,.grid-5{grid-template-columns:1fr}
-  .ftr-grid{grid-template-columns:1fr}
+  /* Two-up, not one full-width card per row — a single card filling the
+     whole screen was the biggest gap next to competitor mobile grids. */
+  .grid-2,.grid-3,.grid-4,.grid-5{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pcard-body{padding:10px}
+  .pcard-name{font-size:12.5px}
+  .pcard-price{font-size:12.5px}
+  .pcard-tiers{font-size:9.5px;margin-bottom:8px}
+  .pcard-body .btn-sm{padding:10px 12px;font-size:12.5px}
+  /* Two columns, not one — same reasoning as the product grid above,
+     applied to the footer link groups instead of stacking every link
+     as its own full-width 44px row. */
+  .ftr-grid{grid-template-columns:1fr 1fr;gap:28px 20px}
   .card-pad{padding:18px}
   .modal{padding:24px}
 }
