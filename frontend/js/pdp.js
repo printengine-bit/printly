@@ -70,7 +70,11 @@ function setGarmentColor(c){
   document.querySelectorAll('#pdpViewSwatchGrid .pdp-view-swatch-item')
     .forEach(el=>el.classList.toggle('on',el.dataset.color===c));
   updatePdpColorName();
-  redrawPdpGalleryCanvases();
+  // Full re-render, not just a canvas repaint — a colour change can flip
+  // a gated product (PRODUCT_GALLERY[pid].color) between showing its real
+  // photos and the recolored canvas, which is a different DOM structure
+  // in #pdpMain, not something a plain redraw can update in place.
+  if(document.getElementById('pdpMain')) renderPdpGallery(PRODUCTS.find(x=>x.id===state.product.id)||state.product);
   draw();
 }
 function updatePdpColorName(){
@@ -253,10 +257,20 @@ function setPdpViewPhoto(btn,src){
 }
 /* Real photography, where PRODUCT_GALLERY has it, else the live
    canvas-recolor gallery keyed to the currently picked colour. */
+/* The real photos for a product, only while the picked colour is the one
+   they were actually shot in (when that's known) — a customer who picks
+   Red must never see the Black sample photographed for Black. Products
+   whose sample doesn't match any catalogue colour have no `color` set,
+   so their real photos show for every swatch, as before. */
+function pdpRealPhotos(p){
+  const g=PRODUCT_GALLERY[p.id]; if(!g) return null;
+  if(g.color && g.color!==state.shirtColor) return null;
+  return g.photos;
+}
 function renderPdpGallery(p){
   const main=document.getElementById('pdpMain');
   const thumbsEl=document.getElementById('pdpViewThumbs');
-  const photos=PRODUCT_GALLERY[p.id];
+  const photos=pdpRealPhotos(p);
   if(photos && photos.length){
     main.innerHTML=`<img id="pdpViewStage" src="${esc(photos[0].src)}" alt="${esc(p.name)}">`;
     thumbsEl.innerHTML = photos.length>1 ? photos.map((v,i)=>`

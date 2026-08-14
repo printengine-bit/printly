@@ -17,69 +17,76 @@ const PRODUCT_PHOTO={
   'sw-kids':'img/products/sw-kids.jpg',
 };
 /* Real per-angle photography for the PDP gallery — a product listed here
-   shows these actual photos (in this order) instead of the studio's
-   canvas-recolored mockup. Deliberately separate from PRODUCT_PHOTO: that
-   map is one fixed card thumbnail regardless of garment colour picked,
-   and this is the same trade-off applied to the bigger product-page
-   gallery — a real photoshoot for the colour it was shot in, not a
-   recolor that tracks the swatch grid. Products without an entry here
-   keep the live canvas gallery in pdp.js, which does track colour. */
+   shows these actual photos instead of the studio's canvas-recolored
+   mockup. Deliberately separate from PRODUCT_PHOTO: that map is one fixed
+   card thumbnail regardless of garment colour picked; this is richer.
+
+   `color` (optional) is the catalogue hex this exact sample was shot in,
+   confirmed by sampling the photo's own pixels against CATALOG.colors —
+   not eyeballed, since a mislabeled colour would show a customer a photo
+   of a garment they didn't order. Where it's set, pdp.js only shows these
+   real photos while that colour is selected; every other swatch falls
+   back to the live canvas recolor, so a customer switching to "Red"
+   never sees the black sample photographed for "Black". Where a product's
+   sample doesn't match any catalogue colour (most of these — the sample
+   garment just isn't a stocked colour), `color` is omitted and the real
+   photos show regardless of swatch, same as before this existed. */
 const PRODUCT_GALLERY={
-  rn:[
+  rn:{photos:[
     {label:'Front', src:'img/products/gallery/rn-front.jpg'},
     {label:'Back', src:'img/products/gallery/rn-back.jpg'},
     {label:'Detail', src:'img/products/gallery/rn-detail.jpg'},
-  ],
-  po:[
+  ]},
+  po:{color:'#101C36', photos:[
     {label:'Front', src:'img/products/gallery/po-front.jpg'},
     {label:'Back', src:'img/products/gallery/po-back.jpg'},
     {label:'Detail', src:'img/products/gallery/po-detail.jpg'},
-  ],
-  hd:[
+  ]},
+  hd:{color:'#111111', photos:[
     {label:'Front', src:'img/products/gallery/hd-front.jpg'},
     {label:'Back', src:'img/products/gallery/hd-back.jpg'},
     {label:'Detail', src:'img/products/gallery/hd-detail.jpg'},
-  ],
-  js:[
+  ]},
+  js:{photos:[
     {label:'Front', src:'img/products/gallery/js-front.jpg'},
     {label:'Back', src:'img/products/gallery/js-back.jpg'},
     {label:'Detail', src:'img/products/gallery/js-detail.jpg'},
-  ],
-  'sw-kids':[
+  ]},
+  'sw-kids':{photos:[
     {label:'Front', src:'img/products/gallery/sw-kids-front.jpg'},
     {label:'Back', src:'img/products/gallery/sw-kids-back.jpg'},
     {label:'Detail', src:'img/products/gallery/sw-kids-detail.jpg'},
-  ],
-  'hd-kids':[
+  ]},
+  'hd-kids':{photos:[
     {label:'Front', src:'img/products/gallery/hd-kids-front.jpg'},
     {label:'Back', src:'img/products/gallery/hd-kids-back.jpg'},
     {label:'Detail', src:'img/products/gallery/hd-kids-detail.jpg'},
-  ],
-  'rn-kids':[
+  ]},
+  'rn-kids':{photos:[
     {label:'Front', src:'img/products/gallery/rn-kids-front.jpg'},
     {label:'Back', src:'img/products/gallery/rn-kids-back.jpg'},
     {label:'Detail', src:'img/products/gallery/rn-kids-detail.jpg'},
-  ],
-  'sw-women':[
+  ]},
+  'sw-women':{color:'#8B8E91', photos:[
     {label:'Front', src:'img/products/gallery/sw-women-front.jpg'},
     {label:'Back', src:'img/products/gallery/sw-women-back.jpg'},
     {label:'Detail', src:'img/products/gallery/sw-women-detail.jpg'},
-  ],
-  'po-women':[
+  ]},
+  'po-women':{color:'#101C36', photos:[
     {label:'Front', src:'img/products/gallery/po-women-front.jpg'},
     {label:'Back', src:'img/products/gallery/po-women-back.jpg'},
     {label:'Detail', src:'img/products/gallery/po-women-detail.jpg'},
-  ],
-  'rn-women':[
+  ]},
+  'rn-women':{photos:[
     {label:'Front', src:'img/products/gallery/rn-women-front.jpg'},
     {label:'Back', src:'img/products/gallery/rn-women-back.jpg'},
     {label:'Detail', src:'img/products/gallery/rn-women-detail.jpg'},
-  ],
-  'hd-women':[
+  ]},
+  'hd-women':{color:'#85008E', photos:[
     {label:'Front', src:'img/products/gallery/hd-women-front.jpg'},
     {label:'Back', src:'img/products/gallery/hd-women-back.jpg'},
     {label:'Detail', src:'img/products/gallery/hd-women-detail.jpg'},
-  ],
+  ]},
 };
 /* Shared product-card thumbnail markup — a real photo where PRODUCT_PHOTO
    has one, otherwise the same canvas-rendered garment thumb every other
