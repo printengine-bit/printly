@@ -523,6 +523,17 @@
           </div>
           <div id="pdpEditorWish"></div>
         </div>
+        <!-- First decision on the page, on purpose — the canvas to the left
+             renders in whatever state.shirtColor already is the moment this
+             mounts, so colour has to be chosen (or already right) before a
+             customer looks at print sides or sizing, not after. -->
+        <div class="pdp-option pdp-color-option">
+          <span class="st-lbl">Colour</span>
+          <div>
+            <div class="swatches" id="pdpSwatches"></div>
+            <span id="pdpColorName" class="pdp-color-name"></span>
+          </div>
+        </div>
         <div class="pdp-option">
           <span class="st-lbl">Print sides</span>
           <div class="print-side-groups" id="printSideGroups"></div>
@@ -535,10 +546,6 @@
           <div id="sizeGrid" class="size-pick"></div>
           <button class="bulk-toggle" id="bulkToggle" onclick="toggleOrderMode()"></button>
           <div class="tier-hint" id="tierHint" hidden></div>
-        </div>
-        <div class="pdp-option">
-          <span class="st-lbl">Colour</span>
-          <div class="swatches" id="pdpSwatches"></div>
         </div>
         <label class="plain-toggle">
           <input id="plainItemToggle" type="checkbox" onchange="togglePlainItem(this.checked)">

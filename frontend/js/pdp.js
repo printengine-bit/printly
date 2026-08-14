@@ -23,7 +23,12 @@ function openProduct(pid){
     state.product=p;
     const sel=document.getElementById('stProduct'); if(sel) sel.value=pid;
     configureProductViews(pid);
-    state.shirtColor='#FFFFFF';
+    // Open on a colour this product is actually stocked in (p.colors —
+    // real variants, same list the card's swatch dots come from,
+    // _colors_for() in catalog.py) instead of a blank white the customer
+    // never asked for. Falls back to the full catalogue's first colour,
+    // then white, only if this product somehow has no active variants yet.
+    state.shirtColor=(p.colors&&p.colors[0])||SHIRT_COLORS[0]||'#FFFFFF';
     state.plainItem=false;
     resetSizesForProduct();
     updateProductSub();
@@ -44,7 +49,12 @@ function setGarmentColor(c){
   state.shirtColor=c;
   document.querySelectorAll('#pdpSwatches .sw,#swatches .sw')
     .forEach(el=>el.classList.toggle('on',el.title===c));
+  updatePdpColorName();
   draw();
+}
+function updatePdpColorName(){
+  const el=document.getElementById('pdpColorName'); if(!el) return;
+  el.textContent=COLOR_NAMES[state.shirtColor]||'';
 }
 function mountPdpCustomizer(p){
   const studio=document.querySelector('.studio'), mount=document.getElementById('pdpCustomizerMount');
@@ -61,6 +71,7 @@ function mountPdpCustomizer(p){
   document.getElementById('pdpSwatches').innerHTML=SHIRT_COLORS.map(c=>
     `<button class="sw${c===state.shirtColor?' on':''}" style="background:${c}" title="${c}"
        aria-label="${esc(COLOR_NAMES[c]||c)}" onclick="setGarmentColor('${c}')"></button>`).join('');
+  updatePdpColorName();
   renderPdpDetails(p);
   renderPrintControls();
   renderSizeGrid(); updatePrice(); renderLayers(); applyPreviewSize(); draw();

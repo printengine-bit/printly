@@ -675,8 +675,16 @@ button.coach-step:hover{border-color:var(--lime);background:var(--surface-contai
 }
 .studio.pdp-mode .print-side-groups{gap:7px}
 .studio.pdp-mode .print-check{padding:7px 9px}
-.studio.pdp-mode .swatches{gap:9px}
-.studio.pdp-mode .sw{width:28px;height:28px}
+/* Colour is the first choice on the page now, not the third — a little
+   more visual weight than the other options (bigger swatches, the
+   selected name spelled out) so it reads as the opening question, not
+   just another row of settings. */
+.studio.pdp-mode .pdp-color-option{padding-top:2px}
+.studio.pdp-mode .swatches{gap:10px}
+.studio.pdp-mode .sw{width:32px;height:32px}
+.pdp-color-name{
+  display:block;margin-top:8px;font-size:12.5px;font-weight:700;color:var(--on-surface-variant);
+}
 .studio.pdp-mode .plain-toggle{padding:10px 0}
 .studio.pdp-mode .pdp-fabric{padding-top:9px}
 .pdp-price-main{display:flex;align-items:baseline;gap:9px}
