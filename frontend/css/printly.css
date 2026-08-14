@@ -528,6 +528,16 @@ input:-webkit-autofill:focus{
   font-size:12px;font-weight:600;color:var(--on-surface-variant);
 }
 .ftr-pay-chip .material-symbols-outlined{font-size:16px}
+/* Real network/UPI-app logos, not text — fixed light card regardless of
+   site theme (dark theme's near-black surface would otherwise kill
+   contrast on these full-colour marks, same reasoning as elsewhere this
+   session for text sitting on a photo). */
+.ftr-pay-logo{
+  display:flex;align-items:center;justify-content:center;
+  height:32px;padding:0 14px;
+  background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:var(--r-full);
+}
+.ftr-pay-logo img{height:16px;width:auto;display:block}
 .ftr-pay-secured{
   display:flex;align-items:center;gap:6px;margin-left:auto;
   font-size:12px;color:var(--outline);
