@@ -4,7 +4,7 @@ import re
 from flask import Blueprint, request, jsonify, session
 
 from db import get_db
-from auth import login_required
+from auth import login_required, get_or_create_guest
 from permissions import require
 from catalog import quote, apply_stock
 
@@ -149,7 +149,6 @@ def _validate_sizes(items):
 
 
 @orders_bp.route("/orders", methods=["POST"])
-@login_required
 def create_order():
     d = request.get_json(force=True, silent=True) or {}
     items = d.get("items")
@@ -169,6 +168,19 @@ def create_order():
         return jsonify(ok=False, error=err), 400
 
     db = get_db()
+    # Signed in: use that account. Guest: resolve (or silently create) a
+    # users row for the email they gave us — see get_or_create_guest() for
+    # why that's a real account rather than a parallel guest_* column set.
+    # Not committed here; it rides the same transaction as the order below,
+    # so a guest account is never left behind by an order that then fails
+    # to place (the connection's implicit transaction rolls back on close).
+    if session.get("user_id"):
+        uid = session["user_id"]
+    else:
+        uid, err = get_or_create_guest(db, d.get("email"), ship["name"])
+        if err:
+            return jsonify(ok=False, error=err), 400
+
     # The server prices the order. `total` from the request is only ever
     # compared against this, never stored — prices, GST, shipping and any
     # promo code are all admin-editable or code-gated, so a stale tab or a
@@ -176,7 +188,7 @@ def create_order():
     # the customer was shown something different from what we'd charge, so
     # refuse rather than quietly billing a number they never saw.
     promo_code = (d.get("promo_code") or "").strip() or None
-    q, err = quote(db, items, promo_code=promo_code, user_id=session["user_id"])
+    q, err = quote(db, items, promo_code=promo_code, user_id=uid)
     if err:
         return jsonify(ok=False, error=err), 400
     if abs(q["total"] - float(total)) > 1.0:
@@ -202,7 +214,7 @@ def create_order():
                               ship_line1,ship_line2,ship_city,ship_state,ship_pincode,
                               promo_code,discount_inr,payment_method,payment_status)
            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-        (session["user_id"], total, json.dumps(items), json.dumps(q),
+        (uid, total, json.dumps(items), json.dumps(q),
          ship["name"], ship["phone"],
          ship["line1"], ship["line2"], ship["city"], ship["state"], ship["pincode"],
          q["promo_code"], q["discount"], method, pay_status),
@@ -219,7 +231,7 @@ def create_order():
         rzp, err = create_rzp_order(
             q["total"], receipt=_display_id(cur.lastrowid),
             notes={"order": _display_id(cur.lastrowid),
-                   "user_id": str(session["user_id"])})
+                   "user_id": str(uid)})
         if err:
             # The order row is rolled back with everything else — there's
             # nothing to pay against, so leaving a pending shell would be
@@ -243,7 +255,7 @@ def create_order():
     # ── COD (and the payments-disabled path): unchanged from before ──
     if q["promo_code"]:
         from promo import redeem_promo
-        redeem_promo(db, q["promo_code"], session["user_id"], cur.lastrowid, q["discount"])
+        redeem_promo(db, q["promo_code"], uid, cur.lastrowid, q["discount"])
     _log_event(db, cur.lastrowid, "placed", None, 0)
     # Blanks leave the shelf when the order is placed, not when it ships —
     # they're committed to this order either way. Never blocks the sale; see
@@ -261,16 +273,15 @@ def create_order():
     points = int(total // 100)
     if points:
         from customers import award_points
-        award_points(db, session["user_id"], points,
+        award_points(db, uid, points,
                      "Earned on order", order_id=cur.lastrowid)
     db.commit()
 
     # Confirmation email. After the commit and non-raising by construction —
     # the order is already placed, and a mail outage must not turn a paid-for
-    # order into an error the customer sees. Only session["user_id"] is in
-    # scope here, so the address needs a lookup.
+    # order into an error the customer sees.
     who = db.execute("SELECT email,name FROM users WHERE id=?",
-                     (session["user_id"],)).fetchone()
+                     (uid,)).fetchone()
     row = db.execute("SELECT * FROM orders WHERE id=?", (cur.lastrowid,)).fetchone()
     if who:
         from mailer import send

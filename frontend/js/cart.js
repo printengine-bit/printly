@@ -429,13 +429,26 @@ const SHIP_FIELDS=[
   ['state','State','text','address-level1'],
   ['pincode','PIN code','text','postal-code'],
 ];
-state.ship = state.ship || {name:'',phone:'',line1:'',line2:'',city:'',state:'',pincode:''};
+state.ship = state.ship || {name:'',phone:'',line1:'',line2:'',city:'',state:'',pincode:'',email:''};
 
+/* No account needed to buy something — forcing signup before checkout is
+   one of the biggest places a real store loses orders. A guest just needs
+   an email so we have somewhere to send the confirmation; the server turns
+   that into a real (passwordless) account behind the scenes — see
+   get_or_create_guest() in auth.py — so "My Orders" and a password-reset
+   claim it later without this page needing to know any of that. A signed-in
+   customer already has an email on file, so the field only shows here. */
 function shipForm(){
+  const emailField = !state.user ? `
+    <label class="field span2">
+      <span>Email <span class="t-dim" style="font-weight:400">— for your order confirmation</span></span>
+      <input id="ship_email" type="email" autocomplete="email"
+             value="${esc(state.ship.email||'')}" oninput="state.ship.email=this.value">
+    </label>` : '';
   return `<div class="card card-pad ship-form">
     <h3 class="t-label" style="margin-bottom:4px">Delivery address</h3>
     <p class="t-dim" style="font-size:12px;margin-bottom:16px">Where should we send the parcel?</p>
-    <div class="ship-grid">${SHIP_FIELDS.map(([k,label,type,auto])=>`
+    <div class="ship-grid">${emailField}${SHIP_FIELDS.map(([k,label,type,auto])=>`
       <label class="field ${k==='line1'||k==='line2'?'span2':''}">
         <span>${label}</span>
         <input id="ship_${k}" type="${type}" autocomplete="${auto}"
@@ -446,11 +459,14 @@ function shipForm(){
   </div>`;
 }
 
-/* Mirrors _clean_shipping() in orders.py. The server is the authority — this
-   exists so the customer sees the problem next to the field, not as a toast
-   after a round trip. */
+/* Mirrors _clean_shipping() in orders.py (plus the guest email check, which
+   is orders.py's own get_or_create_guest()). The server is the authority —
+   this exists so the customer sees the problem next to the field, not as a
+   toast after a round trip. */
 function validateShip(){
   const s=state.ship;
+  if(!state.user && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((s.email||'').trim()))
+    return 'Enter a valid email for your order confirmation.';
   if(!(s.name||'').trim()) return 'Add the name the parcel should go to.';
   if(!/^[6-9]\d{9}$/.test((s.phone||'').trim())) return 'Enter a 10-digit Indian mobile number.';
   if(!(s.line1||'').trim()) return 'Add the street address.';
@@ -499,7 +515,6 @@ function payMethodBox(){
 function setPayMethod(v){ state.payMethod=v; renderCart(); }
 
 async function checkout(tot){
-  if(!state.user){ openLogin(); toast('Sign in to place your order'); return; }
   const bad=validateShip();
   if(bad){ toast(bad); document.getElementById('ship_'+shipFieldFor(bad))?.focus(); return; }
   const btn=document.querySelector('.summary-card .btn-primary');
@@ -508,6 +523,7 @@ async function checkout(tot){
     const items=await uploadArt();
     const res=await fetch(BACKEND+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},
       credentials:'include', body:JSON.stringify({items,total:tot,shipping:state.ship,
+        email: state.user ? undefined : state.ship.email,
         promo_code:state.promo.code, payment_method:state.payMethod})});
     const d=await res.json();
     if(!d.ok){
@@ -534,12 +550,19 @@ async function checkout(tot){
 /* Shared tail for a confirmed order, whichever way it was paid for. */
 async function finishOrder(d, orderId){
   state.cart=[]; state.promo={code:null,discount:0}; setCartCount();
+  const id=orderId || (d.order && d.order.id) || d.order;
   // No session refresh needed: the only thing that went stale was the
   // loyalty balance, which is no longer displayed. The points are still
   // awarded server-side and the ledger still records them.
-  go('orders');
-  const id=orderId || (d.order && d.order.id) || d.order;
-  toast('Order '+id+' placed 🎉');
+  //
+  // A guest has no session, so My Orders can't show them anything — it
+  // would just land them on its "sign in to see your orders" state right
+  // after they bought something, which reads as if the order vanished.
+  // The order itself is real regardless (confirmation email included);
+  // home is just a less confusing place to land.
+  go(state.user ? 'orders' : 'home');
+  toast(state.user ? 'Order '+id+' placed 🎉'
+    : 'Order '+id+' placed 🎉 — a confirmation is on its way to '+(state.ship.email||'your email'));
 }
 
 /* Razorpay Checkout. The order already exists server-side as pending; this
@@ -555,7 +578,7 @@ function payWithRazorpay(d){
     key:r.key, order_id:r.order_id, amount:r.amount, currency:r.currency,
     name:'Print Engine', description:'Order '+d.order,
     prefill:{name:state.ship.name||'', contact:state.ship.phone||'',
-             email:(state.user&&state.user.email)||''},
+             email:(state.user&&state.user.email)||state.ship.email||''},
     theme:{color:'#c8f232'},
     handler: async function(resp){
       try{
@@ -581,6 +604,7 @@ function payWithRazorpay(d){
 }
 /* Which field to focus for a given validation message. */
 function shipFieldFor(msg){
+  if(msg.includes('email')) return 'email';
   if(msg.includes('name')) return 'name';
   if(msg.includes('mobile')) return 'phone';
   if(msg.includes('street')) return 'line1';

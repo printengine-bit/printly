@@ -123,6 +123,37 @@ def signup():
     return jsonify(ok=True, user=_user_public(row))
 
 
+def get_or_create_guest(db, email, name):
+    """Guest checkout still becomes a real `users` row rather than a
+    parallel guest_email/guest_name column on orders — every downstream
+    query (admin order list, customer lifetime value in customers.py,
+    loyalty, order emails) already assumes orders.user_id resolves to a
+    real user, per the "a customer IS a users row" model documented in
+    CLAUDE.md. Duplicating that with a second, nullable path through every
+    one of them would be far more code than reusing this one. Returns
+    (user_id, error). A returning guest (same email) reuses their row, so
+    their order history accumulates in one place.
+
+    password_hash is NOT NULL, so this gets an unusable one — a hash of
+    32 random bytes nobody will ever type — instead of a special-cased
+    NULL that every login() call would need to guard against. The account
+    sits dormant until claimed: the same email can run the existing
+    forgot-password flow to set a real password and sign into the order
+    history that's already there. """
+    email = (email or "").strip().lower()
+    if not EMAIL_RE.match(email):
+        return None, "Enter a valid email so we can send your order confirmation."
+    row = db.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+    if row:
+        return row["id"], None
+    display_name = (name or "").strip()[:120] or "Guest"
+    cur = db.execute(
+        "INSERT INTO users(email,password_hash,name,role) VALUES(?,?,?,?)",
+        (email, generate_password_hash(secrets.token_hex(32)), display_name, "customer"),
+    )
+    return cur.lastrowid, None
+
+
 @auth_bp.route("/login", methods=["POST"])
 def login():
     d = request.get_json(force=True, silent=True) or {}
